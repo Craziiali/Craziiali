@@ -197,6 +197,9 @@
             console.log('[Planner] ✓ Saved', (data.projects||[]).length, 'shoots');
           } catch(e) {
             console.error('[Planner] ✗ Save failed:', e.code, e.message);
+            if (e.code === 'permission-denied') {
+              console.error('[Planner] → Firestore rules are blocking this write. In Firebase Console → Firestore → Rules, ensure authenticated users can write to /craziiali/planner. Example:\n  match /craziiali/{doc} { allow read, write: if request.auth != null; }');
+            }
           }
         },
         watch(cb) {
@@ -7147,12 +7150,13 @@
             if(inp.dataset.field === 'location') return;
             /* keep desc width in sync with typed content */
             if(inp.dataset.field === 'notes') sizeDesc(inp);
-            /* Update in-memory data immediately so stats stay current,
-               but defer localStorage write until blur (no toast spam) */
+            /* Update in-memory data and push to Firebase on every keystroke.
+               savePlanner() has a built-in 250 ms debounce so Firebase receives
+               ~4 writes/sec at most — enough for letter-by-letter live sync. */
             var proj = projects.find(function(x){ return x.id===p.id; });
-            if(proj){ proj[inp.dataset.field] = inp.value; updateStats(); }
+            if(proj){ proj[inp.dataset.field] = inp.value; updateStats(); savePlanner(); }
           });
-          /* Persist to localStorage once the user leaves the field */
+          /* Also persist on blur (catches Tab-away, programmatic blur, etc.) */
           inp.addEventListener('blur', function(){
             if(inp.dataset.field === 'time')     return; /* already saved by attachTimeScroll */
             if(inp.dataset.field === 'location') return; /* already saved by attachLocDisplay */
@@ -7824,13 +7828,21 @@
     var _throttleTimer = null;
     var _lastPx = -99, _lastPy = -99;
 
+    /* ── First-name extractor ──────────────────────────────── */
+    function cursorFirstName(user) {
+      if (!user) return 'Guest';
+      if (user.displayName) return user.displayName.split(' ')[0];
+      if (user.email)       return user.email.split('@')[0];
+      return 'Guest';
+    }
+
     function broadcast(px, py, clicking) {
       if (!_broadcastUid || !window.fb) return;
       window.fb.cursor.write(_broadcastUid, {
         px:   px,
         py:   py,
         cl:   clicking ? 1 : 0,
-        name: (window.fb.currentUser() ? (window.fb.currentUser().displayName || window.fb.currentUser().email || 'Guest') : 'Guest'),
+        name: cursorFirstName(window.fb.currentUser ? window.fb.currentUser() : null),
         ts:   Date.now()
       });
     }
