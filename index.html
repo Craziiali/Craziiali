@@ -24,7 +24,7 @@
       messagingSenderId: "884745496455",
       appId:             "1:884745496455:web:4dc2daf68075f21418d522",
       measurementId:     "G-TBG6ZCBW1J",
-      databaseURL:       "https://my-figma-a7909-default-rtdb.firebaseio.com"
+      databaseURL:       "https://my-figma-a7909-default-rtdb.europe-west1.firebasedatabase.app"
     };
 
     const app     = initializeApp(firebaseConfig);
@@ -58,7 +58,12 @@
       cursor: {
         write(uid, data) {
           if (!rtdb) return;
-          rtdbSet(rtdbRef(rtdb, 'cursors/' + uid), data);
+          rtdbSet(rtdbRef(rtdb, 'cursors/' + uid), data)
+            .catch(e => console.error(
+              '[RTDB] cursors/write denied:', e.code,
+              '— Firebase Console → Realtime Database → Rules → add:\n',
+              '"cursors": { ".read":"auth != null", "$uid": { ".write":"auth != null && auth.uid == $uid" } }'
+            ));
         },
         remove(uid) {
           if (!rtdb) return;
@@ -67,7 +72,15 @@
         watchAll(cb) {
           if (!rtdb) return function(){};
           const r = rtdbRef(rtdb, 'cursors');
-          return onValue(r, function(snap){ cb(snap.val() || {}); });
+          return onValue(
+            r,
+            function(snap){ cb(snap.val() || {}); },
+            function(e){ console.error(
+              '[RTDB] cursors/watchAll denied:', e.code,
+              '— Firebase Console → Realtime Database → Rules → add:\n',
+              '"cursors": { ".read":"auth != null", "$uid": { ".write":"auth != null && auth.uid == $uid" } }'
+            ); }
+          );
         },
         registerDisconnect(uid) {
           if (!rtdb) return;
@@ -7607,13 +7620,17 @@
     }
 
     /* ── Render all cursors ────────────────────────────────── */
+    var _myUidForFilter = null; /* set when admin starts watching */
     function render(allData) {
       var now = Date.now();
       var seen = {};
+      var count = Object.keys(allData).length;
+      if (count > 0) console.log('[Cursors] Rendering', count, 'cursor(s):', Object.keys(allData));
 
       Object.keys(allData).forEach(function(uid) {
+        if (uid === _myUidForFilter) return; /* skip own cursor */
         var d = allData[uid];
-        if (!d || !d.px) return;
+        if (!d || d.px == null) return; /* was !d.px — that broke when px===0 */
         if (d.ts && now - d.ts > 30000) return; /* stale > 30 s */
 
         seen[uid] = true;
@@ -7700,10 +7717,17 @@
     if (stopBtn) stopBtn.addEventListener('click', function(){ setLocked(null); });
 
     /* ── Admin watcher ─────────────────────────────────────── */
-    function startWatching() {
+    function startWatching(myUid) {
       if (_unwatch) return;
-      _unwatch = window.fb.cursor.watchAll(function(allData) { render(allData); });
-      console.log('[Cursors] Admin watching all cursors');
+      _myUidForFilter = myUid || null;
+      _unwatch = window.fb.cursor.watchAll(function(allData) {
+        var ids = Object.keys(allData);
+        if (ids.length === 0) {
+          console.log('[Cursors] Connected — no active viewers yet. Waiting for someone to move their mouse.');
+        }
+        render(allData);
+      });
+      console.log('[Cursors] Admin watching all cursors. UID filter:', _myUidForFilter);
     }
 
     /* ── Visitor broadcaster ────────────────────────────────── */
@@ -7717,7 +7741,7 @@
         px:   px,
         py:   py,
         cl:   clicking ? 1 : 0,
-        name: (window.fb.currentUser() ? (window.fb.currentUser().displayName || 'Guest') : 'Guest'),
+        name: (window.fb.currentUser() ? (window.fb.currentUser().displayName || window.fb.currentUser().email || 'Guest') : 'Guest'),
         ts:   Date.now()
       });
     }
@@ -7726,7 +7750,7 @@
       if (_broadcastUid === uid) return;
       _broadcastUid = uid;
       window.fb.cursor.registerDisconnect(uid);
-      console.log('[Cursors] Broadcasting as', uid);
+      console.log('[Cursors] Broadcasting as uid:', uid, '— move the mouse to send position data');
 
       document.addEventListener('mousemove', function(e) {
         var px = Math.round(e.clientX + window.scrollX);
@@ -7752,13 +7776,13 @@
 
     /* ── Wire up on role change ─────────────────────────────── */
     function onRole(role) {
-      var user = window.fb.currentUser();
+      var user = window.fb && window.fb.currentUser ? window.fb.currentUser() : null;
       if (role === 'admin') {
-        startWatching();
-      } else if ((role === 'viewer' || role === 'public') && user && !user.isAnonymous) {
+        startWatching(user ? user.uid : null);
+      } else if (role === 'viewer' && user) {
         startBroadcasting(user.uid);
-      } else if (role === 'public' && user && user.isAnonymous) {
-        /* Anonymous visitors still tracked */
+      } else if (role === 'public' && user) {
+        /* Public (logged-in or anonymous) still broadcasts position */
         startBroadcasting(user.uid);
       }
     }
