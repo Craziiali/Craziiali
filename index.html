@@ -10,7 +10,7 @@
   <!-- Firebase -->
   <script type="module">
     import { initializeApp }  from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-    import { getAnalytics }   from "https://www.gstatic.com/firebasejs/12.13.0/firebase-analytics.js";
+    /* Analytics import removed — prevented by ad-blockers and not needed */
     import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
     import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, updateProfile, EmailAuthProvider, linkWithCredential } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
     import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-storage.js";
@@ -28,7 +28,7 @@
     };
 
     const app     = initializeApp(firebaseConfig);
-    try { getAnalytics(app); } catch(e) { console.warn("[Firebase] Analytics blocked:", e.message); }
+    /* getAnalytics removed — no analytics needed */
     const db      = getFirestore(app, 'invoice');
     const auth    = getAuth(app);
     const storage = getStorage(app);
@@ -7714,11 +7714,10 @@
 
     /* ── Render all cursors ────────────────────────────────── */
     var _myUidForFilter = null; /* set when admin starts watching */
+    var _lastSeenCount  = -1;   /* for connect/disconnect logging only */
     function render(allData) {
       var now = Date.now();
       var seen = {};
-      var count = Object.keys(allData).length;
-      if (count > 0) console.log('[Cursors] Rendering', count, 'cursor(s):', Object.keys(allData));
 
       Object.keys(allData).forEach(function(uid) {
         if (uid === _myUidForFilter) return; /* skip own cursor */
@@ -7758,6 +7757,16 @@
 
       /* Remove stale/disconnected */
       Object.keys(_els).forEach(function(uid) { if (!seen[uid]) removeEl(uid); });
+
+      /* Log only when a cursor appears or disappears — not on every position tick */
+      var visibleCount = Object.keys(seen).length;
+      if (visibleCount !== _lastSeenCount) {
+        _lastSeenCount = visibleCount;
+        if (visibleCount > 0)
+          console.log('[Cursors] ' + visibleCount + ' viewer(s) active:', Object.keys(seen));
+        else
+          console.log('[Cursors] No active viewers.');
+      }
 
       /* Follow locked cursor */
       if (_locked && _data[_locked]) followLocked();
@@ -7814,10 +7823,6 @@
       if (_unwatch) return;
       _myUidForFilter = myUid || null;
       _unwatch = window.fb.cursor.watchAll(function(allData) {
-        var ids = Object.keys(allData);
-        if (ids.length === 0) {
-          console.log('[Cursors] Connected — no active viewers yet. Waiting for someone to move their mouse.');
-        }
         render(allData);
       });
       console.log('[Cursors] Admin watching all cursors. UID filter:', _myUidForFilter);
