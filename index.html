@@ -3930,45 +3930,52 @@
     }
     body:not(.role-admin) .remote-cursors-layer { display:none !important; }
 
+    /* ── Remote cursor: glass circle (matches local halo-core style) ── */
     .r-cur {
-      position:absolute;top:0;left:0;pointer-events:none;
-      will-change:transform;
+      position: absolute; top: 0; left: 0;
+      width: 22px; height: 22px;
+      margin: -11px 0 0 -11px; /* center circle on cursor hotspot */
+      border-radius: 50%;
+      pointer-events: none;
+      will-change: transform;
+      backdrop-filter: blur(8px) brightness(1.2);
+      -webkit-backdrop-filter: blur(8px) brightness(1.2);
+      border: 1.5px solid rgba(255,255,255,.18);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.22);
+      /* color-specific glow + tint set inline per element */
+      transition: transform .06s linear, box-shadow .15s;
     }
-    .r-cur-arrow {
-      display:block;width:14px;height:18px;
-      filter:drop-shadow(0 1px 4px rgba(0,0,0,.5));
-    }
+    .r-cur.clicking { transform: scale(1.25) !important; }
     .r-cur-badge {
-      position:absolute;top:20px;left:10px;
-      display:flex;align-items:center;gap:4px;
-      padding:3px 5px 3px 8px;border-radius:7px;
-      font-family:var(--font-en-mono);font-size:9px;letter-spacing:.05em;
-      color:#fff;white-space:nowrap;
-      box-shadow:0 2px 8px rgba(0,0,0,.35);
-      pointer-events:none;
+      position: absolute; top: 26px; left: 0;
+      display: flex; align-items: center; gap: 4px;
+      padding: 3px 6px 3px 8px; border-radius: 7px;
+      font-family: var(--font-en-mono); font-size: 9px; letter-spacing: .05em;
+      color: #fff; white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,.35);
+      pointer-events: none;
     }
     .r-cur-lock {
-      width:15px;height:15px;border-radius:4px;border:none;
-      background:rgba(255,255,255,.18);color:#fff;font-size:9px;
-      display:flex;align-items:center;justify-content:center;
-      pointer-events:all;cursor:pointer;padding:0;
-      transition:background .15s;flex-shrink:0;
+      width: 15px; height: 15px; border-radius: 4px; border: none;
+      background: rgba(255,255,255,.18); color: #fff; font-size: 9px;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: all; cursor: pointer; padding: 0;
+      transition: background .15s; flex-shrink: 0;
     }
-    .r-cur-lock:hover { background:rgba(255,255,255,.38); }
-    .r-cur-lock.active { background:rgba(255,255,255,.45); }
+    .r-cur-lock:hover  { background: rgba(255,255,255,.38); }
+    .r-cur-lock.active { background: rgba(255,255,255,.45); }
     /* Click pulse ring */
-    .r-cur.clicking .r-cur-arrow { filter:drop-shadow(0 0 5px currentColor) drop-shadow(0 1px 4px rgba(0,0,0,.5)); }
     @keyframes rCurPulse {
-      from { transform:scale(.3);opacity:.9; }
-      to   { transform:scale(2.2);opacity:0; }
+      from { transform: scale(.3); opacity: .85; }
+      to   { transform: scale(2.6); opacity: 0;  }
     }
     .r-cur-ring {
-      position:absolute;top:-3px;left:-3px;
-      width:20px;height:20px;border-radius:50%;
-      border:2px solid currentColor;
-      pointer-events:none;opacity:0;
+      position: absolute; top: -5px; left: -5px;
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 2px solid currentColor;
+      pointer-events: none; opacity: 0;
     }
-    .r-cur.clicking .r-cur-ring { animation:rCurPulse .45s ease-out forwards; }
+    .r-cur.clicking .r-cur-ring { animation: rCurPulse .5s ease-out forwards; }
 
     /* ── Cursor follow bar ────────────────────────────────────── */
     .cursor-follow-bar {
@@ -7547,12 +7554,11 @@
       return COLORS[((h % COLORS.length) + COLORS.length) % COLORS.length];
     }
 
-    /* ── Cursor SVG arrow ──────────────────────────────────── */
-    function cursorSVG(color) {
-      return '<svg class="r-cur-arrow" viewBox="0 0 11 16" xmlns="http://www.w3.org/2000/svg">'
-           + '<path d="M0 0 L0 13.5 L3.2 10.3 L5.5 15.2 L7.1 14.4 L4.8 9.5 L8.5 9.5 Z" '
-           + 'fill="' + color + '" stroke="rgba(0,0,0,.4)" stroke-width=".6" stroke-linejoin="round"/>'
-           + '</svg>';
+    /* ── Hex → rgba() helper ──────────────────────────────── */
+    function hexToRgba(hex, a) {
+      var c = hex.replace('#', '');
+      if (c.length === 3) c = c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+      return 'rgba('+parseInt(c.slice(0,2),16)+','+parseInt(c.slice(2,4),16)+','+parseInt(c.slice(4,6),16)+','+a+')';
     }
 
     /* ── State ─────────────────────────────────────────────── */
@@ -7583,7 +7589,8 @@
 
       var badge = document.createElement('div');
       badge.className = 'r-cur-badge';
-      badge.style.background = color;
+      badge.style.background = hexToRgba(color, .85);
+      badge.style.backdropFilter = 'blur(6px)';
 
       var nameSpan = document.createElement('span');
       nameSpan.className = 'r-cur-name';
@@ -7602,9 +7609,15 @@
       ring.className = 'r-cur-ring';
       ring.style.borderColor = color;
 
+      /* Glass-circle tint — mirrors the local halo-core cur-dot pattern */
+      el.style.background   = 'radial-gradient(circle at 35% 30%, rgba(255,255,255,.18) 0%, '
+                              + hexToRgba(color, .22) + ' 55%, '
+                              + hexToRgba(color, .42) + ' 100%)';
+      el.style.borderColor  = hexToRgba(color, .80);
+      el.style.boxShadow    = 'inset 0 1px 0 rgba(255,255,255,.22), 0 0 10px 2px ' + hexToRgba(color, .45);
+
       badge.appendChild(nameSpan);
       badge.appendChild(lockBtn);
-      el.innerHTML = cursorSVG(color);
       el.appendChild(badge);
       el.appendChild(ring);
 
