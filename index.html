@@ -14,7 +14,7 @@
     import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
     import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, updateProfile, EmailAuthProvider, linkWithCredential } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
     import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-storage.js";
-    import { getDatabase, ref as rtdbRef, set as rtdbSet, remove as rtdbRemove, push as rtdbPush, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
+    import { getDatabase, ref as rtdbRef, set as rtdbSet, update as rtdbUpdate, remove as rtdbRemove, push as rtdbPush, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey:            "AIzaSyBiRkhf6uFxZfGq1zMf5ohB7UMuXMaCYNo",
@@ -81,6 +81,12 @@
               '"cursors": { ".read":"auth != null", "$uid": { ".write":"auth != null && auth.uid == $uid" } }'
             ); }
           );
+        },
+        /* Patch only field-preview keys without overwriting px/py */
+        writeField(uid, data) {
+          if (!rtdb) return;
+          rtdbUpdate(rtdbRef(rtdb, 'cursors/' + uid), data)
+            .catch(e => console.error('[RTDB] cursors/writeField:', e.code));
         },
         registerDisconnect(uid) {
           if (!rtdb) return;
@@ -3932,6 +3938,7 @@
       position:fixed;inset:0;pointer-events:none;z-index:90000;overflow:hidden;
     }
     body:not(.role-admin) .remote-cursors-layer { display:none !important; }
+    body:not([data-view="planner"]) .remote-cursors-layer { display:none !important; }
 
     /* ── Remote cursor: glass circle (matches local halo-core style) ── */
     .r-cur {
@@ -3948,7 +3955,8 @@
       /* color-specific glow + tint set inline per element */
       transition: transform .06s linear, box-shadow .15s;
     }
-    .r-cur.clicking { transform: scale(1.25) !important; }
+    /* .r-cur.clicking scale is now handled in JS (merged into translate) to
+       avoid the !important overriding the inline translate → top-left jump */
     .r-cur-badge {
       position: absolute; top: 26px; left: 0;
       display: flex; align-items: center; gap: 4px;
@@ -6986,7 +6994,7 @@
         }));
       }catch(e){}
 
-      /* 2 — debounced Firebase write (250 ms — feels live for collaborators) */
+      /* 2 — debounced Firestore write (150 ms — durable save after short pause) */
       if (_fbSaveTimer) clearTimeout(_fbSaveTimer);
       _fbSaveTimer = setTimeout(function(){
         _fbSaveTimer = null;
@@ -6994,7 +7002,7 @@
         var uid = window.fb.currentUser ? (window.fb.currentUser() || {}).uid || '' : '';
         _ownSaveTs = Date.now();
         window.fb.planner.save({ projects: projects, nextId: nextId }, uid);
-      }, 250);
+      }, 150);
     }
 
     function loadPlanner(){
@@ -7150,11 +7158,18 @@
             if(inp.dataset.field === 'location') return;
             /* keep desc width in sync with typed content */
             if(inp.dataset.field === 'notes') sizeDesc(inp);
-            /* Update in-memory data and push to Firebase on every keystroke.
-               savePlanner() has a built-in 250 ms debounce so Firebase receives
-               ~4 writes/sec at most — enough for letter-by-letter live sync. */
+            /* Update in-memory, then:
+               1. Broadcast via RTDB (30 ms debounce, ~50 ms latency) → instant preview
+               2. Persist via Firestore (150 ms debounce, ~300 ms latency) → durable save */
             var proj = projects.find(function(x){ return x.id===p.id; });
-            if(proj){ proj[inp.dataset.field] = inp.value; updateStats(); savePlanner(); }
+            if(proj){
+              proj[inp.dataset.field] = inp.value;
+              updateStats();
+              if (window._broadcastPlannerField) {
+                window._broadcastPlannerField(p.id, inp.dataset.field, inp.value);
+              }
+              savePlanner();
+            }
           });
           /* Also persist on blur (catches Tab-away, programmatic blur, etc.) */
           inp.addEventListener('blur', function(){
@@ -7731,10 +7746,27 @@
         var color = uidColor(uid);
         var el    = getOrCreateEl(uid, color);
 
-        /* Position: stored as absolute page coords → convert to viewport */
+        /* Position + scale — both in one transform so clicking never loses position */
         var vx = d.px - window.scrollX;
         var vy = d.py - window.scrollY;
-        el.style.transform = 'translate(' + vx + 'px,' + vy + 'px)';
+        el.style.transform = 'translate(' + vx + 'px,' + vy + 'px)' + (d.cl ? ' scale(1.25)' : '');
+
+        /* Live field-value preview (broadcast via RTDB alongside cursor position) */
+        if (d.fid != null && d.ffld) {
+          var plannerList = document.getElementById('plannerList');
+          if (plannerList) {
+            var targetRow = plannerList.querySelector('[data-id="' + d.fid + '"]');
+            if (targetRow) {
+              var targetInp = d.ffld === 'location'
+                ? targetRow.querySelector('.shoot-loc')
+                : targetRow.querySelector('[data-field="' + d.ffld + '"]');
+              var newFieldVal = (d.fval == null ? '' : String(d.fval));
+              if (targetInp && targetInp !== document.activeElement && targetInp.value !== newFieldVal) {
+                targetInp.value = newFieldVal;
+              }
+            }
+          }
+        }
 
         /* Name */
         var nameEl = el.querySelector('.r-cur-name');
@@ -7859,6 +7891,7 @@
       console.log('[Cursors] Broadcasting as uid:', uid, '— move the mouse to send position data');
 
       document.addEventListener('mousemove', function(e) {
+        if (document.body.dataset.view !== 'planner') return; /* planner only */
         var px = Math.round(e.clientX + window.scrollX);
         var py = Math.round(e.clientY + window.scrollY);
         if (Math.abs(px - _lastPx) < 4 && Math.abs(py - _lastPy) < 4) return;
@@ -7869,21 +7902,45 @@
       });
 
       document.addEventListener('mousedown', function(e) {
-        /* Use the last mousemove position rather than re-reading e.clientX here.
-           On double-click the browser can auto-scroll to focus an input *during*
-           the mousedown handler, mutating window.scrollX before we read it —
-           which produces a wildly wrong page coordinate and makes the remote
-           cursor jump to the left edge of the screen. */
+        if (document.body.dataset.view !== 'planner') return;
         if (_lastPx !== -99) broadcast(_lastPx, _lastPy, true);
       });
       document.addEventListener('mouseup', function(e) {
+        if (document.body.dataset.view !== 'planner') return;
         if (_lastPx !== -99) broadcast(_lastPx, _lastPy, false);
       });
+
+      /* Remove cursor from RTDB when viewer navigates away from planner */
+      new MutationObserver(function() {
+        if (document.body.dataset.view !== 'planner') {
+          window.fb.cursor.remove(uid);
+          _lastPx = -99; _lastPy = -99;
+        }
+      }).observe(document.body, { attributes: true, attributeFilter: ['data-view'] });
 
       window.addEventListener('beforeunload', function() {
         window.fb.cursor.remove(uid);
       });
     }
+
+    /* ── Field-value broadcaster (RTDB fast path, ~50 ms latency) ──── */
+    var _fieldTimer = null;
+    function broadcastField(projectId, fieldName, value) {
+      if (!_broadcastUid || !window.fb || !window.fb.cursor) return;
+      if (document.body.dataset.view !== 'planner') return;
+      if (_fieldTimer) clearTimeout(_fieldTimer);
+      _fieldTimer = setTimeout(function() {
+        _fieldTimer = null;
+        window.fb.cursor.writeField(_broadcastUid, {
+          fid:  projectId,
+          ffld: fieldName,
+          fval: value,
+          ts:   Date.now()
+        });
+      }, 30); /* 30 ms — fast enough for letter-by-letter, not a flood */
+    }
+    /* Expose so the planner IIFE (different scope) can call it */
+    window._broadcastPlannerField = broadcastField;
 
     /* ── Wire up on role change ─────────────────────────────── */
     function onRole(role) {
