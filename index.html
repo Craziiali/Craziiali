@@ -6634,8 +6634,11 @@
     }
 
     function mkProject(d){
+      /* Preserve d.id when hydrating from saved/remote data;
+         only mint a new id when creating a brand-new project */
+      var id = (d && d.id != null) ? d.id : nextId++;
       return {
-        id:          nextId++,
+        id:          id,
         name:        (d&&d.name)        || '',
         client:      (d&&d.client)      || '',
         date:        (d&&d.date)        || '',
@@ -6889,14 +6892,87 @@
     var _unsubPlanner = null;  /* Firestore onSnapshot unsub */
 
     function applyRemoteData(data) {
-      /* Merge: take whichever has more projects or newer nextId */
       if (!data || !Array.isArray(data.projects)) return;
-      projects = data.projects.map(function(d){ return mkProject(d); });
+      var newProjects = data.projects.map(function(d){ return mkProject(d); });
       if (data.nextId && data.nextId > nextId) nextId = data.nextId;
       try {
-        localStorage.setItem(STORE_KEY, JSON.stringify({ projects: projects, nextId: nextId }));
+        localStorage.setItem(STORE_KEY, JSON.stringify({ projects: newProjects, nextId: nextId }));
       } catch(e) {}
-      renderPlanner(); updateStats();
+
+      var list = document.getElementById('plannerList');
+
+      /* Compare ID sequences — if structure changed (add / remove / reorder) do a full re-render */
+      var oldIds = projects.map(function(p){ return p.id; }).join(',');
+      var newIds = newProjects.map(function(p){ return p.id; }).join(',');
+      var prevProjects = projects;
+      projects = newProjects;
+
+      if (!list || oldIds !== newIds) {
+        renderPlanner(); updateStats(); return;
+      }
+
+      /* ── Surgical patch: same set of projects, only field values changed ──
+         Updates only what differed — no innerHTML wipe, no animation replay,
+         no focus loss on the admin side. The viewer sees their own typing
+         reflected back letter-by-letter without any jarring refresh. */
+      var focused = document.activeElement;
+      newProjects.forEach(function(p, i) {
+        var row = list.querySelector('[data-id="' + p.id + '"]');
+        if (!row) return;
+        var old = prevProjects[i];
+
+        /* Text inputs that carry data-field */
+        row.querySelectorAll('[data-field]').forEach(function(inp) {
+          var field = inp.dataset.field;
+          if (field === 'time')     return;  /* handled below */
+          if (field === 'location') return;  /* .shoot-loc has no data-field */
+          if (inp === focused)      return;  /* don't stomp a live admin edit */
+          var newVal = p[field] || '';
+          if (inp.value !== newVal) {
+            inp.value = newVal;
+            if (field === 'notes') sizeDesc(inp);
+          }
+        });
+
+        /* Time — stored as HH:MM, displayed in 12-hour format */
+        var timeInp = row.querySelector('[data-field="time"]');
+        if (timeInp && timeInp !== focused) {
+          var t12 = fmt12(p.time);
+          if (timeInp.value !== t12) timeInp.value = t12;
+        }
+
+        /* Location — no data-field attr, managed by attachLocDisplay */
+        var locInp = row.querySelector('.shoot-loc');
+        if (locInp && locInp !== focused) {
+          var loc = p.location || '';
+          if (locInp.value !== loc) locInp.value = loc;
+        }
+
+        /* Status */
+        if (!old || old.status !== p.status) {
+          var dot = row.querySelector('.shoot-dot');
+          if (dot) dot.dataset.s = p.status;
+          row.querySelectorAll('.ss-btn').forEach(function(b) {
+            b.classList.toggle('active', b.dataset.s === p.status);
+          });
+          var nameInp = row.querySelector('.shoot-name');
+          if (nameInp) {
+            nameInp.classList.toggle('s-done',      p.status === 'done');
+            nameInp.classList.toggle('s-cancelled', p.status === 'cancelled');
+          }
+        }
+
+        /* Priority */
+        if (!old || old.priority !== p.priority) {
+          var prioBtn = row.querySelector('.shoot-prio');
+          if (prioBtn) {
+            prioBtn.dataset.p   = p.priority;
+            prioBtn.textContent = PLABELS[p.priority];
+          }
+        }
+      });
+
+      updateStats();
     }
 
     function savePlanner(){
@@ -7776,10 +7852,15 @@
       });
 
       document.addEventListener('mousedown', function(e) {
-        broadcast(Math.round(e.clientX + window.scrollX), Math.round(e.clientY + window.scrollY), true);
+        /* Use the last mousemove position rather than re-reading e.clientX here.
+           On double-click the browser can auto-scroll to focus an input *during*
+           the mousedown handler, mutating window.scrollX before we read it —
+           which produces a wildly wrong page coordinate and makes the remote
+           cursor jump to the left edge of the screen. */
+        if (_lastPx !== -99) broadcast(_lastPx, _lastPy, true);
       });
       document.addEventListener('mouseup', function(e) {
-        broadcast(Math.round(e.clientX + window.scrollX), Math.round(e.clientY + window.scrollY), false);
+        if (_lastPx !== -99) broadcast(_lastPx, _lastPy, false);
       });
 
       window.addEventListener('beforeunload', function() {
