@@ -6110,7 +6110,11 @@
   </div>
 
   <!-- ══ AUTH OVERLAY ════════════════════════════════════════════ -->
-  <div id="authOverlay" class="auth-gone" role="dialog" aria-modal="true" aria-label="Sign in">
+  <!-- Starts VISIBLE (no auth-gone) so it covers everything from the very first
+       paint — before any JavaScript runs. The inline script below immediately
+       re-hides it for returning authenticated users (localStorage hint).
+       For fresh / public visitors the overlay stays visible until they sign in. -->
+  <div id="authOverlay" role="dialog" aria-modal="true" aria-label="Sign in">
     <div class="auth-window">
       <div class="auth-brand">CRAZIIALI</div>
 
@@ -6172,6 +6176,21 @@
       </div>
     </div>
   </div>
+  <!-- Inline early-hide: if localStorage says the user was already authed,
+       hide the overlay immediately (before Firebase resolves) so they don't
+       see a flash of the sign-in card over their already-unlocked view.
+       For brand-new / signed-out visitors the overlay stays visible. -->
+  <script>(function(){
+    try {
+      var authed  = localStorage.getItem('cz_authed') === '1';
+      var preview = window.location.search.indexOf('invoice=') >= 0
+                 || window.location.search.indexOf('preview=') >= 0;
+      if (authed || preview) {
+        var ov = document.getElementById('authOverlay');
+        if (ov) ov.classList.add('auth-gone');
+      }
+    } catch(e) {}
+  })();</script>
 
   <!-- Auth bar: "Sign in" when public, avatar+name+signout when logged in -->
   <div class="auth-user-bar" id="authUserBar">
@@ -7885,14 +7904,22 @@
       });
     }
 
-    function startBroadcasting(uid) {
+    /* allowedViews: array of data-view values where cursor should broadcast.
+       Defaults to ['planner']. Pass ['invoice'] for guests on the invoice page,
+       or ['planner','invoice'] for signed-in viewers who move between both. */
+    function startBroadcasting(uid, allowedViews) {
       if (_broadcastUid === uid) return;
+      allowedViews = allowedViews || ['planner'];
       _broadcastUid = uid;
       window.fb.cursor.registerDisconnect(uid);
-      console.log('[Cursors] Broadcasting as uid:', uid, '— move the mouse to send position data');
+      console.log('[Cursors] Broadcasting as uid:', uid, '— allowed on:', allowedViews.join(','));
+
+      function inAllowedView() {
+        return allowedViews.indexOf(document.body.dataset.view) >= 0;
+      }
 
       document.addEventListener('mousemove', function(e) {
-        if (document.body.dataset.view !== 'planner') return; /* planner only */
+        if (!inAllowedView()) return;
         var px = Math.round(e.clientX + window.scrollX);
         var py = Math.round(e.clientY + window.scrollY);
         if (Math.abs(px - _lastPx) < 4 && Math.abs(py - _lastPy) < 4) return;
@@ -7903,17 +7930,17 @@
       });
 
       document.addEventListener('mousedown', function(e) {
-        if (document.body.dataset.view !== 'planner') return;
+        if (!inAllowedView()) return;
         if (_lastPx !== -99) broadcast(_lastPx, _lastPy, true);
       });
       document.addEventListener('mouseup', function(e) {
-        if (document.body.dataset.view !== 'planner') return;
+        if (!inAllowedView()) return;
         if (_lastPx !== -99) broadcast(_lastPx, _lastPy, false);
       });
 
-      /* Remove cursor from RTDB when viewer navigates away from planner */
+      /* Remove cursor from RTDB when viewer navigates away from an allowed view */
       new MutationObserver(function() {
-        if (document.body.dataset.view !== 'planner') {
+        if (!inAllowedView()) {
           window.fb.cursor.remove(uid);
           _lastPx = -99; _lastPy = -99;
         }
@@ -7961,11 +7988,17 @@
       if (role === 'admin') {
         startWatching(user ? user.uid : null);
       } else if (role === 'viewer' && user) {
-        startBroadcasting(user.uid);
-      } else if (role === 'public' && user) {
-        /* Public (logged-in or anonymous) still broadcasts position */
-        startBroadcasting(user.uid);
+        /* Signed-in viewer: cursor only on planner */
+        startBroadcasting(user.uid, ['planner']);
+      } else if (role === 'preview' && user) {
+        /* Invoice preview guest (anonymous Firebase user, ?invoice= URL).
+           data-view stays 'planner' in preview mode (default from view IIFE),
+           but allow both 'planner' and 'invoice' so cursor is tracked
+           regardless of which view name is active. */
+        startBroadcasting(user.uid, ['planner', 'invoice']);
       }
+      /* role === 'public': unauthenticated user behind sign-in overlay.
+         No cursor broadcast until they sign in and become 'viewer'. */
     }
 
     document.addEventListener('cz-role', function(e) { onRole(e.detail.role); });
