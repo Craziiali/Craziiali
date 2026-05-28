@@ -5781,6 +5781,12 @@
   .mb-canvas-entering .mb-topbar { animation:focusIn .45s cubic-bezier(.16,1,.3,1) both; animation-delay:40ms; }
   .mb-canvas-entering .mb-toolbar { animation:focusIn .45s cubic-bezier(.16,1,.3,1) both; animation-delay:100ms; }
   .home-entering .tool-card:nth-child(4) { animation:focusIn .70s cubic-bezier(.16,1,.3,1) both; animation-delay:640ms; }
+  /* Selection ring drawn on top of selected .mb-el */
+  .mb-el-sel-ring { position:absolute; inset:-2px; border:2px solid #7e8cf7; border-radius:3px; pointer-events:none; z-index:5; }
+
+  /* Live pen-draw preview path */
+  .mb-drawing-path { pointer-events:none; }
+
   @media (max-width:600px) {
     .mb-gallery-wrap { padding:32px 16px 60px; }
     .mb-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
@@ -9468,6 +9474,7 @@
     }
 
     function renderAll() {
+      if (!canvas || !svgLayer) return; /* canvas not yet initialized */
       /* Remove orphaned DOM elements */
       Object.keys(_elDoms).forEach(function(id){
         if (!_elements[id]) { _elDoms[id].remove(); delete _elDoms[id]; }
@@ -10398,26 +10405,34 @@
     /* ── Board Gallery ───────────────────────────────────── */
     var _boards = {};
     var _unsubBoards = null;
+    var _galleryListenersAdded = false;
 
     function initGallery() {
-      var grid = document.getElementById('mbGrid');
-      if (!grid) return;
-      if (_unsubBoards) { _unsubBoards(); }
+      /* Set up click handlers once (no role required) */
+      if (!_galleryListenersAdded) {
+        _galleryListenersAdded = true;
+        var newBtn = document.getElementById('mbNewBoardBtn');
+        if (newBtn) newBtn.addEventListener('click', function(){
+          showRenameModal('', function(name){
+            if (!name.trim()) return;
+            window.fb.boards.create(name.trim(), _myUid).then(function(id){
+              openBoard(id);
+            });
+          }, 'New Board', 'Create');
+        });
+        var nb=document.getElementById('mbNotifBtn'), cnb=document.getElementById('mbCanvasNotifBtn');
+        if(nb) nb.addEventListener('click', function(){ toggleNotifPanel(_myUid); });
+        if(cnb) cnb.addEventListener('click', function(){ toggleNotifPanel(_myUid); });
+      }
+    }
+
+    /* Separate function — only called when admin role is confirmed */
+    function startGalleryWatch() {
+      if (_unsubBoards || !window.fb || !window.fb.boards) return;
       _unsubBoards = window.fb.boards.watchAll(function(data){
         _boards = data || {};
         renderGallery();
       });
-      document.getElementById('mbNewBoardBtn').addEventListener('click', function(){
-        showRenameModal('', function(name){
-          if (!name.trim()) return;
-          window.fb.boards.create(name.trim(), _myUid).then(function(id){
-            openBoard(id);
-          });
-        }, 'New Board', 'Create');
-      });
-      var nb=document.getElementById('mbNotifBtn'), cnb=document.getElementById('mbCanvasNotifBtn');
-      if(nb) nb.addEventListener('click', function(){ toggleNotifPanel(_myUid); });
-      if(cnb) cnb.addEventListener('click', function(){ toggleNotifPanel(_myUid); });
     }
 
     function renderGallery() {
@@ -10636,7 +10651,7 @@
         if ((e.ctrlKey||e.metaKey) && e.key==='=') { e.preventDefault(); setZoom(_zoom*1.2); return; }
         if ((e.ctrlKey||e.metaKey) && e.key==='-') { e.preventDefault(); setZoom(_zoom/1.2); return; }
         if ((e.ctrlKey||e.metaKey) && e.key==='0') { e.preventDefault(); fitAll(); return; }
-        if ((e.ctrlKey||e.metaKey) && e.key==='1') { e.preventDefault(); var r=stage.getBoundingClientRect(); _zoom=1; _panX=r.width/2-r.width/2; _panY=r.height/2-r.height/2; applyTransform(); return; }
+        if ((e.ctrlKey||e.metaKey) && e.key==='1') { e.preventDefault(); if(stage){ var r=stage.getBoundingClientRect(); _zoom=1; _panX=r.width/2; _panY=r.height/2; applyTransform(); } return; }
       });
       document.addEventListener('keyup', function(e){
         if (e.key===' ') { _spaceDown=false; if(stage)stage.style.cursor=''; }
@@ -10732,6 +10747,8 @@
           /* Register admin UID in RTDB so viewers can find where to send notifications */
           if (window.fb.adminMeta) window.fb.adminMeta.setAdminUid(_myUid);
           watchEditRequests();
+          /* Start board gallery subscription — admin-only Firebase path */
+          startGalleryWatch();
         }
       }
 
