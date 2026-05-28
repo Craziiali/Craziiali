@@ -5663,13 +5663,13 @@
   .mb-collab-avatars { display:flex; align-items:center; flex-shrink:0; }
   .mb-collab-avatar { width:26px; height:26px; border-radius:50%; border:2px solid var(--bg); font-family:var(--font-en-mono); font-size:9px; font-weight:600; display:flex; align-items:center; justify-content:center; color:#0a0a0b; margin-left:-8px; flex-shrink:0; position:relative; }
   .mb-collab-avatar:first-child { margin-left:0; }
-  .mb-toolbar { position:absolute; left:14px; top:50%; transform:translateY(-50%); z-index:200; display:flex; flex-direction:column; gap:2px; background:rgba(11,11,14,.92); border:1px solid rgba(243,243,239,.09); border-radius:10px; padding:8px 6px; backdrop-filter:blur(12px); pointer-events:all; }
-  .mb-tool-btn { width:36px; height:36px; border-radius:7px; border:1px solid transparent; background:transparent; color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s,border-color .15s,color .15s; position:relative; }
-  .mb-tool-btn:hover { background:rgba(243,243,239,.07); color:var(--ink); }
+  .mb-toolbar { position:absolute; bottom:24px; left:50%; transform:translateX(-50%); z-index:200; display:flex; flex-direction:row; align-items:center; gap:2px; background:rgba(11,11,14,.92); border:1px solid rgba(243,243,239,.11); border-radius:16px; padding:6px 10px; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); pointer-events:all; box-shadow:0 8px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.3); }
+  .mb-tool-btn { width:38px; height:38px; border-radius:10px; border:1px solid transparent; background:transparent; color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s,border-color .15s,color .15s,transform .1s; position:relative; }
+  .mb-tool-btn:hover { background:rgba(243,243,239,.08); color:var(--ink); transform:scale(1.08); }
   .mb-tool-btn.active { background:rgba(126,140,247,.15); border-color:rgba(126,140,247,.4); color:#7e8cf7; }
   .mb-tool-btn svg { width:17px; height:17px; }
-  .mb-tool-sep { height:1px; background:rgba(243,243,239,.07); margin:4px 2px; }
-  .mb-tool-btn[data-tip]::after { content:attr(data-tip); position:absolute; left:calc(100% + 10px); top:50%; transform:translateY(-50%); background:#1e1e26; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.08em; white-space:nowrap; padding:5px 10px; border-radius:5px; border:1px solid rgba(243,243,239,.1); pointer-events:none; opacity:0; transition:opacity .15s; }
+  .mb-tool-sep { width:1px; height:24px; background:rgba(243,243,239,.09); margin:0 4px; flex-shrink:0; }
+  .mb-tool-btn[data-tip]::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); background:#1e1e26; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.08em; white-space:nowrap; padding:5px 10px; border-radius:5px; border:1px solid rgba(243,243,239,.1); pointer-events:none; opacity:0; transition:opacity .15s; z-index:999; }
   .mb-tool-btn[data-tip]:hover::after { opacity:1; }
   .mb-propbar { position:absolute; top:60px; left:50%; transform:translateX(-50%); z-index:190; background:rgba(11,11,14,.92); border:1px solid rgba(243,243,239,.09); border-radius:8px; padding:6px 10px; display:flex; align-items:center; gap:8px; backdrop-filter:blur(12px); pointer-events:none; white-space:nowrap; opacity:0; transition:opacity .15s; }
   .mb-propbar.show { opacity:1; pointer-events:all; }
@@ -5685,7 +5685,7 @@
   .mb-font-select { background:transparent; border:1px solid rgba(243,243,239,.1); border-radius:4px; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.06em; padding:3px 7px; cursor:pointer; outline:none; transition:border-color .15s; }
   .mb-font-select:hover { border-color:rgba(243,243,239,.25); }
   .mb-font-select option { background:#1a1a20; }
-  .mb-stage { position:absolute; inset:0; top:52px; overflow:hidden; cursor:default; }
+  .mb-stage { position:absolute; inset:0; top:52px; bottom:0; overflow:hidden; cursor:default; }
   .mb-stage.tool-select { cursor:default; }
   .mb-stage.tool-hand { cursor:grab; }
   .mb-stage.tool-hand.panning { cursor:grabbing; }
@@ -5698,14 +5698,17 @@
   .mb-bg-lines { background-image:linear-gradient(rgba(243,243,239,.06) 1px,transparent 1px); background-size:40px 40px; }
   .mb-el { position:absolute; box-sizing:border-box; user-select:none; -webkit-user-select:none; cursor:move; transform-origin:0 0; }
   .mb-el.locked { cursor:not-allowed; }
-  .mb-sticky { border-radius:3px; padding:14px 14px 28px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.45),0 1px 4px rgba(0,0,0,.3); min-width:140px; min-height:100px; }
+  .mb-sticky { border-radius:6px; padding:14px 14px 28px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 6px 28px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.3),0 0 0 1px rgba(0,0,0,.1); min-width:140px; min-height:100px; transition:box-shadow .15s; }
+  .mb-el:hover .mb-sticky { box-shadow:0 12px 40px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.12); }
   .mb-sticky-text { flex:1; background:transparent; border:none; outline:none; resize:none; font-family:var(--font-en-mono); font-size:12px; line-height:1.6; color:rgba(10,10,11,.85); width:100%; height:100%; overflow:hidden; word-break:break-word; cursor:inherit; caret-color:rgba(10,10,11,.85); }
   .mb-sticky-text::placeholder { color:rgba(10,10,11,.4); }
   .mb-sticky-text:focus { cursor:text; }
   .mb-textblock { min-width:100px; min-height:30px; padding:4px 6px; border-radius:2px; outline:none; background:transparent; word-break:break-word; }
   .mb-textblock:focus { outline:2px solid rgba(126,140,247,.4); }
   .mb-shape-svg { width:100%; height:100%; overflow:visible; pointer-events:none; }
-  .mb-img { width:100%; height:100%; object-fit:contain; display:block; border-radius:2px; pointer-events:none; user-select:none; -webkit-user-drag:none; }
+  .mb-img { width:100%; height:100%; object-fit:contain; display:block; border-radius:6px; pointer-events:none; user-select:none; -webkit-user-drag:none; }
+  /* Polished frame overlay on image elements */
+  .mb-img-frame { position:absolute; inset:0; border-radius:6px; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.13), 0 8px 32px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4); pointer-events:none; z-index:2; }
   .mb-img-placeholder { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:rgba(243,243,239,.04); border:1px dashed rgba(243,243,239,.15); border-radius:4px; color:var(--ink-soft); opacity:.4; font-family:var(--font-en-mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
   .mb-img-placeholder svg { width:24px; height:24px; }
   .mb-handle { position:absolute; width:9px; height:9px; background:#fff; border:1.5px solid #7e8cf7; border-radius:2px; z-index:10; pointer-events:all; transform:translate(-50%,-50%); }
@@ -5721,21 +5724,54 @@
   .mb-svg-layer { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
   .mb-path-el { pointer-events:stroke; cursor:pointer; }
   .mb-path-el.selected-path { filter:drop-shadow(0 0 4px rgba(126,140,247,.8)); }
+  /* ── Remote cursor: glass circle (matches planner style) ── */
   .mb-cursor { position:absolute; top:0; left:0; pointer-events:none; z-index:900; transform-origin:0 0; transition:transform .06s linear; will-change:transform; }
   .mb-cursor.new-cursor { transition:none; }
-  .mb-cursor svg { width:20px; height:20px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
-  .mb-cursor-label { position:absolute; top:18px; left:8px; padding:3px 8px; border-radius:10px; font-family:var(--font-en-mono); font-size:9px; font-weight:600; color:#fff; white-space:nowrap; letter-spacing:.04em; }
-  .mb-minimap { position:absolute; bottom:20px; right:20px; width:160px; height:90px; background:rgba(11,11,14,.85); border:1px solid rgba(243,243,239,.1); border-radius:8px; overflow:hidden; z-index:200; pointer-events:none; backdrop-filter:blur(8px); }
-  .mb-minimap-canvas { width:100%; height:100%; display:block; }
-  .mb-minimap-viewport { position:absolute; border:1.5px solid rgba(126,140,247,.7); background:rgba(126,140,247,.08); pointer-events:none; }
+  .mb-cursor-dot { width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%; pointer-events:none; backdrop-filter:blur(8px) brightness(1.2); -webkit-backdrop-filter:blur(8px) brightness(1.2); border:1.5px solid rgba(255,255,255,.18); box-shadow:inset 0 1px 0 rgba(255,255,255,.22); transition:box-shadow .15s; }
+  .mb-cursor-label { position:absolute; top:16px; left:-4px; display:flex; align-items:center; gap:4px; padding:3px 8px 3px 10px; border-radius:7px; font-family:var(--font-en-mono); font-size:9px; letter-spacing:.05em; color:#fff; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.35); pointer-events:none; }
+  @keyframes mbCursorPulse { from{transform:scale(.3);opacity:.85} to{transform:scale(2.6);opacity:0} }
+  .mb-cursor-ring { position:absolute; top:-5px; left:-5px; width:32px; height:32px; border-radius:50%; border:2px solid currentColor; pointer-events:none; opacity:0; }
+  .mb-cursor.clicking .mb-cursor-ring { animation:mbCursorPulse .5s ease-out forwards; }
+  /* minimap removed */
   .mb-drop-overlay { position:absolute; inset:0; background:rgba(126,140,247,.08); border:3px dashed rgba(126,140,247,.5); z-index:9000; display:flex; align-items:center; justify-content:center; pointer-events:none; opacity:0; transition:opacity .15s; }
   .mb-drop-overlay.show { opacity:1; }
   .mb-drop-overlay-text { font-family:var(--font-en-mono); font-size:13px; letter-spacing:.15em; text-transform:uppercase; color:#7e8cf7; font-weight:500; }
-  .mb-readonly-banner { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); z-index:300; background:rgba(11,11,14,.92); border:1px solid rgba(243,243,239,.12); border-radius:24px; padding:10px 20px; display:flex; align-items:center; gap:14px; backdrop-filter:blur(12px); box-shadow:0 8px 32px rgba(0,0,0,.5); white-space:nowrap; pointer-events:all; }
+  .mb-readonly-banner { position:absolute; bottom:90px; left:50%; transform:translateX(-50%); z-index:300; background:rgba(11,11,14,.92); border:1px solid rgba(243,243,239,.12); border-radius:24px; padding:10px 20px; display:flex; align-items:center; gap:14px; backdrop-filter:blur(12px); box-shadow:0 8px 32px rgba(0,0,0,.5); white-space:nowrap; pointer-events:all; }
   .mb-readonly-text { font-family:var(--font-en-mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); opacity:.7; }
   .mb-request-btn { padding:5px 16px; border-radius:20px; border:1px solid rgba(126,140,247,.5); background:rgba(126,140,247,.1); color:#7e8cf7; font-family:var(--font-en-mono); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:background .2s,border-color .2s; }
   .mb-request-btn:hover { background:rgba(126,140,247,.2); border-color:rgba(126,140,247,.7); }
   .mb-request-btn:disabled { opacity:.4; cursor:default; }
+  /* ── Fun panel (Timer / Music / Vote) ─────────────────────── */
+  .mb-fun-panel { position:absolute; bottom:84px; left:50%; transform:translateX(-50%); z-index:300; background:rgba(11,11,14,.95); border:1px solid rgba(243,243,239,.13); border-radius:16px; padding:18px 16px 14px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); box-shadow:0 20px 60px rgba(0,0,0,.7),0 4px 16px rgba(0,0,0,.4); pointer-events:all; min-width:220px; }
+  .mb-fun-section { border-bottom:1px solid rgba(243,243,239,.07); padding-bottom:14px; margin-bottom:14px; }
+  .mb-fun-section:last-child { border-bottom:none; padding-bottom:0; margin-bottom:0; }
+  .mb-fun-section-title { font-family:var(--font-en-mono); font-size:7.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-soft); opacity:.4; margin-bottom:10px; }
+  /* Timer */
+  .mb-fun-timer { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .mb-fun-timer-display { font-family:var(--font-en-mono); font-size:32px; letter-spacing:.04em; color:var(--ink); font-weight:600; cursor:default; }
+  .mb-fun-timer-display.running { color:#7e8cf7; }
+  .mb-fun-timer-display.done { color:#e05c5c; animation:mbTimerDone .6s ease infinite alternate; }
+  @keyframes mbTimerDone { from{opacity:1} to{opacity:.4} }
+  .mb-fun-timer-controls { display:flex; align-items:center; gap:6px; }
+  .mb-fun-btn { padding:5px 14px; border-radius:20px; border:1px solid rgba(243,243,239,.12); background:rgba(243,243,239,.06); color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.06em; cursor:pointer; transition:all .15s; white-space:nowrap; }
+  .mb-fun-btn:hover { background:rgba(243,243,239,.12); color:var(--ink); border-color:rgba(243,243,239,.22); }
+  .mb-fun-btn.primary { border-color:rgba(126,140,247,.5); background:rgba(126,140,247,.1); color:#7e8cf7; }
+  .mb-fun-btn.primary:hover { background:rgba(126,140,247,.2); border-color:rgba(126,140,247,.7); }
+  .mb-fun-btn.playing { border-color:rgba(126,200,130,.5); background:rgba(126,200,130,.1); color:#7ec882; }
+  .mb-fun-btn.playing:hover { background:rgba(126,200,130,.2); }
+  /* Music */
+  .mb-fun-music-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .mb-fun-music-select { flex:1; background:rgba(243,243,239,.05); border:1px solid rgba(243,243,239,.1); border-radius:7px; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.04em; padding:6px 10px; outline:none; cursor:pointer; transition:border-color .15s; }
+  .mb-fun-music-select:hover { border-color:rgba(243,243,239,.22); }
+  .mb-fun-music-select option { background:#1a1a20; }
+  .mb-fun-vol-row { display:flex; align-items:center; gap:8px; }
+  .mb-fun-vol-label { font-family:var(--font-en-mono); font-size:7.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft); opacity:.4; flex-shrink:0; }
+  .mb-fun-vol-slider { flex:1; accent-color:#7e8cf7; cursor:pointer; }
+  /* Vote */
+  .mb-fun-vote-new { width:100%; padding:9px; border-radius:9px; border:1px solid rgba(243,243,239,.12); background:rgba(243,243,239,.04); color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; transition:all .15s; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .mb-fun-vote-new:hover { background:rgba(243,243,239,.09); color:var(--ink); border-color:rgba(243,243,239,.24); }
+  /* Fun button active state in toolbar */
+  .mb-tool-btn.fun-active { background:rgba(255,200,80,.1); border-color:rgba(255,200,80,.4); color:#ffc850; }
   @keyframes mbOverlayIn { from{opacity:0} to{opacity:1} }
   @keyframes mbCardIn { from{transform:scale(.94) translateY(12px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
   .mb-share-modal,.mb-rename-modal,.mb-delete-confirm,.mb-editors-modal { position:fixed; inset:0; background:rgba(5,5,6,.75); z-index:99010; display:flex; align-items:center; justify-content:center; padding:24px; backdrop-filter:blur(6px); animation:mbOverlayIn .2s ease both; }
@@ -5778,8 +5814,12 @@
   .mb-entering .mb-card:nth-child(4) { animation-delay:400ms; }
   .mb-entering .mb-card:nth-child(5) { animation-delay:480ms; }
   .mb-entering .mb-card:nth-child(6) { animation-delay:560ms; }
+  @keyframes mbToolbarFocusIn {
+    from { opacity:0; transform:translateX(-50%) translateY(16px); filter:blur(7px); }
+    to   { opacity:1; transform:translateX(-50%);                   filter:blur(0);   }
+  }
   .mb-canvas-entering .mb-topbar { animation:focusIn .45s cubic-bezier(.16,1,.3,1) both; animation-delay:40ms; }
-  .mb-canvas-entering .mb-toolbar { animation:focusIn .45s cubic-bezier(.16,1,.3,1) both; animation-delay:100ms; }
+  .mb-canvas-entering .mb-toolbar { animation:mbToolbarFocusIn .45s cubic-bezier(.16,1,.3,1) both; animation-delay:100ms; }
   .home-entering .tool-card:nth-child(4) { animation:focusIn .70s cubic-bezier(.16,1,.3,1) both; animation-delay:640ms; }
   /* Selection ring drawn on top of selected .mb-el */
   .mb-el-sel-ring { position:absolute; inset:-2px; border:2px solid #7e8cf7; border-radius:3px; pointer-events:none; z-index:5; }
@@ -5790,11 +5830,10 @@
   @media (max-width:600px) {
     .mb-gallery-wrap { padding:32px 16px 60px; }
     .mb-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
-    .mb-toolbar { left:8px; }
+    .mb-toolbar { left:8px; right:8px; transform:none; border-radius:12px; overflow-x:auto; justify-content:flex-start; }
     .mb-topbar { padding:0 10px; gap:8px; }
     .mb-zoom-pct { min-width:38px; }
-    .mb-minimap { display:none; }
-    .mb-readonly-banner { bottom:12px; padding:8px 14px; gap:10px; }
+    .mb-readonly-banner { bottom:84px; padding:8px 14px; gap:10px; }
   }
 
   </style>
@@ -5901,15 +5940,7 @@
       <div class="mb-topbar-sep"></div>
       <input class="mb-board-name-input" id="mbBoardNameInput" type="text" value="Untitled Board" readonly>
       <div style="flex:1"></div>
-      <div class="mb-zoom-ctrl">
-        <button class="mb-zoom-btn" id="mbZoomOut" type="button" title="Zoom out (Ctrl+-)">
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6h8"/></svg>
-        </button>
-        <button class="mb-zoom-pct" id="mbZoomPct" type="button" title="Reset zoom (Ctrl+0)">100%</button>
-        <button class="mb-zoom-btn" id="mbZoomIn" type="button" title="Zoom in (Ctrl+=)">
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 2v8M2 6h8"/></svg>
-        </button>
-      </div>
+      <button class="mb-zoom-pct" id="mbZoomPct" type="button" title="Fit all (Ctrl+0)">100%</button>
       <div class="mb-topbar-sep"></div>
       <div class="mb-collab-avatars" id="mbCollabAvatars"></div>
       <div class="mb-topbar-sep"></div>
@@ -5959,6 +5990,10 @@
       <button class="mb-tool-btn" id="mbt-image" data-tool="image" data-tip="Image (I)" type="button">
         <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3.5" width="14" height="11" rx="1.5"/><circle cx="6.5" cy="7.5" r="1.2"/><path d="M2 12l3.5-3.5 3 3 2.5-2.5L16 14"/></svg>
       </button>
+      <div class="mb-tool-sep"></div>
+      <button class="mb-tool-btn" id="mbt-fun" data-tip="Timer · Music · Vote" type="button">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4"/><circle cx="9" cy="9" r="2.5"/></svg>
+      </button>
     </div>
 
     <!-- Properties bar (shown when selection has style options) -->
@@ -5978,12 +6013,6 @@
       <div class="mb-drop-overlay" id="mbDropOverlay">
         <span class="mb-drop-overlay-text">Drop image here</span>
       </div>
-    </div>
-
-    <!-- Minimap -->
-    <div class="mb-minimap" id="mbMinimap">
-      <canvas class="mb-minimap-canvas" id="mbMinimapCanvas" width="160" height="90"></canvas>
-      <div class="mb-minimap-viewport" id="mbMinimapViewport"></div>
     </div>
 
     <!-- Read-only / request access banner (for non-editors) -->
@@ -9168,11 +9197,10 @@
 
     /* Throttle: cursor broadcast */
     var _cursorTimer=null, _lastCx=-9999, _lastCy=-9999;
-    var _minimapTimer=null;
     var _thumbTimer=null;
 
     /* ── DOM refs ──────────────────────────────────────── */
-    var stage, canvas, svgLayer, selbox, propbar, minimap, minimapCanvas, minimapVp;
+    var stage, canvas, svgLayer, selbox, propbar;
     var toolbar, topbar, boardNameInput, zoomPctEl, collabAvatars;
     var readonlyBanner, requestEditBtn;
     var dropOverlay;
@@ -9220,7 +9248,6 @@
     function applyTransform() {
       canvas.style.transform = 'translate(' + _panX + 'px,' + _panY + 'px) scale(' + _zoom + ')';
       updateZoomPct();
-      scheduleMinimapUpdate();
       positionAllCursors();
     }
 
@@ -9270,6 +9297,46 @@
       if (d.locked) el.classList.add('locked');
       else el.classList.remove('locked');
 
+      /* Vote elements re-render on every call (votes change live) */
+      if (d.type === 'vote') {
+        el.className = 'mb-el mb-sticky';
+        el.style.background = d.color || '#ffd66e';
+        el.style.padding = '14px';
+        var vOpts = d.options || ['👍 Yes','👎 No'];
+        var vVotes = d.votes || {};
+        var vTotal = Object.keys(vVotes).length;
+        var vCounts = {}; vOpts.forEach(function(o){ vCounts[o]=0; });
+        Object.values(vVotes).forEach(function(v){ if(vCounts[v]!=null)vCounts[v]++; });
+        var vMy = vVotes[_myUid||'__'] || null;
+        el.innerHTML = '<div style="font-family:var(--font-en-mono);font-size:11px;font-weight:700;color:rgba(10,10,11,.85);margin-bottom:10px;word-break:break-word">'+escHtml(d.question||'Vote')+'</div>'
+          + vOpts.map(function(o){
+              var pct = vTotal ? Math.round(vCounts[o]/vTotal*100) : 0;
+              var picked = vMy===o;
+              return '<div class="mb-vote-opt'+(picked?' picked':'')+'" data-opt="'+escHtml(o)+'" style="margin-bottom:6px;padding:7px 10px;border-radius:8px;background:'+(picked?'rgba(10,10,11,.15)':'rgba(10,10,11,.07)')+';cursor:pointer;border:1.5px solid '+(picked?'rgba(10,10,11,.25)':'transparent')+';">'
+                +'<div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--font-en-mono);font-size:10px;color:rgba(10,10,11,.8)"><span>'+escHtml(o)+'</span><span>'+vCounts[o]+'</span></div>'
+                +(vTotal?'<div style="height:3px;border-radius:2px;background:rgba(10,10,11,.1);margin-top:4px"><div style="height:100%;width:'+pct+'%;background:rgba(10,10,11,.35);border-radius:2px;transition:width .3s"></div></div>':'')
+                +'</div>';
+            }).join('')
+          + '<div style="font-family:var(--font-en-mono);font-size:8px;color:rgba(10,10,11,.4);margin-top:6px">'+vTotal+' vote'+(vTotal!==1?'s':'')+'</div>';
+        el.querySelectorAll('.mb-vote-opt').forEach(function(optEl){
+          optEl.addEventListener('click', function(ev){
+            ev.stopPropagation();
+            if (!_myUid) return;
+            var opt = optEl.dataset.opt;
+            var nv = Object.assign({}, d.votes||{});
+            if (nv[_myUid] === opt) delete nv[_myUid]; else nv[_myUid] = opt;
+            scheduleElUpdate(id, { votes: nv });
+          });
+        });
+        el.addEventListener('mousedown', function(ev){ if(ev.target.closest('.mb-vote-opt'))ev.stopPropagation(); });
+        if (isNew) { canvas.appendChild(el); _elDoms[id]=el; attachElListeners(el,id); }
+        /* Add/update selection ring */
+        var existRing = el.querySelector('.mb-el-sel-ring');
+        if (_selected.indexOf(id) >= 0) { if(!existRing){var sr=document.createElement('div');sr.className='mb-el-sel-ring';el.appendChild(sr);} renderHandles(el,id); }
+        else { if(existRing)existRing.remove(); removeHandles(el); }
+        return;
+      }
+
       if (isNew) {
         if (d.type === 'sticky') {
           el.className += ' mb-sticky';
@@ -9308,6 +9375,12 @@
             img.src = d.url;
             img.draggable = false;
             el.appendChild(img);
+            /* Polished frame overlay */
+            if (!el.querySelector('.mb-img-frame')) {
+              var frame = document.createElement('div');
+              frame.className = 'mb-img-frame';
+              el.appendChild(frame);
+            }
           } else {
             var ph = document.createElement('div');
             ph.className = 'mb-img-placeholder';
@@ -9806,11 +9879,19 @@
     function onStageWheel(e) {
       e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
+        /* Pinch-to-zoom (trackpad) or Ctrl+scroll */
         var factor = e.deltaY < 0 ? 1.1 : 1/1.1;
         setZoom(_zoom * factor, e.clientX, e.clientY);
+      } else if (e.shiftKey) {
+        /* Shift+scroll = horizontal pan */
+        _panX -= e.deltaY; applyTransform();
+      } else if (Math.abs(e.deltaX) > 1) {
+        /* Two-finger horizontal swipe (trackpad) = pan */
+        _panX -= e.deltaX; _panY -= e.deltaY; applyTransform();
       } else {
-        _panX -= e.deltaX; _panY -= e.deltaY;
-        applyTransform();
+        /* Plain mouse wheel = zoom centered on cursor */
+        var factor2 = e.deltaY < 0 ? 1.1 : 1/1.1;
+        setZoom(_zoom * factor2, e.clientX, e.clientY);
       }
     }
 
@@ -10193,11 +10274,21 @@
           var el = document.createElement('div');
           el.className = 'mb-cursor new-cursor';
           var color = d.color || uidColor(uid);
-          el.innerHTML = '<svg viewBox="0 0 20 20"><path d="M4 2 14 9 9 10.5 7 16z" fill="'+color+'" stroke="#fff" stroke-width="1"/></svg><span class="mb-cursor-label" style="background:'+color+'">'+escHtml(d.name||'Guest')+'</span>';
-          /* Append to STAGE (not canvas) so cursor size is unaffected by zoom */
+          /* Glass circle cursor — same style as planner remote cursors */
+          el.innerHTML = '<div class="mb-cursor-dot" style="background:'+color+'22;box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 0 0 1.5px '+color+'88,0 0 14px '+color+'44;"></div>'
+            +'<span class="mb-cursor-label" style="background:'+color+'">'+escHtml(d.name||'Guest')+'</span>'
+            +'<div class="mb-cursor-ring" style="color:'+color+'"></div>';
+          /* Append to STAGE (not canvas) so cursor is unaffected by zoom */
           if (stage) stage.appendChild(el);
           _cursorEls[uid] = el;
           requestAnimationFrame(function(){ el.classList.remove('new-cursor'); });
+        } else {
+          /* Update name/color if changed */
+          var dot = _cursorEls[uid].querySelector('.mb-cursor-dot');
+          var lbl = _cursorEls[uid].querySelector('.mb-cursor-label');
+          var color2 = d.color || uidColor(uid);
+          if (dot) dot.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.22),0 0 0 1.5px '+color2+'88,0 0 14px '+color2+'44';
+          if (lbl) { lbl.textContent = d.name||'Guest'; lbl.style.background = color2; }
         }
       });
       positionAllCursors();
@@ -10272,35 +10363,10 @@
       window.fb.boards.updateMeta(_boardId, { thumbnail: thumb });
     }
 
-    /* ── Minimap ──────────────────────────────────────────── */
-    function scheduleMinimapUpdate() {
-      if (_minimapTimer) clearTimeout(_minimapTimer);
-      _minimapTimer = setTimeout(updateMinimap, 80);
-    }
+    /* minimap removed — functions kept as no-ops to avoid stale call errors */
+    function scheduleMinimapUpdate() {}
 
-    function updateMinimap() {
-      if (!minimapCanvas || !minimapVp) return;
-      var mCtx = minimapCanvas.getContext('2d');
-      mCtx.clearRect(0,0,160,90);
-      mCtx.fillStyle='#0b0b0c'; mCtx.fillRect(0,0,160,90);
-      var els=Object.values(_elements);
-      if (!els.length) return;
-      var mx=Infinity,my=Infinity,mxr=-Infinity,myr=-Infinity;
-      els.forEach(function(d){ mx=Math.min(mx,d.x);my=Math.min(my,d.y);mxr=Math.max(mxr,d.x+(d.w||200));myr=Math.max(myr,d.y+(d.h||120)); });
-      var fw=Math.max(mxr-mx,600), fh=Math.max(myr-my,400);
-      var sc=Math.min(140/fw,80/fh);
-      var ox=10-(mx*sc), oy=5-(my*sc);
-      els.forEach(function(d){
-        mCtx.fillStyle=d.type==='sticky'?(d.color||'#ffd66e'):'rgba(243,243,239,.2)';
-        mCtx.fillRect(d.x*sc+ox,d.y*sc+oy,(d.w||200)*sc,(d.h||120)*sc);
-      });
-      /* Viewport rect */
-      var r=stage.getBoundingClientRect();
-      var vx=((-_panX/_zoom)*sc+ox), vy=((-_panY/_zoom)*sc+oy);
-      var vw=(r.width/_zoom*sc), vh=(r.height/_zoom*sc);
-      minimapVp.style.left=vx+'px'; minimapVp.style.top=vy+'px';
-      minimapVp.style.width=vw+'px'; minimapVp.style.height=vh+'px';
-    }
+    function updateMinimap() { /* minimap removed */ }
 
     /* ── Notifications ───────────────────────────────────── */
     function initNotifications(uid) {
@@ -10397,6 +10463,216 @@
           item.remove();
         });
       });
+    }
+
+    /* ── Fun Panel (Timer · Music · Vote) ────────────────── */
+    var _funPanel = null;
+    var _timerSec = 300; /* 5 min */
+    var _timerRunning = false;
+    var _timerInterval = null;
+    var _audioCtx = null;
+    var _musicNodes = [];
+    var _musicGainNode = null;
+    var _musicPlaying = false;
+    var _musicTrack = 0;
+    var _musicVol = 40;
+
+    function toggleFunPanel() {
+      if (_funPanel) { _funPanel.remove(); _funPanel = null;
+        var fb2 = document.getElementById('mbt-fun'); if(fb2)fb2.classList.remove('fun-active'); return; }
+      var fb2 = document.getElementById('mbt-fun'); if(fb2)fb2.classList.add('fun-active');
+      _funPanel = document.createElement('div');
+      _funPanel.className = 'mb-fun-panel';
+      _funPanel.id = 'mbFunPanel';
+      _funPanel.innerHTML =
+        '<div class="mb-fun-section">'
+          +'<div class="mb-fun-section-title">Timer</div>'
+          +'<div class="mb-fun-timer">'
+            +'<div class="mb-fun-timer-display" id="mbTimerDisplay">'+fmtTimer(_timerSec)+'</div>'
+            +'<div class="mb-fun-timer-controls">'
+              +'<button class="mb-fun-btn" id="mbTimerMinus">−1 min</button>'
+              +'<button class="mb-fun-btn primary" id="mbTimerPlay">▶ Start</button>'
+              +'<button class="mb-fun-btn" id="mbTimerPlus">+1 min</button>'
+            +'</div>'
+          +'</div>'
+        +'</div>'
+        +'<div class="mb-fun-section">'
+          +'<div class="mb-fun-section-title">Music</div>'
+          +'<div class="mb-fun-music-row">'
+            +'<button class="mb-fun-btn'+ (_musicPlaying?' playing':'') +'" id="mbMusicPlay">'+(_musicPlaying?'■ Stop':'▶ Play')+'</button>'
+            +'<select class="mb-fun-music-select" id="mbMusicTrack">'
+              +'<option value="0"'+ (_musicTrack===0?' selected':'') +'>Acoustic ambient</option>'
+              +'<option value="1"'+ (_musicTrack===1?' selected':'') +'>Deep focus</option>'
+              +'<option value="2"'+ (_musicTrack===2?' selected':'') +'>Rain & drift</option>'
+            +'</select>'
+          +'</div>'
+          +'<div class="mb-fun-vol-row">'
+            +'<span class="mb-fun-vol-label">Vol</span>'
+            +'<input type="range" class="mb-fun-vol-slider" id="mbMusicVol" min="0" max="100" value="'+_musicVol+'">'
+          +'</div>'
+        +'</div>'
+        +'<div class="mb-fun-section">'
+          +'<div class="mb-fun-section-title">Vote</div>'
+          +'<button class="mb-fun-vote-new" id="mbNewVoteBtn">'
+            +'<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M7 2v10M2 7h10"/></svg>'
+            +'New vote'
+          +'</button>'
+        +'</div>';
+      (document.getElementById('viewMoodboardCanvas') || document.body).appendChild(_funPanel);
+
+      /* Timer controls */
+      document.getElementById('mbTimerMinus').addEventListener('click', function(){
+        if (_timerRunning) return;
+        _timerSec = Math.max(60, _timerSec - 60); _funUpdateDisplay();
+      });
+      document.getElementById('mbTimerPlus').addEventListener('click', function(){
+        _timerSec = Math.min(3600, _timerSec + 60); _funUpdateDisplay();
+      });
+      document.getElementById('mbTimerPlay').addEventListener('click', funToggleTimer);
+
+      /* Music controls */
+      document.getElementById('mbMusicPlay').addEventListener('click', funToggleMusic);
+      document.getElementById('mbMusicTrack').addEventListener('change', function(){
+        _musicTrack = parseInt(this.value)||0;
+        if (_musicPlaying) { funStopMusic(); funStartMusic(); }
+      });
+      document.getElementById('mbMusicVol').addEventListener('input', function(){
+        _musicVol = parseInt(this.value)||0;
+        if (_musicGainNode) _musicGainNode.gain.setTargetAtTime(_musicVol/100 * 0.25, getAudioCtx().currentTime, 0.05);
+      });
+
+      /* Vote */
+      document.getElementById('mbNewVoteBtn').addEventListener('click', funNewVote);
+
+      /* Close on outside click */
+      setTimeout(function(){
+        document.addEventListener('mousedown', function onOut(e){
+          if (!_funPanel||!_funPanel.contains(e.target)){
+            var fb3=document.getElementById('mbt-fun');
+            if(fb3&&!fb3.contains(e.target)){
+              if(_funPanel){_funPanel.remove();_funPanel=null;}
+              fb3&&fb3.classList.remove('fun-active');
+              document.removeEventListener('mousedown',onOut);
+            }
+          }
+        });
+      }, 0);
+    }
+
+    function fmtTimer(s) {
+      var m = Math.floor(s/60), sec = s%60;
+      return (m<10?'0':'')+m+':'+(sec<10?'0':'')+sec;
+    }
+
+    function _funUpdateDisplay() {
+      var disp = document.getElementById('mbTimerDisplay');
+      if (disp) {
+        disp.textContent = fmtTimer(_timerSec);
+        disp.className = 'mb-fun-timer-display' + (_timerRunning?' running':'') + (_timerSec===0?' done':'');
+      }
+      var btn = document.getElementById('mbTimerPlay');
+      if (btn) { btn.textContent = _timerRunning ? '■ Stop' : (_timerSec===0 ? '↺ Reset' : '▶ Start'); }
+    }
+
+    function funToggleTimer() {
+      if (_timerSec === 0) { _timerSec = 300; _timerRunning = false; _funUpdateDisplay(); return; }
+      if (_timerRunning) {
+        clearInterval(_timerInterval); _timerInterval = null; _timerRunning = false;
+      } else {
+        _timerRunning = true;
+        _timerInterval = setInterval(function(){
+          if (_timerSec > 0) { _timerSec--; _funUpdateDisplay(); }
+          else { clearInterval(_timerInterval); _timerInterval = null; _timerRunning = false; _funUpdateDisplay(); }
+        }, 1000);
+      }
+      _funUpdateDisplay();
+    }
+
+    function getAudioCtx() {
+      if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (_audioCtx.state === 'suspended') _audioCtx.resume();
+      return _audioCtx;
+    }
+
+    function funStartMusic() {
+      var ctx = getAudioCtx();
+      _musicGainNode = ctx.createGain();
+      _musicGainNode.gain.value = _musicVol / 100 * 0.25;
+      _musicGainNode.connect(ctx.destination);
+
+      /* White noise source */
+      var bufLen = ctx.sampleRate * 4;
+      var buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+      var data = buf.getChannelData(0);
+      /* Pink-ish noise: accumulate white noise for warmth */
+      var b0=0,b1=0,b2=0,b3=0,b4=0,b5=0;
+      for (var i=0; i<bufLen; i++) {
+        var white = Math.random()*2-1;
+        b0=.99886*b0+white*.0555179; b1=.99332*b1+white*.0750759;
+        b2=.96900*b2+white*.1538520; b3=.86650*b3+white*.3104856;
+        b4=.55000*b4+white*.5329522; b5=-.7616*b5-white*.0168980;
+        data[i] = (b0+b1+b2+b3+b4+b5+white*.5362) * 0.11;
+      }
+      var noiseSource = ctx.createBufferSource();
+      noiseSource.buffer = buf; noiseSource.loop = true;
+
+      /* Per-track filter settings */
+      var lpFreq = [600, 300, 1200][_musicTrack] || 600;
+      var lpFilter = ctx.createBiquadFilter();
+      lpFilter.type = 'lowpass'; lpFilter.frequency.value = lpFreq;
+      lpFilter.Q.value = 0.3;
+
+      noiseSource.connect(lpFilter); lpFilter.connect(_musicGainNode);
+      noiseSource.start();
+      _musicNodes.push(noiseSource, lpFilter);
+
+      /* Soft sine tones (acoustic warmth) for track 0 and 1 */
+      if (_musicTrack !== 2) {
+        var tones = _musicTrack === 0 ? [130.81, 196, 261.63] : [82.41, 110, 164.81];
+        tones.forEach(function(freq){
+          var osc = ctx.createOscillator();
+          var oscGain = ctx.createGain();
+          osc.type = 'sine'; osc.frequency.value = freq;
+          oscGain.gain.value = 0.018;
+          osc.connect(oscGain); oscGain.connect(_musicGainNode);
+          osc.start();
+          _musicNodes.push(osc, oscGain);
+        });
+      }
+      _musicPlaying = true;
+    }
+
+    function funStopMusic() {
+      _musicNodes.forEach(function(n){ try{n.stop&&n.stop(); n.disconnect&&n.disconnect();}catch(e){} });
+      _musicNodes = [];
+      if (_musicGainNode) { try{_musicGainNode.disconnect();}catch(e){} _musicGainNode = null; }
+      _musicPlaying = false;
+    }
+
+    function funToggleMusic() {
+      if (_musicPlaying) { funStopMusic(); }
+      else { funStartMusic(); }
+      /* Update button */
+      var btn = document.getElementById('mbMusicPlay');
+      if (btn) { btn.textContent = _musicPlaying ? '■ Stop' : '▶ Play'; btn.className = 'mb-fun-btn' + (_musicPlaying?' playing':''); }
+    }
+
+    function funNewVote() {
+      if (!canEdit()) return;
+      /* Create a vote sticky on the canvas at center of view */
+      if (!_boardId) return;
+      var r = stage ? stage.getBoundingClientRect() : {width:800,height:600};
+      var cx = screenToCanvas(r.left + r.width/2, r.top + r.height/2);
+      var id = genId();
+      var colors = ['#ffd66e','#ff8a8a','#b8f0b8','#8ad4ff','#dbb8ff'];
+      var d = { type:'vote', x:Math.round(cx.x-120), y:Math.round(cx.y-100), w:240, h:200,
+        question:'Vote', options:['👍 Yes','👎 No'], votes:{}, color:colors[Math.floor(Math.random()*colors.length)],
+        z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
+      _elements[id] = d;
+      pushUndo({ type:'create', id:id, data:JSON.parse(JSON.stringify(d)) });
+      commitElSet(id, d);
+      renderEl(id, d);
+      scheduleThumbUpdate();
     }
 
     function watchEditRequests() {
@@ -10680,9 +10956,6 @@
       readonlyBanner  = document.getElementById('mbReadonlyBanner');
       requestEditBtn  = document.getElementById('mbRequestEditBtn');
       dropOverlay     = document.getElementById('mbDropOverlay');
-      minimap         = document.getElementById('mbMinimap');
-      minimapCanvas   = document.getElementById('mbMinimapCanvas');
-      minimapVp       = document.getElementById('mbMinimapViewport');
 
       stage.addEventListener('mousedown', onStageMouseDown);
       document.addEventListener('mousemove', onMouseMove);
@@ -10694,9 +10967,11 @@
         btn.addEventListener('click', function(){ setTool(btn.dataset.tool); });
       });
 
-      /* Zoom controls */
-      document.getElementById('mbZoomIn') .addEventListener('click', function(){ setZoom(_zoom*1.25); });
-      document.getElementById('mbZoomOut').addEventListener('click', function(){ setZoom(_zoom/1.25); });
+      /* Fun panel button */
+      var funBtn = document.getElementById('mbt-fun');
+      if (funBtn) funBtn.addEventListener('click', toggleFunPanel);
+
+      /* Zoom pct click = fit all */
       document.getElementById('mbZoomPct').addEventListener('click', fitAll);
 
       /* Back button */
