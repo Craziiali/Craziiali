@@ -916,6 +916,9 @@
         var menu = document.getElementById('invMenu');
         if (menu) menu.classList.remove('open');
         document.body.style.overflow = '';
+        /* Remove cursor before sign-out so the RTDB write succeeds while
+           auth is still valid — onDisconnect alone can lag several seconds */
+        if (window._cursorRemoveSelf) window._cursorRemoveSelf();
         if (window.fb && window.fb.signOut) window.fb.signOut();
       };
 
@@ -1233,6 +1236,8 @@
             if (menu) menu.classList.remove('open');
             document.body.style.overflow = '';
             if (window.editMode && window.disableEdit) window.disableEdit();
+            /* Remove cursor before sign-out (auth still valid here) */
+            if (window._cursorRemoveSelf) window._cursorRemoveSelf();
             window.fb.signOut();
           }
         });
@@ -7969,6 +7974,18 @@
     }
     /* Expose so the planner IIFE (different scope) can call it */
     window._broadcastPlannerField = broadcastField;
+
+    /* ── Cursor self-removal bridge ─────────────────────────── */
+    /* Called by sign-out handlers BEFORE fb.signOut() so the RTDB
+       write succeeds while auth is still valid (onDisconnect alone
+       can take several seconds to fire after logout).             */
+    window._cursorRemoveSelf = function() {
+      if (!_broadcastUid || !window.fb || !window.fb.cursor) return;
+      window.fb.cursor.remove(_broadcastUid);
+      _broadcastUid = null;
+      _lastPx = -99;
+      _lastPy = -99;
+    };
 
     /* ── Wire up on role change ─────────────────────────────── */
     function onRole(role) {
