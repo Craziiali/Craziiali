@@ -5590,9 +5590,9 @@
   .mb-gallery-topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:44px; }
   .mb-gallery-left { display:flex; align-items:center; gap:24px; }
   .mb-gallery-title { font-family:var(--font-en-display); font-style:italic; font-size:32px; font-weight:400; color:var(--ink); margin:0; line-height:1; }
-  .mb-notif-btn { position:relative; width:36px; height:36px; border-radius:50%; border:1px solid var(--rule); background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); transition:border-color .2s,color .2s,background .2s; flex-shrink:0; }
-  .mb-notif-btn:hover { border-color:rgba(243,243,239,.3); color:var(--ink); background:rgba(243,243,239,.04); }
-  .mb-notif-btn svg { width:16px; height:16px; }
+  .mb-notif-btn { position:relative; width:32px; height:32px; border-radius:9px; border:1px solid transparent; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:rgba(243,243,239,.5); transition:border-color .15s,color .15s,background .15s; flex-shrink:0; }
+  .mb-notif-btn:hover { border-color:rgba(243,243,239,.12); color:rgba(243,243,239,.9); background:rgba(243,243,239,.07); }
+  .mb-notif-btn svg { width:15px; height:15px; }
   .mb-notif-badge { position:absolute; top:-3px; right:-3px; width:16px; height:16px; background:#e05c5c; border-radius:50%; border:2px solid var(--bg); font-family:var(--font-en-mono); font-size:8px; font-weight:600; color:#fff; display:flex; align-items:center; justify-content:center; line-height:1; }
   .mb-notif-badge:empty { display:none; }
   .mb-new-board-btn { display:flex; align-items:center; gap:8px; padding:0 20px; height:36px; border:1px solid var(--rule); border-radius:3px; background:transparent; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; transition:border-color .22s,color .22s,background .22s; white-space:nowrap; }
@@ -5644,12 +5644,14 @@
 
   /* ═══ MOOD BOARD — Canvas View ═════════════════════════════════ */
   #viewMoodboardCanvas { overflow:hidden; position:fixed; inset:0; background:var(--bg); }
-  .mb-topbar { position:absolute; top:0; left:0; right:0; z-index:200; height:52px; background:rgba(11,11,14,.95); border-bottom:1px solid rgba(243,243,239,.09); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); display:flex; align-items:center; padding:0 16px; gap:12px; pointer-events:all; box-shadow:0 1px 0 rgba(243,243,239,.04); }
+  .mb-topbar { position:absolute; top:0; left:0; right:0; z-index:200; height:64px; background:transparent; border-bottom:none; backdrop-filter:none; display:flex; align-items:center; padding:12px 16px; gap:0; pointer-events:none; justify-content:space-between; }
+  .mb-topbar-left { display:flex; align-items:center; gap:0; background:rgba(13,13,17,.94); border:1px solid rgba(243,243,239,.13); border-radius:14px; padding:0 14px; height:38px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); box-shadow:0 4px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06); pointer-events:all; flex-shrink:0; max-width:55vw; overflow:hidden; }
+  .mb-topbar-right { display:flex; align-items:center; gap:6px; background:rgba(13,13,17,.94); border:1px solid rgba(243,243,239,.13); border-radius:14px; padding:0 8px 0 12px; height:38px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); box-shadow:0 4px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06); pointer-events:all; flex-shrink:0; }
   .mb-topbar-back { display:flex; align-items:center; gap:6px; font-family:var(--font-en-mono); font-size:8.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft); opacity:.65; cursor:pointer; border:none; background:transparent; padding:4px 0; transition:opacity .2s; flex-shrink:0; }
   .mb-topbar-back:hover { opacity:1; }
   .mb-topbar-back svg { width:9px; height:9px; }
-  .mb-topbar-sep { width:1px; height:20px; background:rgba(243,243,239,.1); flex-shrink:0; }
-  .mb-board-name-input { flex:1; min-width:0; background:transparent; border:none; outline:none; font-family:var(--font-en-display); font-style:italic; font-size:16px; font-weight:400; color:var(--ink); padding:0; cursor:text; }
+  .mb-topbar-sep { width:1px; height:18px; background:rgba(243,243,239,.12); flex-shrink:0; margin:0 10px; }
+  .mb-board-name-input { flex:1; min-width:60px; max-width:220px; background:transparent; border:none; outline:none; font-family:var(--font-en-display); font-style:italic; font-size:15px; font-weight:400; color:var(--ink); padding:0; cursor:text; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .mb-board-name-input[readonly] { cursor:default; pointer-events:none; }
   .mb-zoom-ctrl { display:flex; align-items:center; gap:2px; flex-shrink:0; }
   .mb-zoom-btn { width:28px; height:28px; border-radius:4px; border:1px solid transparent; background:transparent; color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:var(--font-en-mono); font-size:10px; transition:background .15s,border-color .15s,color .15s; }
@@ -5669,7 +5671,9 @@
   .mb-tool-btn:hover { background:rgba(243,243,239,.09); color:rgba(243,243,239,.9); }
   .mb-tool-btn:active { background:rgba(243,243,239,.06); transform:scale(.96); transition:transform .06s; }
   .mb-tool-btn.active { background:rgba(126,140,247,.18); border-color:rgba(126,140,247,.5); color:#b4bcff; box-shadow:0 0 0 1px rgba(126,140,247,.12), 0 2px 10px rgba(126,140,247,.22); }
-  .mb-tool-btn svg { width:16px; height:16px; }
+  .mb-tool-btn svg { width:16px; height:16px; transition:transform .22s cubic-bezier(.34,1.56,.64,1); will-change:transform; }
+  .mb-tool-btn:hover svg { transform:translateY(-2px) scale(1.1); }
+  .mb-tool-btn:active svg { transform:translateY(0) scale(.9); transition-duration:.08s; }
   .mb-tool-sep { width:1px; height:20px; background:rgba(243,243,239,.1); margin:0 5px; flex-shrink:0; }
   .mb-tool-btn[data-tip]::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); background:rgba(20,20,28,.98); color:rgba(243,243,239,.75); font-family:var(--font-en-mono); font-size:8.5px; letter-spacing:.08em; white-space:nowrap; padding:5px 10px; border-radius:6px; border:1px solid rgba(243,243,239,.12); pointer-events:none; opacity:0; transition:opacity .12s; z-index:999; box-shadow:0 4px 16px rgba(0,0,0,.5); }
   .mb-tool-btn[data-tip]:hover::after { opacity:1; }
@@ -5687,14 +5691,14 @@
   .mb-font-select { background:transparent; border:1px solid rgba(243,243,239,.1); border-radius:4px; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.06em; padding:3px 7px; cursor:pointer; outline:none; transition:border-color .15s; }
   .mb-font-select:hover { border-color:rgba(243,243,239,.25); }
   .mb-font-select option { background:#1a1a20; }
-  .mb-stage { position:absolute; inset:0; top:52px; bottom:0; overflow:hidden; cursor:default; }
+  .mb-stage { position:absolute; inset:0; top:0; bottom:0; overflow:hidden; cursor:default; }
   .mb-stage.tool-select { cursor:default; }
   .mb-stage.tool-hand { cursor:grab; }
   .mb-stage.tool-hand.panning { cursor:grabbing; }
   .mb-stage.tool-pen,.mb-stage.tool-sticky,.mb-stage.tool-rect,.mb-stage.tool-circle,.mb-stage.tool-diamond,.mb-stage.tool-arrow { cursor:crosshair; }
   .mb-stage.tool-text { cursor:text; }
   .mb-stage.tool-image { cursor:copy; }
-  .mb-canvas { position:absolute; top:0; left:0; width:0; height:0; transform-origin:0 0; will-change:transform; }
+  .mb-canvas { position:absolute; top:0; left:0; width:0; height:0; transform-origin:0 0; will-change:transform; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
   .mb-bg-dots { background-image:radial-gradient(circle,rgba(243,243,239,.16) 1px,transparent 1px); background-size:24px 24px; }
   .mb-bg-grid { background-image:linear-gradient(rgba(243,243,239,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(243,243,239,.06) 1px,transparent 1px); background-size:40px 40px; }
   .mb-bg-lines { background-image:linear-gradient(rgba(243,243,239,.06) 1px,transparent 1px); background-size:40px 40px; }
@@ -5702,15 +5706,15 @@
   .mb-el.locked { cursor:not-allowed; }
   .mb-sticky { border-radius:14px; padding:14px 14px 30px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,.4),0 2px 8px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.18),0 0 0 1px rgba(0,0,0,.08); min-width:140px; min-height:100px; transition:box-shadow .2s,transform .15s; }
   .mb-el:hover .mb-sticky { box-shadow:0 16px 48px rgba(0,0,0,.5),0 4px 14px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2),0 0 0 1px rgba(0,0,0,.1); transform:translateY(-1px); }
-  .mb-sticky-text { flex:1; background:transparent; border:none; outline:none; resize:none; font-family:var(--font-en-mono); font-size:12px; line-height:1.6; color:rgba(10,10,11,.85); width:100%; height:100%; overflow:hidden; word-break:break-word; cursor:inherit; caret-color:rgba(10,10,11,.85); }
-  .mb-sticky-text::placeholder { color:rgba(10,10,11,.4); }
-  .mb-sticky-text:focus { cursor:text; }
+  .mb-sticky-text { flex:1; background:transparent; border:none; outline:none; resize:none; font-family:var(--font-en-mono); font-size:12px; line-height:1.65; color:rgba(10,10,11,.85); width:100%; min-height:0; overflow:hidden; word-break:break-word; cursor:inherit; caret-color:rgba(10,10,11,.85); margin:0; padding:0; display:block; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  .mb-sticky-text::placeholder { color:rgba(10,10,11,.38); }
+  .mb-sticky-text:focus { cursor:text; outline:none; }
   .mb-textblock { min-width:100px; min-height:30px; padding:4px 6px; border-radius:2px; outline:none; background:transparent; word-break:break-word; }
   .mb-textblock:focus { outline:2px solid rgba(126,140,247,.4); }
   .mb-shape-svg { width:100%; height:100%; overflow:visible; pointer-events:none; }
   .mb-img { width:100%; height:100%; object-fit:contain; display:block; border-radius:6px; pointer-events:none; user-select:none; -webkit-user-drag:none; }
   /* Polished frame overlay on image elements */
-  .mb-img-frame { position:absolute; inset:0; border-radius:6px; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.13), 0 8px 32px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4); pointer-events:none; z-index:2; }
+  .mb-img-frame { position:absolute; inset:0; border-radius:8px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.1), 0 8px 28px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.3); pointer-events:none; z-index:2; background:transparent; }
   .mb-img-placeholder { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:rgba(243,243,239,.04); border:1px dashed rgba(243,243,239,.15); border-radius:4px; color:var(--ink-soft); opacity:.4; font-family:var(--font-en-mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
   .mb-img-placeholder svg { width:24px; height:24px; }
   .mb-handle { position:absolute; width:8px; height:8px; background:#fff; border:1.5px solid #8e9bf8; border-radius:3px; z-index:10; pointer-events:all; transform:translate(-50%,-50%); box-shadow:0 1px 4px rgba(0,0,0,.4),0 0 0 1px rgba(126,140,247,.2); transition:transform .1s; }
@@ -5833,10 +5837,14 @@
   @media (max-width:600px) {
     .mb-gallery-wrap { padding:32px 16px 60px; }
     .mb-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
-    .mb-toolbar { left:8px; right:8px; transform:none; border-radius:12px; overflow-x:auto; justify-content:flex-start; }
-    .mb-topbar { padding:0 10px; gap:8px; }
-    .mb-zoom-pct { min-width:38px; }
-    .mb-readonly-banner { bottom:84px; padding:8px 14px; gap:10px; }
+    .mb-toolbar { left:8px; right:8px; transform:none; border-radius:14px; overflow-x:auto; justify-content:flex-start; bottom:16px; }
+    .mb-topbar { padding:8px 10px; }
+    .mb-topbar-left { padding:0 10px; max-width:calc(50vw - 12px); }
+    .mb-topbar-right { padding:0 6px 0 8px; gap:4px; }
+    .mb-board-name-input { font-size:13px; max-width:100px; }
+    .mb-share-btn { padding:0 10px; font-size:7.5px; }
+    .mb-readonly-banner { bottom:80px; padding:8px 14px; gap:10px; }
+    .mb-fun-panel { left:8px; right:8px; transform:none; min-width:unset; bottom:80px; }
   }
 
   </style>
@@ -5934,27 +5942,31 @@
 
   <!-- ══ MOOD BOARD CANVAS VIEW ═══════════════════════════════════ -->
   <div id="viewMoodboardCanvas" class="view-overlay v-hidden v-gone" aria-label="Mood Board Canvas">
-    <!-- Top bar -->
+    <!-- Top bar — two floating pills -->
     <div class="mb-topbar" id="mbTopbar">
-      <button class="mb-topbar-back" id="mbCanvasBack" type="button">
-        <svg viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1.5 2.5 4.5 6 7.5"/></svg>
-        <span>Boards</span>
-      </button>
-      <div class="mb-topbar-sep"></div>
-      <input class="mb-board-name-input" id="mbBoardNameInput" type="text" value="Untitled Board" readonly>
-      <div style="flex:1"></div>
-      <button class="mb-zoom-pct" id="mbZoomPct" type="button" title="Fit all (Ctrl+0)">100%</button>
-      <div class="mb-topbar-sep"></div>
-      <div class="mb-collab-avatars" id="mbCollabAvatars"></div>
-      <div class="mb-topbar-sep"></div>
-      <button class="mb-notif-btn mb-topbar-notif" id="mbCanvasNotifBtn" type="button" title="Notifications" style="width:30px;height:30px">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M10 2a6 6 0 0 1 6 6c0 3.5 1.5 5 1.5 5h-15S4 11.5 4 8a6 6 0 0 1 6-6z"/><path d="M8.7 17a1.3 1.3 0 0 0 2.6 0"/></svg>
-        <span class="mb-notif-badge" id="mbCanvasNotifBadge"></span>
-      </button>
-      <button class="mb-share-btn" id="mbShareBtn" type="button">
-        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="3" r="1.5"/><circle cx="11" cy="11" r="1.5"/><circle cx="3" cy="7" r="1.5"/><path d="M4.4 7.7l5.2 2.8M9.6 3.5 4.4 6.3"/></svg>
-        Share
-      </button>
+      <!-- Left pill: back + board name -->
+      <div class="mb-topbar-left">
+        <button class="mb-topbar-back" id="mbCanvasBack" type="button">
+          <svg viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1.5 2.5 4.5 6 7.5"/></svg>
+          <span>Boards</span>
+        </button>
+        <div class="mb-topbar-sep"></div>
+        <input class="mb-board-name-input" id="mbBoardNameInput" type="text" value="Untitled Board" readonly>
+      </div>
+      <!-- Right pill: collab avatars + notifications + share -->
+      <div class="mb-topbar-right">
+        <div class="mb-collab-avatars" id="mbCollabAvatars"></div>
+        <button class="mb-notif-btn mb-topbar-notif" id="mbCanvasNotifBtn" type="button" title="Notifications">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.5a5 5 0 0 1 5 5c0 3 1.3 4.5 1.3 4.5H2.7S4 10.5 4 7.5a5 5 0 0 1 5-5z"/><path d="M7.8 15.5a1.2 1.2 0 0 0 2.4 0"/></svg>
+          <span class="mb-notif-badge" id="mbCanvasNotifBadge"></span>
+        </button>
+        <button class="mb-share-btn" id="mbShareBtn" type="button">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="3" r="1.5"/><circle cx="11" cy="11" r="1.5"/><circle cx="3" cy="7" r="1.5"/><path d="M4.4 7.7l5.2 2.8M9.6 3.5 4.4 6.3"/></svg>
+          Share
+        </button>
+      </div>
+      <!-- Invisible zoom pct kept for JS reference -->
+      <button class="mb-zoom-pct" id="mbZoomPct" type="button" aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;top:-999px">100%</button>
     </div>
 
     <!-- Left toolbar -->
@@ -9370,6 +9382,20 @@
           });
           tb.addEventListener('mousedown', function(e){ e.stopPropagation(); });
           el.appendChild(tb);
+        } else if (d.type === 'video') {
+          el.className = 'mb-el';
+          var vid = document.createElement('video');
+          vid.className = 'mb-img';
+          vid.src = d.url || '';
+          vid.autoplay = true; vid.loop = true; vid.muted = true; vid.playsInline = true;
+          vid.style.objectFit = 'cover';
+          vid.draggable = false;
+          el.appendChild(vid);
+          if (!el.querySelector('.mb-img-frame')) {
+            var vframe = document.createElement('div');
+            vframe.className = 'mb-img-frame';
+            el.appendChild(vframe);
+          }
         } else if (d.type === 'image') {
           el.className = 'mb-el';
           if (d.url) {
@@ -9443,6 +9469,9 @@
             tb2.style.textAlign = d.align||'left';
             if (document.activeElement !== tb2) tb2.innerHTML = d.content||'';
           }
+        } else if (d.type === 'video') {
+          var vid2 = el.querySelector('video');
+          if (vid2 && d.url && vid2.src !== d.url) { vid2.src = d.url; vid2.play().catch(function(){}); }
         } else if (d.type === 'image') {
           var img2 = el.querySelector('img');
           if (img2 && d.url && img2.src !== d.url) img2.src = d.url;
@@ -10211,17 +10240,21 @@
     /* ── Image upload ─────────────────────────────────────── */
     function openImagePicker(x, y) {
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*';
+      inp.type = 'file'; inp.accept = 'image/*,video/*';
       inp.addEventListener('change', function(){
         var file = inp.files[0];
         if (!file || !_boardId) return;
+        var isVideo = file.type.startsWith('video/');
         var id = genId();
-        var d = { type:'image', x:Math.round(x), y:Math.round(y), w:240, h:180, url:'', z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
+        /* Show instantly from local object URL — no waiting for upload */
+        var localUrl = URL.createObjectURL(file);
+        var d = { type: isVideo ? 'video' : 'image', x:Math.round(x), y:Math.round(y), w: isVideo ? 320 : 240, h: isVideo ? 200 : 180, url:localUrl, z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
         _elements[id] = d;
         renderEl(id, d);
         var path = 'moodboard-images/' + _boardId + '/' + id + '/' + file.name;
         window.fb.upload(file, path, null).then(function(result){
           if (!result) return;
+          URL.revokeObjectURL(localUrl);
           d.url = result.url; d.storagePath = result.path;
           commitElSet(id, d);
           renderEl(id, d);
@@ -10240,15 +10273,18 @@
         e.preventDefault(); dropOverlay.classList.remove('show');
         if (!canEdit()) return;
         var pos3 = screenToCanvas(e.clientX, e.clientY);
-        var files = Array.from(e.dataTransfer.files).filter(function(f){ return f.type.startsWith('image/'); });
+        var files = Array.from(e.dataTransfer.files).filter(function(f){ return f.type.startsWith('image/') || f.type.startsWith('video/'); });
         files.forEach(function(file, i){
+          var isVideo = file.type.startsWith('video/');
           var id = genId();
-          var d = { type:'image', x:Math.round(pos3.x + i*20), y:Math.round(pos3.y + i*20), w:240, h:180, url:'', z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
+          var localUrl2 = URL.createObjectURL(file);
+          var d = { type: isVideo ? 'video' : 'image', x:Math.round(pos3.x + i*20), y:Math.round(pos3.y + i*20), w: isVideo ? 320 : 240, h: isVideo ? 200 : 180, url:localUrl2, z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
           _elements[id] = d;
           renderEl(id, d);
           var path2 = 'moodboard-images/' + _boardId + '/' + id + '/' + file.name;
           window.fb.upload(file, path2, null).then(function(result){
             if (!result) return;
+            URL.revokeObjectURL(localUrl2);
             d.url=result.url; d.storagePath=result.path;
             commitElSet(id, d); renderEl(id, d); scheduleThumbUpdate();
           });
