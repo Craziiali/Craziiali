@@ -938,10 +938,6 @@
 
       function showOverlay() {
         if (!authOverlay) return;
-        /* Show the planner silently behind the overlay so the backdrop-filter
-           blurs it — this way the invoice is never touched.
-           The planner's solid background covers the invoice completely. */
-        document.body.classList.add('auth-showing-planner-bg');
         authOverlay.style.opacity = '1';
         authOverlay.style.pointerEvents = 'all';
         authOverlay.classList.remove('auth-gone');
@@ -953,19 +949,6 @@
         authOverlay.style.pointerEvents = 'none';
         setTimeout(function(){
           authOverlay.classList.add('auth-gone');
-          /* Only hide the planner preview if it hasn't been made visible by a
-             successful login (in that case showView/applyRole already owns it) */
-          if (document.body.classList.contains('auth-showing-planner-bg')) {
-            var vp = document.getElementById('viewPlanner');
-            var isReallyShown = vp && !vp.classList.contains('v-gone');
-            if (!isReallyShown) {
-              /* Login was cancelled — planner is still v-gone, just remove bg class */
-              document.body.classList.remove('auth-showing-planner-bg');
-            } else {
-              /* Login succeeded — planner is live, class no longer needed */
-              document.body.classList.remove('auth-showing-planner-bg');
-            }
-          }
         }, 420);
       }
       /* Exposed so global shortcuts can open / close the overlay */
@@ -3273,31 +3256,18 @@
     .pwd-link:hover { color:var(--ink-dim); }
 
     /* ── AUTH OVERLAY ───────────────────────────────────────── */
+    /* Fully opaque — nothing from the app is ever visible behind it */
     #authOverlay{
       position:fixed;inset:0;z-index:99999;
-      background:rgba(5,5,6,.72);
-      backdrop-filter:blur(18px) saturate(0.7) brightness(0.6);
-      -webkit-backdrop-filter:blur(18px) saturate(0.7) brightness(0.6);
+      background:
+        radial-gradient(ellipse 70% 60% at 50% 46%, rgba(243,243,239,.035) 0%, transparent 65%),
+        #050506;
       display:flex;align-items:center;justify-content:center;
       opacity:1;pointer-events:all;
       transition:opacity .4s ease;
       padding:24px;
     }
     #authOverlay.auth-gone{display:none}
-
-    /* ── Planner shown as blurred background behind the auth overlay ───
-       Overrides v-gone (display:none) and v-hidden (opacity:0) so the
-       planner is silently visible while the blur overlay is open.
-       pointer-events:none means nothing is clickable through the overlay.
-       The planner's own solid --bg background covers the invoice.        */
-    body.auth-showing-planner-bg #viewPlanner {
-      display:  block   !important;
-      opacity:  1       !important;
-      pointer-events: none !important;
-      z-index:  1       !important;
-      transition: none  !important;
-      overflow: hidden  !important;
-    }
 
     /* ── Restore native cursor inside all auth/profile/backup overlays ──
        The global rule `*, *::before, *::after { cursor:none !important }`
@@ -3317,12 +3287,10 @@
     #backupPwdOverlay input { cursor: text !important; }
     .auth-window{
       width:min(400px,100%);
-      background:rgba(11,11,13,.58);
-      backdrop-filter:blur(32px) saturate(1.5) brightness(0.86);
-      -webkit-backdrop-filter:blur(32px) saturate(1.5) brightness(0.86);
-      border:1px solid rgba(243,243,239,.13);border-radius:20px;
+      background:#111114;
+      border:1px solid rgba(243,243,239,.11);border-radius:20px;
       padding:38px 36px 32px;
-      box-shadow:0 40px 80px rgba(0,0,0,.55),inset 0 1px 0 rgba(243,243,239,.09);
+      box-shadow:0 40px 80px rgba(0,0,0,.7),inset 0 1px 0 rgba(243,243,239,.09);
     }
     .auth-brand{
       font-family:var(--font-en-mono);font-size:9px;letter-spacing:.24em;text-transform:uppercase;
