@@ -261,6 +261,175 @@
           console.error('[Firebase Storage] ✗ Delete failed:', e.code, e.message);
           return false;
         }
+      },
+
+      /* ── Mood Boards ─────────────────────────────────────── */
+      boards: {
+        /* Create a new board — returns boardId */
+        create(name, uid) {
+          if (!rtdb) return Promise.reject('no rtdb');
+          const id  = 'board_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+          const tok = 'sh_' + Math.random().toString(36).slice(2,10) + Math.random().toString(36).slice(2,10);
+          return rtdbSet(rtdbRef(rtdb, 'moodboards/' + id + '/meta'), {
+            name: name || 'Untitled Board',
+            created: Date.now(), updated: Date.now(),
+            createdBy: uid || '', shareToken: tok,
+            bg: 'dots', thumbnail: ''
+          }).then(() => id);
+        },
+        updateMeta(boardId, data) {
+          if (!rtdb) return;
+          rtdbUpdate(rtdbRef(rtdb, 'moodboards/' + boardId + '/meta'), { ...data, updated: Date.now() });
+        },
+        delete(boardId) {
+          if (!rtdb) return Promise.resolve();
+          return rtdbRemove(rtdbRef(rtdb, 'moodboards/' + boardId));
+        },
+        watchAll(cb) {
+          if (!rtdb) return () => {};
+          return onValue(rtdbRef(rtdb, 'moodboards'), s => cb(s.val() || {}),
+            e => console.error('[MB] boards/watchAll:', e.code));
+        },
+        watchOne(boardId, cb) {
+          if (!rtdb) return () => {};
+          return onValue(rtdbRef(rtdb, 'moodboards/' + boardId + '/meta'), s => cb(s.val()),
+            e => console.error('[MB] board/watchOne:', e.code));
+        },
+        /* Per-board editor permissions */
+        grantEditor(boardId, uid, info) {
+          if (!rtdb) return;
+          rtdbSet(rtdbRef(rtdb, 'moodboards/' + boardId + '/editors/' + uid), { ...info, grantedAt: Date.now() });
+        },
+        revokeEditor(boardId, uid) {
+          if (!rtdb) return;
+          rtdbRemove(rtdbRef(rtdb, 'moodboards/' + boardId + '/editors/' + uid));
+        },
+        watchEditors(boardId, cb) {
+          if (!rtdb) return () => {};
+          return onValue(rtdbRef(rtdb, 'moodboards/' + boardId + '/editors'), s => cb(s.val() || {}),
+            e => console.error('[MB] editors/watch:', e.code));
+        },
+        isEditor(boardId, uid) {
+          if (!rtdb) return Promise.resolve(false);
+          return new Promise(res => {
+            const r = rtdbRef(rtdb, 'moodboards/' + boardId + '/editors/' + uid);
+            onValue(r, s => res(s.exists()), { onlyOnce: true });
+          });
+        },
+        /* Elements */
+        elements: {
+          set(boardId, elementId, data) {
+            if (!rtdb) return;
+            rtdbSet(rtdbRef(rtdb, 'moodboards/' + boardId + '/elements/' + elementId), data)
+              .catch(e => console.error('[MB] elements/set:', e.code));
+          },
+          update(boardId, elementId, data) {
+            if (!rtdb) return;
+            rtdbUpdate(rtdbRef(rtdb, 'moodboards/' + boardId + '/elements/' + elementId), data)
+              .catch(e => console.error('[MB] elements/update:', e.code));
+          },
+          remove(boardId, elementId) {
+            if (!rtdb) return;
+            rtdbRemove(rtdbRef(rtdb, 'moodboards/' + boardId + '/elements/' + elementId))
+              .catch(e => console.error('[MB] elements/remove:', e.code));
+          },
+          watchAll(boardId, cb) {
+            if (!rtdb) return () => {};
+            return onValue(rtdbRef(rtdb, 'moodboards/' + boardId + '/elements'),
+              s => cb(s.val() || {}),
+              e => console.error('[MB] elements/watchAll:', e.code));
+          }
+        },
+        /* Canvas-space cursors */
+        cursors: {
+          set(boardId, uid, data) {
+            if (!rtdb) return;
+            const r = rtdbRef(rtdb, 'moodboards/' + boardId + '/cursors/' + uid);
+            rtdbSet(r, data).catch(() => {});
+            onDisconnect(r).remove();
+          },
+          remove(boardId, uid) {
+            if (!rtdb) return;
+            rtdbRemove(rtdbRef(rtdb, 'moodboards/' + boardId + '/cursors/' + uid));
+          },
+          watchAll(boardId, cb) {
+            if (!rtdb) return () => {};
+            return onValue(rtdbRef(rtdb, 'moodboards/' + boardId + '/cursors'),
+              s => cb(s.val() || {}),
+              e => console.error('[MB] cursors/watchAll:', e.code));
+          }
+        }
+      },
+
+      /* ── Edit requests ───────────────────────────────────── */
+      editRequests: {
+        create(data) {
+          if (!rtdb) return Promise.resolve(null);
+          const r = rtdbRef(rtdb, 'editRequests');
+          const nr = rtdbPush(r);
+          return rtdbSet(nr, { ...data, status: 'pending', requestedAt: Date.now() })
+            .then(() => nr.key);
+        },
+        update(reqId, data) {
+          if (!rtdb) return;
+          rtdbUpdate(rtdbRef(rtdb, 'editRequests/' + reqId), data);
+        },
+        watchPending(cb) {
+          if (!rtdb) return () => {};
+          return onValue(rtdbRef(rtdb, 'editRequests'),
+            s => cb(s.val() || {}),
+            e => console.error('[MB] editRequests/watch:', e.code));
+        }
+      },
+
+      /* ── Notifications ───────────────────────────────────── */
+      mbNotifications: {
+        add(uid, data) {
+          if (!rtdb) return;
+          const nr = rtdbPush(rtdbRef(rtdb, 'mbNotifications/' + uid));
+          rtdbSet(nr, { ...data, read: false, ts: Date.now() });
+        },
+        markRead(uid, nid) {
+          if (!rtdb) return;
+          rtdbUpdate(rtdbRef(rtdb, 'mbNotifications/' + uid + '/' + nid), { read: true });
+        },
+        markAllRead(uid) {
+          if (!rtdb) return;
+          /* Read all first, then batch mark */
+          onValue(rtdbRef(rtdb, 'mbNotifications/' + uid), s => {
+            const v = s.val() || {};
+            Object.keys(v).forEach(k => {
+              if (!v[k].read) rtdbUpdate(rtdbRef(rtdb, 'mbNotifications/' + uid + '/' + k), { read: true });
+            });
+          }, { onlyOnce: true });
+        },
+        remove(uid, nid) {
+          if (!rtdb) return;
+          rtdbRemove(rtdbRef(rtdb, 'mbNotifications/' + uid + '/' + nid));
+        },
+        watchAll(uid, cb) {
+          if (!rtdb) return () => {};
+          return onValue(rtdbRef(rtdb, 'mbNotifications/' + uid),
+            s => cb(s.val() || {}),
+            e => console.error('[MB] notifications/watch:', e.code));
+        }
+      },
+
+      /* ── Admin metadata (stores admin UID so viewers can look it up) ── */
+      adminMeta: {
+        /* Called when admin signs in — makes UID findable by other users */
+        setAdminUid(uid) {
+          if (!rtdb) return;
+          rtdbSet(rtdbRef(rtdb, 'adminMeta/uid'), uid)
+            .catch(e => console.error('[MB] adminMeta/set:', e.code));
+        },
+        /* Returns a Promise<string|null> — admin's UID, or null if not set */
+        getAdminUid() {
+          if (!rtdb) return Promise.resolve(null);
+          return new Promise(res => {
+            onValue(rtdbRef(rtdb, 'adminMeta/uid'), s => res(s.val() || null), { onlyOnce: true });
+          });
+        }
       }
     };
     /* Check existing auth state first — only sign in anonymously when truly no user.
@@ -3491,9 +3660,12 @@
     body.role-public .top-bar .sp-row      { display:none !important; }
     body.role-public .edit-badge           { display:none !important; }
 
-    /* Viewer: hide Notes, hide invoice edit controls */
+    /* Viewer: hide Notes, Mood Boards card, hide invoice edit controls */
     body.role-viewer #cardNotes            { display:none !important; }
     body.role-viewer #viewNotes            { display:none !important; }
+    body.role-viewer #cardMoodboards       { display:none !important; }
+    body.role-public  #cardMoodboards      { display:none !important; }
+    body.role-preview #cardMoodboards      { display:none !important; }
     body.role-viewer .inv-edit-btn         { display:none !important; }
     body.role-viewer #invNewBtn            { display:none !important; }
     body.role-viewer #invLockBtn           { display:none !important; }
@@ -5412,6 +5584,213 @@
     .czchat-win      { width: calc(100vw - 28px); right: 14px; height: 400px; bottom: 76px; }
   }
 
+  /* ═══ MOOD BOARD — Gallery ══════════════════════════════════════ */
+  #viewMoodboards { overflow-y: auto; overflow-x: hidden; }
+  .mb-gallery-wrap { flex:1; padding:48px 40px 80px; max-width:1200px; margin:0 auto; width:100%; box-sizing:border-box; }
+  .mb-gallery-topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:44px; }
+  .mb-gallery-left { display:flex; align-items:center; gap:24px; }
+  .mb-gallery-title { font-family:var(--font-en-display); font-style:italic; font-size:32px; font-weight:400; color:var(--ink); margin:0; line-height:1; }
+  .mb-notif-btn { position:relative; width:36px; height:36px; border-radius:50%; border:1px solid var(--rule); background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); transition:border-color .2s,color .2s,background .2s; flex-shrink:0; }
+  .mb-notif-btn:hover { border-color:rgba(243,243,239,.3); color:var(--ink); background:rgba(243,243,239,.04); }
+  .mb-notif-btn svg { width:16px; height:16px; }
+  .mb-notif-badge { position:absolute; top:-3px; right:-3px; width:16px; height:16px; background:#e05c5c; border-radius:50%; border:2px solid var(--bg); font-family:var(--font-en-mono); font-size:8px; font-weight:600; color:#fff; display:flex; align-items:center; justify-content:center; line-height:1; }
+  .mb-notif-badge:empty { display:none; }
+  .mb-new-board-btn { display:flex; align-items:center; gap:8px; padding:0 20px; height:36px; border:1px solid var(--rule); border-radius:3px; background:transparent; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; transition:border-color .22s,color .22s,background .22s; white-space:nowrap; }
+  .mb-new-board-btn:hover { border-color:rgba(243,243,239,.3); color:var(--ink); background:rgba(243,243,239,.04); }
+  .mb-new-board-btn svg { width:12px; height:12px; flex-shrink:0; }
+  .mb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
+  .mb-card { position:relative; border:1px solid var(--rule); border-radius:6px; overflow:hidden; cursor:pointer; background:#0d0d10; transition:border-color .25s,transform .2s; display:flex; flex-direction:column; user-select:none; }
+  .mb-card:hover { border-color:rgba(243,243,239,.28); transform:translateY(-2px); }
+  .mb-card-thumb { width:100%; aspect-ratio:16/9; background:#111116; overflow:hidden; position:relative; flex-shrink:0; }
+  .mb-card-thumb canvas,.mb-card-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+  .mb-card-thumb-empty { width:100%; height:100%; display:flex; align-items:center; justify-content:center; opacity:.15; }
+  .mb-card-thumb-empty svg { width:36px; height:36px; color:var(--ink); }
+  .mb-card-info { padding:14px 16px 16px; flex:1; display:flex; flex-direction:column; gap:6px; }
+  .mb-card-name { font-family:var(--font-en-display); font-style:italic; font-size:16px; font-weight:400; color:var(--ink); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mb-card-meta { font-family:var(--font-en-mono); font-size:8px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); opacity:.5; }
+  .mb-card-menu-btn { position:absolute; top:8px; right:8px; width:28px; height:28px; border-radius:50%; background:rgba(11,11,12,.8); border:1px solid rgba(243,243,239,.1); color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s,background .2s; backdrop-filter:blur(6px); }
+  .mb-card:hover .mb-card-menu-btn { opacity:1; }
+  .mb-card-menu-btn:hover { background:rgba(30,30,36,.9); color:var(--ink); }
+  .mb-card-menu-btn svg { width:14px; height:14px; }
+  .mb-ctx-menu { position:fixed; background:#1a1a20; border:1px solid rgba(243,243,239,.12); border-radius:8px; padding:4px; z-index:99000; min-width:160px; box-shadow:0 16px 48px rgba(0,0,0,.7); animation:mbCtxIn .12s ease both; }
+  @keyframes mbCtxIn { from{opacity:0;transform:scale(.95) translateY(-4px)} to{opacity:1;transform:scale(1) translateY(0)} }
+  .mb-ctx-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:5px; font-family:var(--font-en-mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); cursor:pointer; transition:background .15s,color .15s; }
+  .mb-ctx-item:hover { background:rgba(243,243,239,.07); color:var(--ink); }
+  .mb-ctx-item.danger:hover { background:rgba(224,92,92,.12); color:#e05c5c; }
+  .mb-ctx-item svg { width:13px; height:13px; flex-shrink:0; opacity:.7; }
+  .mb-ctx-sep { height:1px; background:rgba(243,243,239,.07); margin:4px 0; }
+  .mb-notif-panel { position:fixed; top:60px; right:20px; width:min(360px,calc(100vw - 32px)); background:#16161c; border:1px solid rgba(243,243,239,.12); border-radius:12px; z-index:99001; box-shadow:0 24px 64px rgba(0,0,0,.75); overflow:hidden; display:flex; flex-direction:column; max-height:calc(100dvh - 80px); animation:mbCtxIn .15s ease both; }
+  .mb-notif-hd { display:flex; align-items:center; justify-content:space-between; padding:16px 18px 12px; border-bottom:1px solid rgba(243,243,239,.07); flex-shrink:0; }
+  .mb-notif-hd-title { font-family:var(--font-en-mono); font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-soft); opacity:.7; }
+  .mb-notif-mark-all { font-family:var(--font-en-mono); font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); opacity:.5; cursor:pointer; border:none; background:none; transition:opacity .2s; }
+  .mb-notif-mark-all:hover { opacity:1; }
+  .mb-notif-list { overflow-y:auto; flex:1; }
+  .mb-notif-empty { padding:40px 20px; text-align:center; font-family:var(--font-en-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); opacity:.35; }
+  .mb-notif-item { padding:14px 18px; border-bottom:1px solid rgba(243,243,239,.05); display:flex; flex-direction:column; gap:7px; transition:background .15s; }
+  .mb-notif-item:hover { background:rgba(243,243,239,.03); }
+  .mb-notif-item.unread { background:rgba(243,243,239,.025); }
+  .mb-notif-row { display:flex; align-items:flex-start; gap:10px; }
+  .mb-notif-dot { width:6px; height:6px; border-radius:50%; background:#7e8cf7; flex-shrink:0; margin-top:5px; opacity:0; }
+  .mb-notif-item.unread .mb-notif-dot { opacity:1; }
+  .mb-notif-text { font-family:var(--font-en-mono); font-size:10px; line-height:1.6; color:var(--ink-soft); flex:1; }
+  .mb-notif-text strong { color:var(--ink); font-weight:500; }
+  .mb-notif-time { font-family:var(--font-en-mono); font-size:8px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); opacity:.4; padding-left:16px; }
+  .mb-notif-actions { display:flex; gap:8px; padding-left:16px; }
+  .mb-notif-approve,.mb-notif-deny { padding:5px 14px; border-radius:3px; font-family:var(--font-en-mono); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; border:1px solid; transition:background .15s,color .15s; }
+  .mb-notif-approve { border-color:rgba(126,200,130,.4); color:#7ec882; background:rgba(126,200,130,.07); }
+  .mb-notif-approve:hover { background:rgba(126,200,130,.16); }
+  .mb-notif-deny { border-color:rgba(224,92,92,.3); color:#e05c5c; background:transparent; }
+  .mb-notif-deny:hover { background:rgba(224,92,92,.1); }
+
+  /* ═══ MOOD BOARD — Canvas View ═════════════════════════════════ */
+  #viewMoodboardCanvas { overflow:hidden; position:fixed; inset:0; background:var(--bg); }
+  .mb-topbar { position:absolute; top:0; left:0; right:0; z-index:200; height:52px; background:rgba(11,11,14,.92); border-bottom:1px solid rgba(243,243,239,.07); backdrop-filter:blur(12px); display:flex; align-items:center; padding:0 16px; gap:12px; pointer-events:all; }
+  .mb-topbar-back { display:flex; align-items:center; gap:6px; font-family:var(--font-en-mono); font-size:8.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft); opacity:.65; cursor:pointer; border:none; background:transparent; padding:4px 0; transition:opacity .2s; flex-shrink:0; }
+  .mb-topbar-back:hover { opacity:1; }
+  .mb-topbar-back svg { width:9px; height:9px; }
+  .mb-topbar-sep { width:1px; height:20px; background:rgba(243,243,239,.1); flex-shrink:0; }
+  .mb-board-name-input { flex:1; min-width:0; background:transparent; border:none; outline:none; font-family:var(--font-en-display); font-style:italic; font-size:16px; font-weight:400; color:var(--ink); padding:0; cursor:text; }
+  .mb-board-name-input[readonly] { cursor:default; pointer-events:none; }
+  .mb-zoom-ctrl { display:flex; align-items:center; gap:2px; flex-shrink:0; }
+  .mb-zoom-btn { width:28px; height:28px; border-radius:4px; border:1px solid transparent; background:transparent; color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:var(--font-en-mono); font-size:10px; transition:background .15s,border-color .15s,color .15s; }
+  .mb-zoom-btn:hover { background:rgba(243,243,239,.07); border-color:rgba(243,243,239,.1); color:var(--ink); }
+  .mb-zoom-btn svg { width:12px; height:12px; }
+  .mb-zoom-pct { min-width:48px; text-align:center; font-family:var(--font-en-mono); font-size:10px; letter-spacing:.04em; color:var(--ink-soft); cursor:pointer; padding:0 4px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:4px; border:1px solid transparent; transition:background .15s,border-color .15s; }
+  .mb-zoom-pct:hover { background:rgba(243,243,239,.07); border-color:rgba(243,243,239,.1); }
+  .mb-share-btn { display:flex; align-items:center; gap:7px; padding:0 14px; height:30px; border-radius:4px; border:1px solid rgba(243,243,239,.12); background:transparent; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:border-color .2s,color .2s,background .2s; flex-shrink:0; white-space:nowrap; }
+  .mb-share-btn:hover { border-color:rgba(243,243,239,.28); color:var(--ink); background:rgba(243,243,239,.04); }
+  .mb-share-btn svg { width:12px; height:12px; }
+  .mb-collab-avatars { display:flex; align-items:center; flex-shrink:0; }
+  .mb-collab-avatar { width:26px; height:26px; border-radius:50%; border:2px solid var(--bg); font-family:var(--font-en-mono); font-size:9px; font-weight:600; display:flex; align-items:center; justify-content:center; color:#0a0a0b; margin-left:-8px; flex-shrink:0; position:relative; }
+  .mb-collab-avatar:first-child { margin-left:0; }
+  .mb-toolbar { position:absolute; left:14px; top:50%; transform:translateY(-50%); z-index:200; display:flex; flex-direction:column; gap:2px; background:rgba(11,11,14,.92); border:1px solid rgba(243,243,239,.09); border-radius:10px; padding:8px 6px; backdrop-filter:blur(12px); pointer-events:all; }
+  .mb-tool-btn { width:36px; height:36px; border-radius:7px; border:1px solid transparent; background:transparent; color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s,border-color .15s,color .15s; position:relative; }
+  .mb-tool-btn:hover { background:rgba(243,243,239,.07); color:var(--ink); }
+  .mb-tool-btn.active { background:rgba(126,140,247,.15); border-color:rgba(126,140,247,.4); color:#7e8cf7; }
+  .mb-tool-btn svg { width:17px; height:17px; }
+  .mb-tool-sep { height:1px; background:rgba(243,243,239,.07); margin:4px 2px; }
+  .mb-tool-btn[data-tip]::after { content:attr(data-tip); position:absolute; left:calc(100% + 10px); top:50%; transform:translateY(-50%); background:#1e1e26; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.08em; white-space:nowrap; padding:5px 10px; border-radius:5px; border:1px solid rgba(243,243,239,.1); pointer-events:none; opacity:0; transition:opacity .15s; }
+  .mb-tool-btn[data-tip]:hover::after { opacity:1; }
+  .mb-propbar { position:absolute; top:60px; left:50%; transform:translateX(-50%); z-index:190; background:rgba(11,11,14,.92); border:1px solid rgba(243,243,239,.09); border-radius:8px; padding:6px 10px; display:flex; align-items:center; gap:8px; backdrop-filter:blur(12px); pointer-events:none; white-space:nowrap; opacity:0; transition:opacity .15s; }
+  .mb-propbar.show { opacity:1; pointer-events:all; }
+  .mb-prop-swatch { width:22px; height:22px; border-radius:50%; border:2px solid rgba(243,243,239,.15); cursor:pointer; flex-shrink:0; transition:border-color .15s,transform .15s; }
+  .mb-prop-swatch:hover { border-color:rgba(243,243,239,.4); transform:scale(1.1); }
+  .mb-prop-swatch.active { border-color:rgba(243,243,239,.8); }
+  .mb-prop-sep { width:1px; height:18px; background:rgba(243,243,239,.1); }
+  .mb-prop-btn { width:28px; height:28px; border-radius:5px; border:1px solid transparent; background:transparent; color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:var(--font-en-mono); font-size:11px; transition:background .15s,color .15s,border-color .15s; }
+  .mb-prop-btn:hover { background:rgba(243,243,239,.07); color:var(--ink); border-color:rgba(243,243,239,.1); }
+  .mb-prop-btn.active { background:rgba(126,140,247,.12); color:#7e8cf7; border-color:rgba(126,140,247,.35); }
+  .mb-prop-btn svg { width:13px; height:13px; }
+  .mb-stroke-slider { width:70px; accent-color:#7e8cf7; cursor:pointer; }
+  .mb-font-select { background:transparent; border:1px solid rgba(243,243,239,.1); border-radius:4px; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.06em; padding:3px 7px; cursor:pointer; outline:none; transition:border-color .15s; }
+  .mb-font-select:hover { border-color:rgba(243,243,239,.25); }
+  .mb-font-select option { background:#1a1a20; }
+  .mb-stage { position:absolute; inset:0; top:52px; overflow:hidden; cursor:default; }
+  .mb-stage.tool-select { cursor:default; }
+  .mb-stage.tool-hand { cursor:grab; }
+  .mb-stage.tool-hand.panning { cursor:grabbing; }
+  .mb-stage.tool-pen,.mb-stage.tool-sticky,.mb-stage.tool-rect,.mb-stage.tool-circle,.mb-stage.tool-diamond,.mb-stage.tool-arrow { cursor:crosshair; }
+  .mb-stage.tool-text { cursor:text; }
+  .mb-stage.tool-image { cursor:copy; }
+  .mb-canvas { position:absolute; top:0; left:0; width:0; height:0; transform-origin:0 0; will-change:transform; }
+  .mb-bg-dots { background-image:radial-gradient(circle,rgba(243,243,239,.18) 1px,transparent 1px); background-size:28px 28px; }
+  .mb-bg-grid { background-image:linear-gradient(rgba(243,243,239,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(243,243,239,.06) 1px,transparent 1px); background-size:40px 40px; }
+  .mb-bg-lines { background-image:linear-gradient(rgba(243,243,239,.06) 1px,transparent 1px); background-size:40px 40px; }
+  .mb-el { position:absolute; box-sizing:border-box; user-select:none; -webkit-user-select:none; cursor:move; transform-origin:0 0; }
+  .mb-el.locked { cursor:not-allowed; }
+  .mb-sticky { border-radius:3px; padding:14px 14px 28px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.45),0 1px 4px rgba(0,0,0,.3); min-width:140px; min-height:100px; }
+  .mb-sticky-text { flex:1; background:transparent; border:none; outline:none; resize:none; font-family:var(--font-en-mono); font-size:12px; line-height:1.6; color:rgba(10,10,11,.85); width:100%; height:100%; overflow:hidden; word-break:break-word; cursor:inherit; caret-color:rgba(10,10,11,.85); }
+  .mb-sticky-text::placeholder { color:rgba(10,10,11,.4); }
+  .mb-sticky-text:focus { cursor:text; }
+  .mb-textblock { min-width:100px; min-height:30px; padding:4px 6px; border-radius:2px; outline:none; background:transparent; word-break:break-word; }
+  .mb-textblock:focus { outline:2px solid rgba(126,140,247,.4); }
+  .mb-shape-svg { width:100%; height:100%; overflow:visible; pointer-events:none; }
+  .mb-img { width:100%; height:100%; object-fit:contain; display:block; border-radius:2px; pointer-events:none; user-select:none; -webkit-user-drag:none; }
+  .mb-img-placeholder { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:rgba(243,243,239,.04); border:1px dashed rgba(243,243,239,.15); border-radius:4px; color:var(--ink-soft); opacity:.4; font-family:var(--font-en-mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
+  .mb-img-placeholder svg { width:24px; height:24px; }
+  .mb-handle { position:absolute; width:9px; height:9px; background:#fff; border:1.5px solid #7e8cf7; border-radius:2px; z-index:10; pointer-events:all; transform:translate(-50%,-50%); }
+  .mb-handle[data-h="nw"] { top:0; left:0; cursor:nw-resize; }
+  .mb-handle[data-h="n"]  { top:0; left:50%; cursor:n-resize; }
+  .mb-handle[data-h="ne"] { top:0; left:100%; cursor:ne-resize; }
+  .mb-handle[data-h="e"]  { top:50%; left:100%; cursor:e-resize; }
+  .mb-handle[data-h="se"] { top:100%; left:100%; cursor:se-resize; }
+  .mb-handle[data-h="s"]  { top:100%; left:50%; cursor:s-resize; }
+  .mb-handle[data-h="sw"] { top:100%; left:0; cursor:sw-resize; }
+  .mb-handle[data-h="w"]  { top:50%; left:0; cursor:w-resize; }
+  .mb-selbox { position:absolute; border:1.5px solid #7e8cf7; background:rgba(126,140,247,.08); pointer-events:none; z-index:500; }
+  .mb-svg-layer { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+  .mb-path-el { pointer-events:stroke; cursor:pointer; }
+  .mb-path-el.selected-path { filter:drop-shadow(0 0 4px rgba(126,140,247,.8)); }
+  .mb-cursor { position:absolute; top:0; left:0; pointer-events:none; z-index:900; transform-origin:0 0; transition:transform .06s linear; will-change:transform; }
+  .mb-cursor.new-cursor { transition:none; }
+  .mb-cursor svg { width:20px; height:20px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
+  .mb-cursor-label { position:absolute; top:18px; left:8px; padding:3px 8px; border-radius:10px; font-family:var(--font-en-mono); font-size:9px; font-weight:600; color:#fff; white-space:nowrap; letter-spacing:.04em; }
+  .mb-minimap { position:absolute; bottom:20px; right:20px; width:160px; height:90px; background:rgba(11,11,14,.85); border:1px solid rgba(243,243,239,.1); border-radius:8px; overflow:hidden; z-index:200; pointer-events:none; backdrop-filter:blur(8px); }
+  .mb-minimap-canvas { width:100%; height:100%; display:block; }
+  .mb-minimap-viewport { position:absolute; border:1.5px solid rgba(126,140,247,.7); background:rgba(126,140,247,.08); pointer-events:none; }
+  .mb-drop-overlay { position:absolute; inset:0; background:rgba(126,140,247,.08); border:3px dashed rgba(126,140,247,.5); z-index:9000; display:flex; align-items:center; justify-content:center; pointer-events:none; opacity:0; transition:opacity .15s; }
+  .mb-drop-overlay.show { opacity:1; }
+  .mb-drop-overlay-text { font-family:var(--font-en-mono); font-size:13px; letter-spacing:.15em; text-transform:uppercase; color:#7e8cf7; font-weight:500; }
+  .mb-readonly-banner { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); z-index:300; background:rgba(11,11,14,.92); border:1px solid rgba(243,243,239,.12); border-radius:24px; padding:10px 20px; display:flex; align-items:center; gap:14px; backdrop-filter:blur(12px); box-shadow:0 8px 32px rgba(0,0,0,.5); white-space:nowrap; pointer-events:all; }
+  .mb-readonly-text { font-family:var(--font-en-mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); opacity:.7; }
+  .mb-request-btn { padding:5px 16px; border-radius:20px; border:1px solid rgba(126,140,247,.5); background:rgba(126,140,247,.1); color:#7e8cf7; font-family:var(--font-en-mono); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:background .2s,border-color .2s; }
+  .mb-request-btn:hover { background:rgba(126,140,247,.2); border-color:rgba(126,140,247,.7); }
+  .mb-request-btn:disabled { opacity:.4; cursor:default; }
+  @keyframes mbOverlayIn { from{opacity:0} to{opacity:1} }
+  @keyframes mbCardIn { from{transform:scale(.94) translateY(12px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
+  .mb-share-modal,.mb-rename-modal,.mb-delete-confirm,.mb-editors-modal { position:fixed; inset:0; background:rgba(5,5,6,.75); z-index:99010; display:flex; align-items:center; justify-content:center; padding:24px; backdrop-filter:blur(6px); animation:mbOverlayIn .2s ease both; }
+  .mb-share-card,.mb-rename-card,.mb-delete-card,.mb-editors-card { background:#161619; border:1px solid rgba(243,243,239,.12); border-radius:16px; padding:32px 28px 24px; width:min(440px,100%); box-shadow:0 32px 80px rgba(0,0,0,.8); animation:mbCardIn .2s cubic-bezier(.16,1,.3,1) both; }
+  .mb-rename-card,.mb-delete-card { width:min(360px,100%); border-radius:14px; padding:28px 24px 20px; display:flex; flex-direction:column; gap:14px; }
+  .mb-delete-card { border-color:rgba(224,92,92,.2); }
+  .mb-editors-card { width:min(420px,100%); max-height:80dvh; overflow-y:auto; display:flex; flex-direction:column; gap:18px; }
+  .mb-share-title,.mb-editors-title { font-family:var(--font-en-display); font-style:italic; font-size:22px; font-weight:400; color:var(--ink); margin:0 0 6px; }
+  .mb-delete-title { font-family:var(--font-en-display); font-style:italic; font-size:20px; color:var(--ink); margin:0; }
+  .mb-rename-title { font-family:var(--font-en-mono); font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-soft); opacity:.55; }
+  .mb-share-sub,.mb-delete-sub { font-family:var(--font-en-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); opacity:.5; margin-bottom:22px; }
+  .mb-delete-sub { font-size:9.5px; line-height:1.7; opacity:.6; }
+  .mb-share-link-row { display:flex; gap:8px; margin-bottom:20px; }
+  .mb-share-link-input { flex:1; min-width:0; background:rgba(243,243,239,.04); border:1px solid rgba(243,243,239,.1); border-radius:6px; padding:10px 14px; font-family:var(--font-en-mono); font-size:10px; color:var(--ink-soft); outline:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mb-share-copy-btn { padding:0 18px; border-radius:6px; border:1px solid rgba(243,243,239,.12); background:rgba(243,243,239,.06); color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:background .15s,border-color .15s,color .15s; white-space:nowrap; }
+  .mb-share-copy-btn:hover { background:rgba(243,243,239,.12); border-color:rgba(243,243,239,.22); color:var(--ink); }
+  .mb-share-note { font-family:var(--font-en-mono); font-size:8.5px; letter-spacing:.06em; color:var(--ink-soft); opacity:.4; line-height:1.7; margin-bottom:20px; }
+  .mb-share-close,.mb-editors-close { width:100%; padding:11px; border-radius:6px; border:1px solid rgba(243,243,239,.1); background:transparent; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; transition:background .15s,border-color .15s,color .15s; }
+  .mb-share-close:hover,.mb-editors-close:hover { background:rgba(243,243,239,.05); border-color:rgba(243,243,239,.2); color:var(--ink); }
+  .mb-rename-input { background:rgba(243,243,239,.04); border:1px solid rgba(243,243,239,.12); border-radius:6px; padding:11px 14px; font-family:var(--font-en-display); font-style:italic; font-size:18px; font-weight:400; color:var(--ink); outline:none; transition:border-color .2s; width:100%; box-sizing:border-box; }
+  .mb-rename-input:focus { border-color:rgba(126,140,247,.5); }
+  .mb-rename-actions,.mb-delete-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:4px; }
+  .mb-rename-cancel,.mb-rename-save,.mb-delete-cancel,.mb-delete-confirm-btn { padding:8px 20px; border-radius:6px; font-family:var(--font-en-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:all .15s; }
+  .mb-rename-cancel,.mb-delete-cancel { border:1px solid rgba(243,243,239,.1); background:transparent; color:var(--ink-soft); }
+  .mb-rename-cancel:hover,.mb-delete-cancel:hover { background:rgba(243,243,239,.05); color:var(--ink); }
+  .mb-rename-save { border:1px solid rgba(126,140,247,.45); background:rgba(126,140,247,.1); color:#7e8cf7; }
+  .mb-rename-save:hover { background:rgba(126,140,247,.2); border-color:rgba(126,140,247,.7); }
+  .mb-delete-confirm-btn { border:1px solid rgba(224,92,92,.4); background:rgba(224,92,92,.1); color:#e05c5c; }
+  .mb-delete-confirm-btn:hover { background:rgba(224,92,92,.2); }
+  .mb-editor-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid rgba(243,243,239,.06); }
+  .mb-editor-avatar { width:32px; height:32px; border-radius:50%; font-family:var(--font-en-mono); font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center; color:#0a0a0b; flex-shrink:0; }
+  .mb-editor-name { flex:1; font-family:var(--font-en-mono); font-size:11px; color:var(--ink-soft); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mb-editor-revoke { padding:4px 12px; border-radius:4px; border:1px solid rgba(224,92,92,.3); background:transparent; color:rgba(224,92,92,.7); font-family:var(--font-en-mono); font-size:8px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:all .15s; flex-shrink:0; }
+  .mb-editor-revoke:hover { background:rgba(224,92,92,.1); color:#e05c5c; }
+  .mb-entering .mb-gallery-topbar { animation:focusIn .6s cubic-bezier(.16,1,.3,1) both; animation-delay:80ms; }
+  .mb-entering .mb-card:nth-child(n) { animation:focusIn .65s cubic-bezier(.16,1,.3,1) both; }
+  .mb-entering .mb-card:nth-child(1) { animation-delay:160ms; }
+  .mb-entering .mb-card:nth-child(2) { animation-delay:240ms; }
+  .mb-entering .mb-card:nth-child(3) { animation-delay:320ms; }
+  .mb-entering .mb-card:nth-child(4) { animation-delay:400ms; }
+  .mb-entering .mb-card:nth-child(5) { animation-delay:480ms; }
+  .mb-entering .mb-card:nth-child(6) { animation-delay:560ms; }
+  .mb-canvas-entering .mb-topbar { animation:focusIn .45s cubic-bezier(.16,1,.3,1) both; animation-delay:40ms; }
+  .mb-canvas-entering .mb-toolbar { animation:focusIn .45s cubic-bezier(.16,1,.3,1) both; animation-delay:100ms; }
+  .home-entering .tool-card:nth-child(4) { animation:focusIn .70s cubic-bezier(.16,1,.3,1) both; animation-delay:640ms; }
+  @media (max-width:600px) {
+    .mb-gallery-wrap { padding:32px 16px 60px; }
+    .mb-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+    .mb-toolbar { left:8px; }
+    .mb-topbar { padding:0 10px; gap:8px; }
+    .mb-zoom-pct { min-width:38px; }
+    .mb-minimap { display:none; }
+    .mb-readonly-banner { bottom:12px; padding:8px 14px; gap:10px; }
+  }
+
   </style>
 </head>
 <body>
@@ -5463,7 +5842,148 @@
           </svg>
         </button>
 
+        <button class="tool-card" id="cardMoodboards" type="button">
+          <span class="tc-num">04</span>
+          <h2 class="tc-name">Mood Board</h2>
+          <p class="tc-desc">Collaborate &amp; ideate<br>on an infinite canvas</p>
+          <svg class="tc-arrow" viewBox="0 0 18 18" fill="none"
+               stroke="currentColor" stroke-width="1.2" aria-hidden="true">
+            <path d="M3 9h12M11 5l4 4-4 4"/>
+          </svg>
+        </button>
+
       </nav>
+    </div>
+  </div>
+
+  <!-- ══ MOOD BOARD GALLERY VIEW ══════════════════════════════════ -->
+  <div id="viewMoodboards" class="view-overlay v-hidden v-gone" aria-label="Mood Boards">
+    <div class="mb-gallery-wrap">
+      <div class="mb-gallery-topbar">
+        <div class="mb-gallery-left">
+          <button class="back-nav" id="mbGalleryBack" type="button">
+            <svg viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1.5 2.5 4.5 6 7.5"/></svg>
+            <span>Home</span>
+          </button>
+          <h1 class="mb-gallery-title">Mood Boards</h1>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="mb-notif-btn" id="mbNotifBtn" type="button" title="Notifications">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2a6 6 0 0 1 6 6c0 3.5 1.5 5 1.5 5h-15S4 11.5 4 8a6 6 0 0 1 6-6z"/><path d="M8.7 17a1.3 1.3 0 0 0 2.6 0"/></svg>
+            <span class="mb-notif-badge" id="mbNotifBadge"></span>
+          </button>
+          <button class="mb-new-board-btn" id="mbNewBoardBtn" type="button">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M7 2v10M2 7h10"/></svg>
+            New Board
+          </button>
+        </div>
+      </div>
+      <div class="mb-grid" id="mbGrid">
+        <!-- Board cards injected by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MOOD BOARD CANVAS VIEW ═══════════════════════════════════ -->
+  <div id="viewMoodboardCanvas" class="view-overlay v-hidden v-gone" aria-label="Mood Board Canvas">
+    <!-- Top bar -->
+    <div class="mb-topbar" id="mbTopbar">
+      <button class="mb-topbar-back" id="mbCanvasBack" type="button">
+        <svg viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1.5 2.5 4.5 6 7.5"/></svg>
+        <span>Boards</span>
+      </button>
+      <div class="mb-topbar-sep"></div>
+      <input class="mb-board-name-input" id="mbBoardNameInput" type="text" value="Untitled Board" readonly>
+      <div style="flex:1"></div>
+      <div class="mb-zoom-ctrl">
+        <button class="mb-zoom-btn" id="mbZoomOut" type="button" title="Zoom out (Ctrl+-)">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6h8"/></svg>
+        </button>
+        <button class="mb-zoom-pct" id="mbZoomPct" type="button" title="Reset zoom (Ctrl+0)">100%</button>
+        <button class="mb-zoom-btn" id="mbZoomIn" type="button" title="Zoom in (Ctrl+=)">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 2v8M2 6h8"/></svg>
+        </button>
+      </div>
+      <div class="mb-topbar-sep"></div>
+      <div class="mb-collab-avatars" id="mbCollabAvatars"></div>
+      <div class="mb-topbar-sep"></div>
+      <button class="mb-notif-btn mb-topbar-notif" id="mbCanvasNotifBtn" type="button" title="Notifications" style="width:30px;height:30px">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M10 2a6 6 0 0 1 6 6c0 3.5 1.5 5 1.5 5h-15S4 11.5 4 8a6 6 0 0 1 6-6z"/><path d="M8.7 17a1.3 1.3 0 0 0 2.6 0"/></svg>
+        <span class="mb-notif-badge" id="mbCanvasNotifBadge"></span>
+      </button>
+      <button class="mb-share-btn" id="mbShareBtn" type="button">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="3" r="1.5"/><circle cx="11" cy="11" r="1.5"/><circle cx="3" cy="7" r="1.5"/><path d="M4.4 7.7l5.2 2.8M9.6 3.5 4.4 6.3"/></svg>
+        Share
+      </button>
+    </div>
+
+    <!-- Left toolbar -->
+    <div class="mb-toolbar" id="mbToolbar">
+      <button class="mb-tool-btn active" id="mbt-select" data-tool="select" data-tip="Select (V)" type="button">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2 14 9l-5 1.5L7 16z"/></svg>
+      </button>
+      <button class="mb-tool-btn" id="mbt-hand" data-tool="hand" data-tip="Pan (H)" type="button">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.5V9m0-5.5a1 1 0 0 1 1 1V9m-1-5.5a1 1 0 0 0-1 1V9m4 0V6a1 1 0 0 0-2 0m2 3V6a1 1 0 0 1 2 0v4.5c0 2.5-1.8 4.5-4 4.5s-4-2-4-4.5V9"/></svg>
+      </button>
+      <div class="mb-tool-sep"></div>
+      <button class="mb-tool-btn" id="mbt-sticky" data-tool="sticky" data-tip="Sticky Note (S)" type="button">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2"/><path d="M6 7h6M6 10h4"/></svg>
+      </button>
+      <button class="mb-tool-btn" id="mbt-text" data-tool="text" data-tip="Text (T)" type="button">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 4h12M9 4v11M6 15h6"/></svg>
+      </button>
+      <div class="mb-tool-sep"></div>
+      <button class="mb-tool-btn" id="mbt-rect" data-tool="rect" data-tip="Rectangle (R)" type="button">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="2.5" y="4" width="13" height="10" rx="1.5"/></svg>
+      </button>
+      <button class="mb-tool-btn" id="mbt-circle" data-tool="circle" data-tip="Circle (C)" type="button">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="9" cy="9" r="6"/></svg>
+      </button>
+      <button class="mb-tool-btn" id="mbt-diamond" data-tool="diamond" data-tip="Diamond (D)" type="button">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2 16 9 9 16 2 9z"/></svg>
+      </button>
+      <button class="mb-tool-btn" id="mbt-arrow" data-tool="arrow" data-tip="Arrow (A)" type="button">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15 13 5M8 5h5v5"/></svg>
+      </button>
+      <div class="mb-tool-sep"></div>
+      <button class="mb-tool-btn" id="mbt-pen" data-tool="pen" data-tip="Pen (P)" type="button">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15c2-1 4-5 6-7s3-2 4-1-1 2-3 4-6 4-7 4z"/><path d="M9 8 12 5l1.5 1.5L11 9"/></svg>
+      </button>
+      <div class="mb-tool-sep"></div>
+      <button class="mb-tool-btn" id="mbt-image" data-tool="image" data-tip="Image (I)" type="button">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3.5" width="14" height="11" rx="1.5"/><circle cx="6.5" cy="7.5" r="1.2"/><path d="M2 12l3.5-3.5 3 3 2.5-2.5L16 14"/></svg>
+      </button>
+    </div>
+
+    <!-- Properties bar (shown when selection has style options) -->
+    <div class="mb-propbar" id="mbPropbar"></div>
+
+    <!-- Canvas stage -->
+    <div class="mb-stage mb-bg-dots" id="mbStage">
+      <!-- Infinite canvas world -->
+      <div class="mb-canvas" id="mbCanvas">
+        <!-- SVG layer for paths and arrows -->
+        <svg class="mb-svg-layer" id="mbSvgLayer" xmlns="http://www.w3.org/2000/svg"></svg>
+        <!-- DOM elements (stickies, text, images, shapes) injected by JS -->
+      </div>
+      <!-- Rubber-band selection box -->
+      <div class="mb-selbox" id="mbSelbox" style="display:none"></div>
+      <!-- Drop overlay for images -->
+      <div class="mb-drop-overlay" id="mbDropOverlay">
+        <span class="mb-drop-overlay-text">Drop image here</span>
+      </div>
+    </div>
+
+    <!-- Minimap -->
+    <div class="mb-minimap" id="mbMinimap">
+      <canvas class="mb-minimap-canvas" id="mbMinimapCanvas" width="160" height="90"></canvas>
+      <div class="mb-minimap-viewport" id="mbMinimapViewport"></div>
+    </div>
+
+    <!-- Read-only / request access banner (for non-editors) -->
+    <div class="mb-readonly-banner" id="mbReadonlyBanner" style="display:none">
+      <span class="mb-readonly-text">View only</span>
+      <button class="mb-request-btn" id="mbRequestEditBtn" type="button">Request edit access</button>
     </div>
   </div>
 
@@ -6412,16 +6932,18 @@
   <script>
   (function(){
     /* ── View state ─────────────────────────────────────────────── */
-    var viewHome    = document.getElementById('viewHome');
-    var viewPlanner = document.getElementById('viewPlanner');
-    var viewNotes   = document.getElementById('viewNotes');
+    var viewHome            = document.getElementById('viewHome');
+    var viewPlanner         = document.getElementById('viewPlanner');
+    var viewNotes           = document.getElementById('viewNotes');
+    var viewMoodboards      = document.getElementById('viewMoodboards');
+    var viewMoodboardCanvas = document.getElementById('viewMoodboardCanvas');
     var current     = 'home';
     var FADE        = 560;
 
     /* Overlay registry — every non-invoice view + its entrance class.
        Generalised so adding a view never means touching the transition logic. */
-    var OVERLAYS   = { home: viewHome, planner: viewPlanner, notes: viewNotes };
-    var ENTER_CLS  = { home: 'home-entering', planner: 'planner-entering', notes: 'notes-entering' };
+    var OVERLAYS   = { home: viewHome, planner: viewPlanner, notes: viewNotes, moodboards: viewMoodboards, moodboardCanvas: viewMoodboardCanvas };
+    var ENTER_CLS  = { home: 'home-entering', planner: 'planner-entering', notes: 'notes-entering', moodboards: 'mb-entering', moodboardCanvas: 'mb-canvas-entering' };
 
     /* Cancellable transition timer — prevents stale callbacks from
        re-hiding an overlay that a subsequent navigation just revealed */
@@ -6595,6 +7117,11 @@
         if (window._requireSignIn) window._requireSignIn(function(){ showView('notes'); });
       } else { showView('notes'); }
     });
+    document.getElementById('cardMoodboards').addEventListener('click', function(){
+      if (window._appRole !== 'admin') return; /* gallery is admin-only */
+      showView('moodboards');
+    });
+    document.getElementById('mbGalleryBack').addEventListener('click', function(){ showView('home'); });
     /* These back-to-home navigations are admin-only — viewers have no home */
     document.getElementById('plannerBack').addEventListener('click',      function(){ if(window._appRole==='admin') showView('home'); });
     document.getElementById('plannerBrandHome').addEventListener('click', function(){ if(window._appRole==='admin') showView('home'); });
@@ -8582,6 +9109,1658 @@
     });
 
   })();
+
+  /* ══════════════════════════════════════════════════════════
+     MOOD BOARD IIFE
+     Handles: gallery, canvas, elements, tools, Firebase sync,
+              cursors, notifications, permissions, undo/redo
+  ══════════════════════════════════════════════════════════ */
+  (function() {
+
+    /* ── Constants ─────────────────────────────────────── */
+    var ADMIN_EMAIL = 'ikcu1994@gmail.com';
+    var ZOOM_MIN = 0.08, ZOOM_MAX = 8;
+    var STICKY_COLORS = ['#ffd66e','#ff9a9a','#a8f0c6','#93c5fd','#d8b4fe','#fdba74','#f0f0e8'];
+    var STROKE_COLORS = ['#f3f3ef','#ff9a9a','#93c5fd','#a8f0c6','#ffd66e','#d8b4fe','#fdba74','#0b0b0c'];
+    var SHAPE_FILLS   = ['transparent','rgba(255,214,110,.18)','rgba(147,197,253,.18)','rgba(168,240,198,.18)','rgba(216,180,254,.18)','rgba(243,243,239,.08)'];
+    var UID_COLORS    = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bdb','#ff922b','#66d9e8','#f783ac'];
+
+    /* ── State ─────────────────────────────────────────── */
+    var _myUid    = null;
+    var _myName   = null;
+    var _myRole   = null; /* 'admin'|'viewer'|'preview'|'public' */
+    var _myColor  = null;
+    var _boardId  = null; /* currently open board */
+    var _boardMeta= {};
+    var _elements = {};   /* { elementId: data } live from RTDB */
+    var _elDoms   = {};   /* { elementId: domElement } */
+    var _selected = [];   /* array of selected elementIds */
+    var _tool     = 'select';
+    var _zoom     = 1;
+    var _panX     = 0, _panY = 0;
+    var _undoStack= [], _redoStack = [];
+    var _unsubElements = null, _unsubCursors = null, _unsubMeta = null;
+    var _cursorEls = {};  /* { uid: domElement } */
+    var _allCursorData = {}; /* { uid: {cx,cy,name,color,ts} } — cache for zoom/pan reposition */
+    var _isEditor = false; /* can this user edit this board? */
+    var _propStrokeColor = '#f3f3ef';
+    var _propFill        = 'transparent';
+    var _propStrokeWidth = 2;
+    var _propFontSize    = 16;
+    var _propStickyColor = '#ffd66e';
+
+    /* Drag / resize / draw state */
+    var _drag = null;   /* { ids, startX, startY, origPos[] } */
+    var _resize= null;  /* { id, handle, origEl, startX, startY } */
+    var _selbox= null;  /* { startX, startY } rubber-band */
+    var _drawing=null;  /* { path SVG elem, points[] } — pen tool */
+    var _arrowDraw=null;/* { svg line, x1,y1 } — arrow tool */
+    var _shapePreview=null; /* preview el while drawing shape */
+    var _spaceDown=false;   /* space bar held (temporary hand tool) */
+    var _isPanning=false;   /* middle-mouse or space+drag */
+    var _panStart=null;
+
+    /* Throttle: cursor broadcast */
+    var _cursorTimer=null, _lastCx=-9999, _lastCy=-9999;
+    var _minimapTimer=null;
+    var _thumbTimer=null;
+
+    /* ── DOM refs ──────────────────────────────────────── */
+    var stage, canvas, svgLayer, selbox, propbar, minimap, minimapCanvas, minimapVp;
+    var toolbar, topbar, boardNameInput, zoomPctEl, collabAvatars;
+    var readonlyBanner, requestEditBtn;
+    var dropOverlay;
+    var notifPanel = null;
+    var _notifUnsub = null;
+    var _reqUnsub   = null;
+
+    /* ── Helpers ────────────────────────────────────────── */
+    function genId() { return 'el_' + Date.now() + '_' + Math.random().toString(36).slice(2,6); }
+
+    function uidColor(uid) {
+      if (!uid) return UID_COLORS[0];
+      var h = 0;
+      for (var i = 0; i < uid.length; i++) h = (h * 31 + uid.charCodeAt(i)) & 0xffffffff;
+      return UID_COLORS[Math.abs(h) % UID_COLORS.length];
+    }
+
+    function relTimeStr(ts) {
+      var s = (Date.now() - ts) / 1000;
+      if (s < 60)  return 'just now';
+      if (s < 3600) return Math.floor(s/60) + 'm ago';
+      if (s < 86400) return Math.floor(s/3600) + 'h ago';
+      return Math.floor(s/86400) + 'd ago';
+    }
+
+    function isAdmin() { return _myRole === 'admin'; }
+
+    function canEdit() {
+      return _isEditor && (_myRole === 'admin' || _myRole === 'viewer');
+    }
+
+    /* ── Coordinate transforms ──────────────────────────── */
+    function screenToCanvas(sx, sy) {
+      var r = stage.getBoundingClientRect();
+      return { x: (sx - r.left - _panX) / _zoom, y: (sy - r.top - _panY) / _zoom };
+    }
+
+    function canvasToScreen(cx, cy) {
+      var r = stage.getBoundingClientRect();
+      return { x: cx * _zoom + _panX + r.left, y: cy * _zoom + _panY + r.top };
+    }
+
+    function applyTransform() {
+      canvas.style.transform = 'translate(' + _panX + 'px,' + _panY + 'px) scale(' + _zoom + ')';
+      updateZoomPct();
+      scheduleMinimapUpdate();
+      positionAllCursors();
+    }
+
+    function updateZoomPct() {
+      if (zoomPctEl) zoomPctEl.textContent = Math.round(_zoom * 100) + '%';
+    }
+
+    function setZoom(z, cx, cy) {
+      if (cx == null) { var r = stage.getBoundingClientRect(); cx = r.left + r.width/2; cy = r.top + r.height/2; }
+      var oldZ = _zoom;
+      _zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+      var r2 = stage.getBoundingClientRect();
+      _panX = cx - r2.left - (cx - r2.left - _panX) * (_zoom / oldZ);
+      _panY = cy - r2.top  - (cy - r2.top  - _panY) * (_zoom / oldZ);
+      applyTransform();
+    }
+
+    function fitAll() {
+      var els = Object.values(_elements);
+      if (!els.length) { _zoom=1; _panX=0; _panY=0; applyTransform(); return; }
+      var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+      els.forEach(function(e){
+        minX=Math.min(minX,e.x); minY=Math.min(minY,e.y);
+        maxX=Math.max(maxX,e.x+(e.w||200)); maxY=Math.max(maxY,e.y+(e.h||120));
+      });
+      var pad=80, r=stage.getBoundingClientRect();
+      var sw=r.width-pad*2, sh=r.height-pad*2;
+      var fw=maxX-minX, fh=maxY-minY;
+      if(fw<1)fw=600; if(fh<1)fh=400;
+      _zoom=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,Math.min(sw/fw,sh/fh)));
+      _panX=pad-(minX*_zoom); _panY=pad-(minY*_zoom);
+      applyTransform();
+    }
+
+    /* ── Element rendering ──────────────────────────────── */
+    function renderEl(id, d) {
+      var isNew = !_elDoms[id];
+      var el = _elDoms[id] || document.createElement('div');
+      el.className = 'mb-el';
+      el.dataset.id = id;
+      el.style.left = d.x + 'px';
+      el.style.top  = d.y + 'px';
+      el.style.width = (d.w||200) + 'px';
+      el.style.height= (d.h||120) + 'px';
+      el.style.zIndex= d.z || 1;
+      el.style.opacity = (d.opacity != null ? d.opacity : 1);
+      if (d.locked) el.classList.add('locked');
+      else el.classList.remove('locked');
+
+      if (isNew) {
+        if (d.type === 'sticky') {
+          el.className += ' mb-sticky';
+          el.style.background = d.color || '#ffd66e';
+          var ta = document.createElement('textarea');
+          ta.className = 'mb-sticky-text';
+          ta.value = d.content || '';
+          ta.placeholder = 'Write something…';
+          ta.readOnly = !canEdit();
+          ta.addEventListener('input', function(){
+            scheduleElUpdate(id, { content: ta.value });
+          });
+          ta.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+          el.appendChild(ta);
+        } else if (d.type === 'text') {
+          el.className = 'mb-el';
+          var tb = document.createElement('div');
+          tb.className = 'mb-textblock';
+          tb.contentEditable = canEdit() ? 'true' : 'false';
+          tb.style.fontSize   = (d.fontSize || 16) + 'px';
+          tb.style.color      = d.color || '#f3f3ef';
+          tb.style.fontWeight = d.bold ? '600' : '400';
+          tb.style.fontStyle  = d.italic ? 'italic' : 'normal';
+          tb.style.textAlign  = d.align || 'left';
+          tb.innerHTML = d.content || '';
+          tb.addEventListener('input', function(){
+            scheduleElUpdate(id, { content: tb.innerHTML });
+          });
+          tb.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+          el.appendChild(tb);
+        } else if (d.type === 'image') {
+          el.className = 'mb-el';
+          if (d.url) {
+            var img = document.createElement('img');
+            img.className = 'mb-img';
+            img.src = d.url;
+            img.draggable = false;
+            el.appendChild(img);
+          } else {
+            var ph = document.createElement('div');
+            ph.className = 'mb-img-placeholder';
+            ph.innerHTML = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3.5" width="14" height="11" rx="1.5"/><circle cx="6.5" cy="7.5" r="1.2"/><path d="M2 12l3.5-3.5 3 3 2.5-2.5L16 14"/></svg><span>Loading…</span>';
+            el.appendChild(ph);
+          }
+        } else if (d.type === 'rect' || d.type === 'circle' || d.type === 'diamond') {
+          el.className = 'mb-el';
+          var svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+          svg.setAttribute('class','mb-shape-svg');
+          svg.setAttribute('viewBox','0 0 100 100');
+          svg.setAttribute('preserveAspectRatio','none');
+          var shape;
+          if (d.type === 'rect') {
+            shape = document.createElementNS('http://www.w3.org/2000/svg','rect');
+            shape.setAttribute('x','2'); shape.setAttribute('y','2');
+            shape.setAttribute('width','96'); shape.setAttribute('height','96');
+            shape.setAttribute('rx','3');
+          } else if (d.type === 'circle') {
+            shape = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+            shape.setAttribute('cx','50'); shape.setAttribute('cy','50');
+            shape.setAttribute('rx','48'); shape.setAttribute('ry','48');
+          } else {
+            shape = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+            shape.setAttribute('points','50,2 98,50 50,98 2,50');
+          }
+          shape.setAttribute('fill', d.fill || 'transparent');
+          shape.setAttribute('stroke', d.stroke || '#f3f3ef');
+          shape.setAttribute('stroke-width', ((d.strokeWidth||2)*100/Math.max(d.w||100,d.h||100)));
+          svg.appendChild(shape);
+          el.appendChild(svg);
+        }
+
+        /* Attach drag / select listeners */
+        attachElListeners(el, id);
+        canvas.appendChild(el);
+        _elDoms[id] = el;
+      } else {
+        /* Update existing element */
+        el.style.left  = d.x + 'px';
+        el.style.top   = d.y + 'px';
+        el.style.width = (d.w||200) + 'px';
+        el.style.height= (d.h||120) + 'px';
+        el.style.zIndex= d.z || 1;
+
+        if (d.type === 'sticky') {
+          el.style.background = d.color || '#ffd66e';
+          var ta2 = el.querySelector('.mb-sticky-text');
+          if (ta2 && document.activeElement !== ta2) ta2.value = d.content || '';
+        } else if (d.type === 'text') {
+          var tb2 = el.querySelector('.mb-textblock');
+          if (tb2) {
+            tb2.style.fontSize  = (d.fontSize||16)+'px';
+            tb2.style.color     = d.color||'#f3f3ef';
+            tb2.style.fontWeight= d.bold?'600':'400';
+            tb2.style.fontStyle = d.italic?'italic':'normal';
+            tb2.style.textAlign = d.align||'left';
+            if (document.activeElement !== tb2) tb2.innerHTML = d.content||'';
+          }
+        } else if (d.type === 'image') {
+          var img2 = el.querySelector('img');
+          if (img2 && d.url && img2.src !== d.url) img2.src = d.url;
+        } else if (d.type === 'rect' || d.type === 'circle' || d.type === 'diamond') {
+          var shp2 = el.querySelector('rect,ellipse,polygon');
+          if (shp2) {
+            shp2.setAttribute('fill', d.fill||'transparent');
+            shp2.setAttribute('stroke', d.stroke||'#f3f3ef');
+            shp2.setAttribute('stroke-width', ((d.strokeWidth||2)*100/Math.max(d.w||100,d.h||100)));
+          }
+        }
+      }
+
+      /* Selection ring */
+      var ring = el.querySelector('.mb-el-sel-ring');
+      if (_selected.indexOf(id) >= 0) {
+        if (!ring) {
+          ring = document.createElement('div');
+          ring.className = 'mb-el-sel-ring';
+          el.appendChild(ring);
+        }
+        renderHandles(el, id);
+      } else {
+        if (ring) ring.remove();
+        removeHandles(el);
+      }
+    }
+
+    function renderSvgEl(id, d) {
+      /* Draw path (pen) or arrow in the SVG layer */
+      var existing = svgLayer.querySelector('[data-id="' + id + '"]');
+      if (existing) existing.remove();
+
+      if (d.type === 'path' && d.points && d.points.length > 1) {
+        var pathEl = document.createElementNS('http://www.w3.org/2000/svg','path');
+        pathEl.setAttribute('data-id', id);
+        pathEl.setAttribute('class', 'mb-path-el');
+        pathEl.setAttribute('d', smoothPath(d.points));
+        pathEl.setAttribute('fill','none');
+        pathEl.setAttribute('stroke', d.stroke || '#f3f3ef');
+        pathEl.setAttribute('stroke-width', d.strokeWidth || 2);
+        pathEl.setAttribute('stroke-linecap','round');
+        pathEl.setAttribute('stroke-linejoin','round');
+        if (_selected.indexOf(id) >= 0) pathEl.classList.add('selected-path');
+        svgLayer.appendChild(pathEl);
+      } else if (d.type === 'arrow') {
+        var g = document.createElementNS('http://www.w3.org/2000/svg','g');
+        g.setAttribute('data-id', id);
+        g.setAttribute('class','mb-path-el');
+        var ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+        ln.setAttribute('x1', d.x); ln.setAttribute('y1', d.y);
+        ln.setAttribute('x2', d.x2); ln.setAttribute('y2', d.y2);
+        ln.setAttribute('stroke', d.stroke||'#f3f3ef');
+        ln.setAttribute('stroke-width', d.strokeWidth||2);
+        ln.setAttribute('stroke-linecap','round');
+        var ah = arrowheadPath(d.x,d.y,d.x2,d.y2);
+        var ap = document.createElementNS('http://www.w3.org/2000/svg','path');
+        ap.setAttribute('d', ah);
+        ap.setAttribute('fill','none');
+        ap.setAttribute('stroke', d.stroke||'#f3f3ef');
+        ap.setAttribute('stroke-width', d.strokeWidth||2);
+        ap.setAttribute('stroke-linecap','round');
+        g.appendChild(ln); g.appendChild(ap);
+        if (_selected.indexOf(id) >= 0) g.classList.add('selected-path');
+        svgLayer.appendChild(g);
+      }
+    }
+
+    function smoothPath(pts) {
+      if (!pts || pts.length < 2) return '';
+      var d = 'M' + pts[0][0] + ' ' + pts[0][1];
+      for (var i = 1; i < pts.length - 1; i++) {
+        var cx = (pts[i][0] + pts[i+1][0]) / 2;
+        var cy = (pts[i][1] + pts[i+1][1]) / 2;
+        d += ' Q' + pts[i][0] + ' ' + pts[i][1] + ' ' + cx + ' ' + cy;
+      }
+      d += ' L' + pts[pts.length-1][0] + ' ' + pts[pts.length-1][1];
+      return d;
+    }
+
+    function arrowheadPath(x1,y1,x2,y2) {
+      var angle = Math.atan2(y2-y1, x2-x1);
+      var len=14, spread=Math.PI/6;
+      var ax1=x2-len*Math.cos(angle-spread), ay1=y2-len*Math.sin(angle-spread);
+      var ax2=x2-len*Math.cos(angle+spread), ay2=y2-len*Math.sin(angle+spread);
+      return 'M'+ax1+' '+ay1+' L'+x2+' '+y2+' L'+ax2+' '+ay2;
+    }
+
+    function renderHandles(el, id) {
+      removeHandles(el);
+      var d = _elements[id];
+      if (!d || d.locked || !canEdit()) return;
+      ['nw','n','ne','e','se','s','sw','w'].forEach(function(h){
+        var hEl = document.createElement('div');
+        hEl.className = 'mb-handle'; hEl.dataset.h = h;
+        hEl.addEventListener('mousedown', function(e){
+          e.stopPropagation(); e.preventDefault();
+          startResize(id, h, e);
+        });
+        el.appendChild(hEl);
+      });
+    }
+
+    function removeHandles(el) {
+      var hs = el.querySelectorAll('.mb-handle');
+      hs.forEach(function(h){ h.remove(); });
+    }
+
+    function renderAll() {
+      /* Remove orphaned DOM elements */
+      Object.keys(_elDoms).forEach(function(id){
+        if (!_elements[id]) { _elDoms[id].remove(); delete _elDoms[id]; }
+      });
+      /* Render/update each element */
+      Object.keys(_elements).forEach(function(id){
+        var d = _elements[id];
+        if (d.type === 'path' || d.type === 'arrow') renderSvgEl(id, d);
+        else renderEl(id, d);
+      });
+    }
+
+    /* ── Element listeners (drag, select) ───────────────── */
+    function attachElListeners(el, id) {
+      el.addEventListener('mousedown', function(e){
+        if (e.button !== 0) return;
+        if (_tool !== 'select' && _tool !== 'hand') return;
+        if (_tool === 'hand' || _spaceDown) return; /* hand tool pans instead */
+        e.stopPropagation();
+        var d = _elements[id];
+        if (!d) return;
+
+        /* Select */
+        if (e.shiftKey) {
+          var idx = _selected.indexOf(id);
+          if (idx >= 0) _selected.splice(idx,1);
+          else _selected.push(id);
+        } else if (_selected.indexOf(id) < 0) {
+          _selected = [id];
+        }
+        renderAll();
+        updatePropbar();
+
+        if (!canEdit() || (d && d.locked)) return;
+
+        /* Start drag */
+        var origPos = _selected.map(function(sid){
+          var sd = _elements[sid];
+          return sd ? { id:sid, x:sd.x, y:sd.y } : null;
+        }).filter(Boolean);
+        _drag = { startX: e.clientX, startY: e.clientY, origPos: origPos };
+        e.preventDefault();
+      });
+
+      /* SVG path click */
+      el.addEventListener('click', function(e){
+        if (_tool !== 'select') return;
+        e.stopPropagation();
+        if (!e.shiftKey) _selected = [id];
+        else {
+          var idx2 = _selected.indexOf(id);
+          if (idx2>=0) _selected.splice(idx2,1); else _selected.push(id);
+        }
+        renderAll(); updatePropbar();
+      });
+    }
+
+    /* ── Drag handler ───────────────────────────────────── */
+    function onMouseMove(e) {
+      var pos = screenToCanvas(e.clientX, e.clientY);
+
+      /* Broadcast cursor — all authenticated users broadcast on the canvas */
+      if (_boardId && _myUid) {
+        var dx = pos.x - _lastCx, dy = pos.y - _lastCy;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+          _lastCx = pos.x; _lastCy = pos.y;
+          if (!_cursorTimer) {
+            _cursorTimer = setTimeout(function(){ _cursorTimer=null; }, 65);
+            if (window.fb && window.fb.boards) {
+              window.fb.boards.cursors.set(_boardId, _myUid, {
+                cx: Math.round(pos.x), cy: Math.round(pos.y),
+                name: _myName || 'Guest', color: _myColor, ts: Date.now()
+              });
+            }
+          }
+        }
+      }
+
+      /* Pan (space+drag or hand tool) */
+      if (_isPanning && _panStart) {
+        _panX += e.clientX - _panStart.x;
+        _panY += e.clientY - _panStart.y;
+        _panStart = { x: e.clientX, y: e.clientY };
+        applyTransform();
+        return;
+      }
+
+      /* Drag elements */
+      if (_drag) {
+        var ddx = (e.clientX - _drag.startX) / _zoom;
+        var ddy = (e.clientY - _drag.startY) / _zoom;
+        _drag.origPos.forEach(function(op){
+          var dom = _elDoms[op.id];
+          if (dom) { dom.style.left=(op.x+ddx)+'px'; dom.style.top=(op.y+ddy)+'px'; }
+        });
+        return;
+      }
+
+      /* Resize */
+      if (_resize) {
+        doResize(e.clientX, e.clientY);
+        return;
+      }
+
+      /* Rubber-band selection box */
+      if (_selbox) {
+        var r2 = stage.getBoundingClientRect();
+        var sx = Math.min(_selbox.startX, e.clientX - r2.left);
+        var sy = Math.min(_selbox.startY, e.clientY - r2.top);
+        var sw = Math.abs(e.clientX - r2.left - _selbox.startX);
+        var sh = Math.abs(e.clientY - r2.top  - _selbox.startY);
+        selbox.style.display='block';
+        selbox.style.left=sx+'px'; selbox.style.top=sy+'px';
+        selbox.style.width=sw+'px'; selbox.style.height=sh+'px';
+        /* Compute intersecting elements */
+        var boxL=(_selbox.startX-_panX)/_zoom, boxT=(_selbox.startY-_panY)/_zoom;
+        var boxR=((_selbox.startX+sw)-_panX)/_zoom, boxB=((_selbox.startY+sh)-_panY)/_zoom;
+        if(e.clientX-r2.left < _selbox.startX){boxL=(e.clientX-r2.left-_panX)/_zoom; boxR=(_selbox.startX-_panX)/_zoom;}
+        if(e.clientY-r2.top  < _selbox.startY){boxT=(e.clientY-r2.top-_panY)/_zoom;  boxB=(_selbox.startY-_panY)/_zoom;}
+        _selected = Object.keys(_elements).filter(function(id){
+          var d=_elements[id]; if(!d||d.x==null)return false;
+          return d.x<boxR&&(d.x+(d.w||200))>boxL&&d.y<boxB&&(d.y+(d.h||120))>boxT;
+        });
+        renderAll(); return;
+      }
+
+      /* Pen tool: record points */
+      if (_drawing && e.buttons === 1) {
+        _drawing.points.push([pos.x, pos.y]);
+        _drawing.el.setAttribute('d', smoothPath(_drawing.points));
+        return;
+      }
+
+      /* Arrow draw */
+      if (_arrowDraw && e.buttons === 1) {
+        _arrowDraw.line.setAttribute('x2', pos.x);
+        _arrowDraw.line.setAttribute('y2', pos.y);
+        var ah = arrowheadPath(_arrowDraw.x1,_arrowDraw.y1,pos.x,pos.y);
+        _arrowDraw.head.setAttribute('d', ah);
+        return;
+      }
+
+      /* Shape preview */
+      if (_shapePreview && e.buttons === 1) {
+        var sp = _shapePreview;
+        var nx = Math.min(sp.sx, pos.x), ny = Math.min(sp.sy, pos.y);
+        var nw = Math.abs(pos.x - sp.sx), nh = Math.abs(pos.y - sp.sy);
+        if (sp.el) {
+          sp.el.style.left=nx+'px'; sp.el.style.top=ny+'px';
+          sp.el.style.width=nw+'px'; sp.el.style.height=nh+'px';
+        }
+      }
+    }
+
+    function onMouseUp(e) {
+      /* Finish drag */
+      if (_drag) {
+        var ddx = (e.clientX - _drag.startX) / _zoom;
+        var ddy = (e.clientY - _drag.startY) / _zoom;
+        if (Math.abs(ddx) > 1 || Math.abs(ddy) > 1) {
+          var updates = [];
+          _drag.origPos.forEach(function(op){
+            var nx = Math.round(op.x + ddx), ny = Math.round(op.y + ddy);
+            updates.push({ id: op.id, x: nx, y: ny });
+            commitElUpdate(op.id, { x: nx, y: ny });
+          });
+          pushUndo({ type:'move', items: _drag.origPos.map(function(op,i){ return { id:op.id, before:{x:op.x,y:op.y}, after:{x:updates[i].x,y:updates[i].y}}; }) });
+        }
+        _drag = null;
+        return;
+      }
+
+      /* Finish resize */
+      if (_resize) {
+        finishResize();
+        return;
+      }
+
+      /* Finish rubber-band */
+      if (_selbox) {
+        _selbox = null;
+        selbox.style.display = 'none';
+        renderAll(); updatePropbar();
+        return;
+      }
+
+      /* Finish pen drawing */
+      if (_drawing) {
+        var pts = _drawing.points;
+        if (pts.length > 1) {
+          var pathId = genId();
+          var pathData = { type:'path', points:pts, stroke:_propStrokeColor, strokeWidth:_propStrokeWidth, x:0,y:0,w:0,h:0, z: nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
+          _elements[pathId] = pathData;
+          pushUndo({ type:'create', id:pathId, data: JSON.parse(JSON.stringify(pathData)) });
+          commitElSet(pathId, pathData);
+          renderSvgEl(pathId, pathData);
+        }
+        _drawing.el.remove();
+        _drawing = null;
+        return;
+      }
+
+      /* Finish arrow */
+      if (_arrowDraw) {
+        var x2f = parseFloat(_arrowDraw.line.getAttribute('x2'));
+        var y2f = parseFloat(_arrowDraw.line.getAttribute('y2'));
+        var dist = Math.sqrt(Math.pow(x2f-_arrowDraw.x1,2)+Math.pow(y2f-_arrowDraw.y1,2));
+        if (dist > 10) {
+          var arId = genId();
+          var arData = { type:'arrow', x:_arrowDraw.x1, y:_arrowDraw.y1, x2:x2f, y2:y2f, stroke:_propStrokeColor, strokeWidth:_propStrokeWidth, w:0,h:0, z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
+          _elements[arId] = arData;
+          pushUndo({ type:'create', id:arId, data: JSON.parse(JSON.stringify(arData)) });
+          commitElSet(arId, arData);
+          renderSvgEl(arId, arData);
+        }
+        _arrowDraw.g.remove();
+        _arrowDraw = null;
+        return;
+      }
+
+      /* Finish shape preview */
+      if (_shapePreview) {
+        var sp = _shapePreview;
+        var nx2 = Math.min(sp.sx, screenToCanvas(e.clientX,e.clientY).x);
+        var ny2 = Math.min(sp.sy, screenToCanvas(e.clientX,e.clientY).y);
+        var nw2 = Math.abs(screenToCanvas(e.clientX,e.clientY).x - sp.sx);
+        var nh2 = Math.abs(screenToCanvas(e.clientX,e.clientY).y - sp.sy);
+        if (sp.el) sp.el.remove();
+        _shapePreview = null;
+        if (nw2 > 5 && nh2 > 5) {
+          addElement(sp.type, nx2, ny2, Math.max(nw2,40), Math.max(nh2,40));
+        }
+        return;
+      }
+
+      _isPanning = false; _panStart = null;
+      if (stage) stage.classList.remove('panning');
+    }
+
+    /* ── Stage mouse down: tool actions ─────────────────── */
+    function onStageMouseDown(e) {
+      if (e.target !== stage && e.target !== canvas && !e.target.classList.contains('mb-bg-dots')) {
+        /* .mb-el divs have their own mousedown handler — don't double-handle */
+        if (e.target.closest('.mb-el')) return;
+        /* SVG elements (paths, arrows) — handle select here since they have no own handler */
+        var svgDataEl = e.target.closest('[data-id]');
+        if (svgDataEl && _tool === 'select') {
+          var svgId = svgDataEl.getAttribute('data-id');
+          if (e.shiftKey) {
+            var si = _selected.indexOf(svgId);
+            if (si >= 0) _selected.splice(si, 1); else _selected.push(svgId);
+          } else {
+            if (_selected.indexOf(svgId) < 0) _selected = [svgId];
+          }
+          renderAll(); updatePropbar();
+          e.stopPropagation(); return;
+        }
+        if (svgDataEl) return; /* other tools on SVG — ignore */
+      }
+      if (e.button === 1 || (e.button === 0 && (_spaceDown || _tool === 'hand'))) {
+        /* Pan */
+        _isPanning = true; _panStart = { x: e.clientX, y: e.clientY };
+        stage.classList.add('panning');
+        e.preventDefault(); return;
+      }
+      if (e.button !== 0) return;
+
+      var pos2 = screenToCanvas(e.clientX, e.clientY);
+
+      if (_tool === 'select') {
+        /* Deselect + start rubber band */
+        if (!e.shiftKey) _selected = [];
+        var r3 = stage.getBoundingClientRect();
+        _selbox = { startX: e.clientX - r3.left, startY: e.clientY - r3.top };
+        renderAll(); updatePropbar();
+        return;
+      }
+
+      if (!canEdit()) return;
+
+      if (_tool === 'sticky') {
+        addElement('sticky', pos2.x-100, pos2.y-60);
+        setTool('select');
+      } else if (_tool === 'text') {
+        addElement('text', pos2.x-60, pos2.y-18);
+        setTool('select');
+      } else if (_tool === 'pen') {
+        /* Start drawing */
+        var pathPrev = document.createElementNS('http://www.w3.org/2000/svg','path');
+        pathPrev.setAttribute('fill','none');
+        pathPrev.setAttribute('stroke', _propStrokeColor);
+        pathPrev.setAttribute('stroke-width', _propStrokeWidth);
+        pathPrev.setAttribute('stroke-linecap','round');
+        pathPrev.setAttribute('stroke-linejoin','round');
+        pathPrev.setAttribute('class','mb-drawing-path');
+        svgLayer.appendChild(pathPrev);
+        _drawing = { el: pathPrev, points: [[pos2.x, pos2.y]] };
+      } else if (_tool === 'arrow') {
+        var arG = document.createElementNS('http://www.w3.org/2000/svg','g');
+        var arLn = document.createElementNS('http://www.w3.org/2000/svg','line');
+        arLn.setAttribute('x1',pos2.x); arLn.setAttribute('y1',pos2.y);
+        arLn.setAttribute('x2',pos2.x); arLn.setAttribute('y2',pos2.y);
+        arLn.setAttribute('stroke',_propStrokeColor); arLn.setAttribute('stroke-width',_propStrokeWidth); arLn.setAttribute('stroke-linecap','round');
+        var arHd = document.createElementNS('http://www.w3.org/2000/svg','path');
+        arHd.setAttribute('fill','none'); arHd.setAttribute('stroke',_propStrokeColor); arHd.setAttribute('stroke-width',_propStrokeWidth); arHd.setAttribute('stroke-linecap','round');
+        arG.appendChild(arLn); arG.appendChild(arHd);
+        svgLayer.appendChild(arG);
+        _arrowDraw = { g:arG, line:arLn, head:arHd, x1:pos2.x, y1:pos2.y };
+      } else if (_tool === 'rect' || _tool === 'circle' || _tool === 'diamond') {
+        var previewEl = document.createElement('div');
+        previewEl.className = 'mb-el';
+        previewEl.style.left = pos2.x+'px'; previewEl.style.top = pos2.y+'px';
+        previewEl.style.width='0px'; previewEl.style.height='0px';
+        previewEl.style.border = '2px dashed rgba(126,140,247,.6)';
+        previewEl.style.background = 'rgba(126,140,247,.04)';
+        previewEl.style.pointerEvents = 'none';
+        canvas.appendChild(previewEl);
+        _shapePreview = { type:_tool, sx:pos2.x, sy:pos2.y, el:previewEl };
+      } else if (_tool === 'image') {
+        /* Open file picker */
+        openImagePicker(pos2.x, pos2.y);
+        setTool('select');
+      }
+    }
+
+    /* ── Scroll to zoom ─────────────────────────────────── */
+    function onStageWheel(e) {
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) {
+        var factor = e.deltaY < 0 ? 1.1 : 1/1.1;
+        setZoom(_zoom * factor, e.clientX, e.clientY);
+      } else {
+        _panX -= e.deltaX; _panY -= e.deltaY;
+        applyTransform();
+      }
+    }
+
+    /* ── Add elements ───────────────────────────────────── */
+    function nextZ() {
+      var z = 1;
+      Object.values(_elements).forEach(function(d){ if (d.z >= z) z = d.z + 1; });
+      return z;
+    }
+
+    function addElement(type, x, y, w, h) {
+      if (!canEdit()) return;
+      var id = genId();
+      var d = {
+        type: type,
+        x: Math.round(x), y: Math.round(y),
+        w: w || (type==='sticky'?200:type==='text'?180:type==='image'?240:160),
+        h: h || (type==='sticky'?160:type==='text'?50:type==='image'?180:120),
+        z: nextZ(),
+        createdBy: _myUid||'',
+        updatedAt: Date.now()
+      };
+      if (type==='sticky') { d.color=_propStickyColor; d.content=''; }
+      else if (type==='text') { d.content=''; d.fontSize=_propFontSize; d.color='#f3f3ef'; }
+      else if (type==='rect'||type==='circle'||type==='diamond') { d.fill=_propFill; d.stroke=_propStrokeColor; d.strokeWidth=_propStrokeWidth; }
+
+      _elements[id] = d;
+      pushUndo({ type:'create', id:id, data: JSON.parse(JSON.stringify(d)) });
+      commitElSet(id, d);
+
+      if (type==='path'||type==='arrow') renderSvgEl(id,d);
+      else { renderEl(id,d); }
+
+      /* Auto-focus text inputs */
+      setTimeout(function(){
+        var dom = _elDoms[id];
+        if (!dom) return;
+        if (type==='sticky') { var ta=dom.querySelector('textarea'); if(ta)ta.focus(); }
+        else if (type==='text') { var tb=dom.querySelector('[contenteditable]'); if(tb)tb.focus(); }
+      }, 50);
+
+      _selected = [id];
+      renderAll(); updatePropbar();
+      scheduleThumbUpdate();
+      return id;
+    }
+
+    /* ── Delete selected ────────────────────────────────── */
+    function deleteSelected() {
+      if (!canEdit() || !_selected.length) return;
+      var removed = [];
+      _selected.forEach(function(id){
+        var d = _elements[id];
+        if (!d || d.locked) return;
+        removed.push({ id:id, data: JSON.parse(JSON.stringify(d)) });
+        delete _elements[id];
+        if (_elDoms[id]) { _elDoms[id].remove(); delete _elDoms[id]; }
+        var svgEl = svgLayer.querySelector('[data-id="'+id+'"]');
+        if (svgEl) svgEl.remove();
+        if (window.fb && window.fb.boards) window.fb.boards.elements.remove(_boardId, id);
+      });
+      if (removed.length) {
+        pushUndo({ type:'delete', items: removed });
+        _selected = [];
+        updatePropbar(); scheduleThumbUpdate();
+      }
+    }
+
+    /* ── Resize ─────────────────────────────────────────── */
+    function startResize(id, handle, e) {
+      var d = _elements[id];
+      if (!d) return;
+      _resize = { id:id, handle:handle, origEl: JSON.parse(JSON.stringify(d)), startX:e.clientX, startY:e.clientY };
+    }
+
+    function doResize(mx, my) {
+      var r = _resize, d = _elements[r.id];
+      if (!d) return;
+      var ddx = (mx - r.startX) / _zoom;
+      var ddy = (my - r.startY) / _zoom;
+      var h = r.handle;
+      var nx=r.origEl.x, ny=r.origEl.y, nw=r.origEl.w||200, nh=r.origEl.h||120;
+      if (h.indexOf('e')>=0) nw=Math.max(40,r.origEl.w+ddx);
+      if (h.indexOf('s')>=0) nh=Math.max(40,r.origEl.h+ddy);
+      if (h.indexOf('w')>=0) { nx=r.origEl.x+ddx; nw=Math.max(40,r.origEl.w-ddx); }
+      if (h.indexOf('n')>=0) { ny=r.origEl.y+ddy; nh=Math.max(40,r.origEl.h-ddy); }
+      d.x=Math.round(nx); d.y=Math.round(ny); d.w=Math.round(nw); d.h=Math.round(nh);
+      var dom = _elDoms[r.id];
+      if (dom) { dom.style.left=d.x+'px'; dom.style.top=d.y+'px'; dom.style.width=d.w+'px'; dom.style.height=d.h+'px'; }
+    }
+
+    function finishResize() {
+      if (!_resize) return;
+      var d = _elements[_resize.id];
+      if (d) {
+        pushUndo({ type:'resize', id:_resize.id, before:_resize.origEl, after:{x:d.x,y:d.y,w:d.w,h:d.h} });
+        commitElUpdate(_resize.id, { x:d.x, y:d.y, w:d.w, h:d.h });
+      }
+      _resize = null;
+    }
+
+    /* ── Firebase commit helpers (debounced) ─────────────── */
+    var _elUpdateTimers = {};
+    function scheduleElUpdate(id, patch) {
+      Object.assign(_elements[id]||{}, patch);
+      if (_elUpdateTimers[id]) clearTimeout(_elUpdateTimers[id]);
+      _elUpdateTimers[id] = setTimeout(function(){
+        delete _elUpdateTimers[id];
+        commitElUpdate(id, patch);
+      }, 300);
+    }
+
+    function commitElUpdate(id, patch) {
+      if (!_boardId || !window.fb || !window.fb.boards) return;
+      var d = _elements[id];
+      if (!d) return;
+      var full = Object.assign({}, d, patch, { updatedAt: Date.now(), updatedBy: _myUid||'' });
+      _elements[id] = full;
+      window.fb.boards.elements.update(_boardId, id, full);
+      scheduleThumbUpdate();
+    }
+
+    function commitElSet(id, data) {
+      if (!_boardId || !window.fb || !window.fb.boards) return;
+      window.fb.boards.elements.set(_boardId, id, Object.assign({}, data, { updatedAt:Date.now(), updatedBy:_myUid||'' }));
+      scheduleThumbUpdate();
+    }
+
+    /* ── Undo / Redo ─────────────────────────────────────── */
+    function pushUndo(action) { _undoStack.push(action); _redoStack=[]; if(_undoStack.length>80)_undoStack.shift(); }
+
+    function undo() {
+      if (!canEdit() || !_undoStack.length) return;
+      var a = _undoStack.pop(); _redoStack.push(a);
+      applyUndo(a, false);
+    }
+
+    function redo() {
+      if (!canEdit() || !_redoStack.length) return;
+      var a = _redoStack.pop(); _undoStack.push(a);
+      applyUndo(a, true);
+    }
+
+    function applyUndo(a, isRedo) {
+      if (a.type === 'create') {
+        if (isRedo) {
+          _elements[a.id] = JSON.parse(JSON.stringify(a.data));
+          commitElSet(a.id, a.data);
+          renderAll();
+        } else {
+          delete _elements[a.id];
+          if (_elDoms[a.id]) { _elDoms[a.id].remove(); delete _elDoms[a.id]; }
+          var se=svgLayer.querySelector('[data-id="'+a.id+'"]'); if(se)se.remove();
+          if (window.fb&&window.fb.boards) window.fb.boards.elements.remove(_boardId, a.id);
+        }
+      } else if (a.type === 'delete') {
+        a.items.forEach(function(it){
+          if (isRedo) {
+            delete _elements[it.id];
+            if (_elDoms[it.id]) { _elDoms[it.id].remove(); delete _elDoms[it.id]; }
+            var se2=svgLayer.querySelector('[data-id="'+it.id+'"]'); if(se2)se2.remove();
+            if (window.fb&&window.fb.boards) window.fb.boards.elements.remove(_boardId, it.id);
+          } else {
+            _elements[it.id] = JSON.parse(JSON.stringify(it.data));
+            commitElSet(it.id, it.data);
+            renderAll();
+          }
+        });
+      } else if (a.type === 'move') {
+        a.items.forEach(function(it){
+          var pos = isRedo ? it.after : it.before;
+          if (_elements[it.id]) { _elements[it.id].x=pos.x; _elements[it.id].y=pos.y; }
+          var dom=_elDoms[it.id]; if(dom){dom.style.left=pos.x+'px';dom.style.top=pos.y+'px';}
+          commitElUpdate(it.id, pos);
+        });
+      } else if (a.type === 'resize') {
+        var pos2 = isRedo ? a.after : a.before;
+        if (_elements[a.id]) Object.assign(_elements[a.id], pos2);
+        var dom2=_elDoms[a.id];
+        if(dom2){dom2.style.left=pos2.x+'px';dom2.style.top=pos2.y+'px';dom2.style.width=pos2.w+'px';dom2.style.height=pos2.h+'px';}
+        commitElUpdate(a.id, pos2);
+      }
+      _selected = []; renderAll(); updatePropbar(); scheduleThumbUpdate();
+    }
+
+    /* ── Properties bar ─────────────────────────────────── */
+    function updatePropbar() {
+      if (!propbar) return;
+      if (!_selected.length || !canEdit()) { propbar.classList.remove('show'); propbar.innerHTML=''; return; }
+      var types = _selected.map(function(id){ return (_elements[id]||{}).type; });
+      var html = '';
+      /* Stroke color picker */
+      if (types.some(function(t){return t==='path'||t==='arrow'||t==='rect'||t==='circle'||t==='diamond';})) {
+        html += '<span style="font-family:var(--font-en-mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);opacity:.5;">Stroke</span>';
+        STROKE_COLORS.forEach(function(c){
+          html += '<button class="mb-prop-swatch'+(c===_propStrokeColor?' active':'')+'" style="background:'+c+';" data-strokecolor="'+c+'" title="'+c+'"></button>';
+        });
+        html += '<div class="mb-prop-sep"></div>';
+        html += '<span style="font-family:var(--font-en-mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);opacity:.5;">Width</span>';
+        html += '<input class="mb-stroke-slider" type="range" min="1" max="12" value="'+_propStrokeWidth+'" id="mbStrokeWidth">';
+      }
+      /* Sticky color */
+      if (types.some(function(t){return t==='sticky';})) {
+        html += '<span style="font-family:var(--font-en-mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);opacity:.5;">Color</span>';
+        STICKY_COLORS.forEach(function(c){
+          html += '<button class="mb-prop-swatch'+(c===_propStickyColor?' active':'')+'" style="background:'+c+';" data-stickycolor="'+c+'" title="'+c+'"></button>';
+        });
+      }
+      /* Text styles */
+      if (types.some(function(t){return t==='text';})) {
+        var firstText = _elements[_selected.find(function(id){ return (_elements[id]||{}).type==='text'; })];
+        html += '<button class="mb-prop-btn'+(firstText&&firstText.bold?' active':'')+'" data-textprop="bold" title="Bold"><b>B</b></button>';
+        html += '<button class="mb-prop-btn'+(firstText&&firstText.italic?' active':'')+'" data-textprop="italic" title="Italic"><i>I</i></button>';
+        html += '<div class="mb-prop-sep"></div>';
+        html += '<select class="mb-font-select" id="mbFontSize">';
+        [10,12,14,16,18,24,32,48].forEach(function(s){ html += '<option value="'+s+'"'+(firstText&&firstText.fontSize===s?' selected':'')+'>'+s+'px</option>'; });
+        html += '</select>';
+        html += '<div class="mb-prop-sep"></div>';
+        STROKE_COLORS.slice(0,6).forEach(function(c){
+          var clr = firstText ? firstText.color : '#f3f3ef';
+          html += '<button class="mb-prop-swatch'+(c===clr?' active':'')+'" style="background:'+c+';" data-textcolor="'+c+'" title="'+c+'"></button>';
+        });
+      }
+      /* Shape fill */
+      if (types.some(function(t){return t==='rect'||t==='circle'||t==='diamond';})) {
+        var firstSh = _elements[_selected.find(function(id){ var t=(_elements[id]||{}).type; return t==='rect'||t==='circle'||t==='diamond'; })];
+        html += '<div class="mb-prop-sep"></div>';
+        html += '<span style="font-family:var(--font-en-mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);opacity:.5;">Fill</span>';
+        SHAPE_FILLS.forEach(function(f){
+          var bg = f==='transparent'?'rgba(243,243,239,.08)':f;
+          var isCurrent = firstSh&&firstSh.fill===f;
+          html += '<button class="mb-prop-swatch'+(isCurrent?' active':'')+'" style="background:'+bg+';'+(f==='transparent'?'border-style:dashed;':'')+'" data-fill="'+encodeURIComponent(f)+'" title="Fill"></button>';
+        });
+      }
+      /* Delete + lock */
+      html += '<div class="mb-prop-sep"></div>';
+      html += '<button class="mb-prop-btn" data-act="delete" title="Delete (Del)"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h10M5 4V2.5h4V4M5.5 7v4M8.5 7v4M3 4l.7 7.5h6.6L11 4"/></svg></button>';
+      var firstEl2 = _elements[_selected[0]];
+      var isLocked = firstEl2 && firstEl2.locked;
+      if (isAdmin()) html += '<button class="mb-prop-btn'+(isLocked?' active':'')+'" data-act="lock" title="'+(isLocked?'Unlock':'Lock')+'"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="3" y="6" width="8" height="6" rx="1"/><path d="M5 6V4.5a2 2 0 0 1 4 0V6"/></svg></button>';
+      html += '<button class="mb-prop-btn" data-act="duplicate" title="Duplicate (Ctrl+D)"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="4" y="4" width="8" height="8" rx="1"/><path d="M2 10V2h8"/></svg></button>';
+
+      propbar.innerHTML = html;
+      propbar.classList.add('show');
+
+      /* Bind propbar events */
+      propbar.querySelectorAll('[data-strokecolor]').forEach(function(btn){
+        btn.addEventListener('click', function(){ _propStrokeColor = btn.dataset.strokecolor; _selected.forEach(function(id){ if(_elements[id])scheduleElUpdate(id,{stroke:_propStrokeColor}); }); updatePropbar(); });
+      });
+      propbar.querySelectorAll('[data-stickycolor]').forEach(function(btn){
+        btn.addEventListener('click', function(){ _propStickyColor = btn.dataset.stickycolor; _selected.forEach(function(id){ if(_elements[id]&&_elements[id].type==='sticky')scheduleElUpdate(id,{color:_propStickyColor}); }); updatePropbar(); });
+      });
+      propbar.querySelectorAll('[data-textprop]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var prop = btn.dataset.textprop;
+          _selected.forEach(function(id){ if(_elements[id]&&_elements[id].type==='text'){ var cur=_elements[id][prop]; scheduleElUpdate(id,{[prop]:!cur}); } });
+          updatePropbar();
+        });
+      });
+      propbar.querySelectorAll('[data-textcolor]').forEach(function(btn){
+        btn.addEventListener('click', function(){ _selected.forEach(function(id){ if(_elements[id]&&_elements[id].type==='text')scheduleElUpdate(id,{color:btn.dataset.textcolor}); }); updatePropbar(); });
+      });
+      propbar.querySelectorAll('[data-fill]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var f = decodeURIComponent(btn.dataset.fill);
+          _propFill = f;
+          _selected.forEach(function(id){ if(_elements[id])scheduleElUpdate(id,{fill:f}); });
+          updatePropbar();
+        });
+      });
+      var swEl = propbar.querySelector('#mbStrokeWidth');
+      if (swEl) swEl.addEventListener('input', function(){ _propStrokeWidth=parseInt(swEl.value); _selected.forEach(function(id){ if(_elements[id])scheduleElUpdate(id,{strokeWidth:_propStrokeWidth}); }); });
+      var fsEl = propbar.querySelector('#mbFontSize');
+      if (fsEl) fsEl.addEventListener('change', function(){ _propFontSize=parseInt(fsEl.value); _selected.forEach(function(id){ if(_elements[id]&&_elements[id].type==='text')scheduleElUpdate(id,{fontSize:_propFontSize}); }); });
+      var delBtn = propbar.querySelector('[data-act="delete"]');
+      if (delBtn) delBtn.addEventListener('click', deleteSelected);
+      var lockBtn = propbar.querySelector('[data-act="lock"]');
+      if (lockBtn) lockBtn.addEventListener('click', function(){
+        _selected.forEach(function(id){ if(_elements[id]){ var l=!_elements[id].locked; scheduleElUpdate(id,{locked:l}); } });
+        updatePropbar();
+      });
+      var dupBtn = propbar.querySelector('[data-act="duplicate"]');
+      if (dupBtn) dupBtn.addEventListener('click', duplicateSelected);
+    }
+
+    /* ── Duplicate ──────────────────────────────────────── */
+    function duplicateSelected() {
+      if (!canEdit() || !_selected.length) return;
+      var newIds = [];
+      _selected.forEach(function(id){
+        var d = _elements[id];
+        if (!d) return;
+        var nid = genId();
+        var nd = Object.assign({}, JSON.parse(JSON.stringify(d)), { x:d.x+20, y:d.y+20, z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() });
+        _elements[nid] = nd;
+        commitElSet(nid, nd);
+        newIds.push(nid);
+        pushUndo({ type:'create', id:nid, data:nd });
+      });
+      _selected = newIds;
+      renderAll(); updatePropbar(); scheduleThumbUpdate();
+    }
+
+    /* ── Tool selection ──────────────────────────────────── */
+    function setTool(t) {
+      _tool = t;
+      if (stage) stage.className = 'mb-stage mb-bg-' + ((_boardMeta&&_boardMeta.bg)||'dots') + ' tool-' + t;
+      if (toolbar) toolbar.querySelectorAll('.mb-tool-btn').forEach(function(btn){
+        btn.classList.toggle('active', btn.dataset.tool === t);
+      });
+      if (t !== 'select') { _selected=[]; renderAll(); updatePropbar(); }
+    }
+
+    /* ── Image upload ─────────────────────────────────────── */
+    function openImagePicker(x, y) {
+      var inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*';
+      inp.addEventListener('change', function(){
+        var file = inp.files[0];
+        if (!file || !_boardId) return;
+        var id = genId();
+        var d = { type:'image', x:Math.round(x), y:Math.round(y), w:240, h:180, url:'', z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
+        _elements[id] = d;
+        renderEl(id, d);
+        var path = 'moodboard-images/' + _boardId + '/' + id + '/' + file.name;
+        window.fb.upload(file, path, null).then(function(result){
+          if (!result) return;
+          d.url = result.url; d.storagePath = result.path;
+          commitElSet(id, d);
+          renderEl(id, d);
+          scheduleThumbUpdate();
+        });
+        pushUndo({ type:'create', id:id, data:JSON.parse(JSON.stringify(d)) });
+      });
+      inp.click();
+    }
+
+    /* Drag & drop images onto canvas */
+    function initDragDrop() {
+      stage.addEventListener('dragover', function(e){ e.preventDefault(); dropOverlay.classList.add('show'); });
+      stage.addEventListener('dragleave', function(){ dropOverlay.classList.remove('show'); });
+      stage.addEventListener('drop', function(e){
+        e.preventDefault(); dropOverlay.classList.remove('show');
+        if (!canEdit()) return;
+        var pos3 = screenToCanvas(e.clientX, e.clientY);
+        var files = Array.from(e.dataTransfer.files).filter(function(f){ return f.type.startsWith('image/'); });
+        files.forEach(function(file, i){
+          var id = genId();
+          var d = { type:'image', x:Math.round(pos3.x + i*20), y:Math.round(pos3.y + i*20), w:240, h:180, url:'', z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
+          _elements[id] = d;
+          renderEl(id, d);
+          var path2 = 'moodboard-images/' + _boardId + '/' + id + '/' + file.name;
+          window.fb.upload(file, path2, null).then(function(result){
+            if (!result) return;
+            d.url=result.url; d.storagePath=result.path;
+            commitElSet(id, d); renderEl(id, d); scheduleThumbUpdate();
+          });
+          pushUndo({ type:'create', id:id, data:JSON.parse(JSON.stringify(d)) });
+        });
+      });
+    }
+
+    /* ── Remote cursors ──────────────────────────────────── */
+    function renderCursors(allData) {
+      _allCursorData = allData || {};
+      /* Remove stale or gone cursors */
+      Object.keys(_cursorEls).forEach(function(uid){
+        var d = allData[uid];
+        if (!d || uid === _myUid || (d.ts && Date.now() - d.ts > 12000)) {
+          _cursorEls[uid].remove(); delete _cursorEls[uid];
+        }
+      });
+      /* Create or update cursor DOM elements */
+      Object.keys(allData).forEach(function(uid){
+        if (uid === _myUid) return;
+        var d = allData[uid];
+        if (!d || d.cx == null) return;
+        if (Date.now() - (d.ts||0) > 12000) return; /* stale */
+        if (!_cursorEls[uid]) {
+          var el = document.createElement('div');
+          el.className = 'mb-cursor new-cursor';
+          var color = d.color || uidColor(uid);
+          el.innerHTML = '<svg viewBox="0 0 20 20"><path d="M4 2 14 9 9 10.5 7 16z" fill="'+color+'" stroke="#fff" stroke-width="1"/></svg><span class="mb-cursor-label" style="background:'+color+'">'+escHtml(d.name||'Guest')+'</span>';
+          /* Append to STAGE (not canvas) so cursor size is unaffected by zoom */
+          if (stage) stage.appendChild(el);
+          _cursorEls[uid] = el;
+          requestAnimationFrame(function(){ el.classList.remove('new-cursor'); });
+        }
+      });
+      positionAllCursors();
+    }
+
+    /* Reposition cursors in screen space — called on data change AND on zoom/pan */
+    function positionAllCursors() {
+      if (!stage) return;
+      Object.keys(_allCursorData).forEach(function(uid){
+        if (uid === _myUid || !_cursorEls[uid]) return;
+        var d = _allCursorData[uid];
+        if (!d || d.cx == null) return;
+        /* Convert canvas coords → stage-relative screen coords */
+        var sx = d.cx * _zoom + _panX;
+        var sy = d.cy * _zoom + _panY;
+        _cursorEls[uid].style.transform = 'translate(' + sx + 'px,' + sy + 'px)';
+      });
+    }
+
+    function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    /* ── Collab avatars in topbar ────────────────────────── */
+    function renderCollabAvatars(cursors) {
+      if (!collabAvatars) return;
+      var uids = Object.keys(cursors).filter(function(uid){ return uid !== _myUid && Date.now()-(cursors[uid].ts||0)<15000; });
+      collabAvatars.innerHTML = uids.slice(0,5).map(function(uid){
+        var d = cursors[uid];
+        var color = d.color || uidColor(uid);
+        var letter = (d.name||'?')[0].toUpperCase();
+        return '<div class="mb-collab-avatar" style="background:'+color+'" title="'+escHtml(d.name||'Guest')+'">'+letter+'</div>';
+      }).join('');
+    }
+
+    /* ── Thumbnail ───────────────────────────────────────── */
+    function scheduleThumbUpdate() {
+      if (_thumbTimer) clearTimeout(_thumbTimer);
+      _thumbTimer = setTimeout(generateAndSaveThumbnail, 2000);
+    }
+
+    function generateAndSaveThumbnail() {
+      if (!_boardId || !isAdmin()) return;
+      var c = document.createElement('canvas');
+      c.width = 280; c.height = 158;
+      var ctx = c.getContext('2d');
+      ctx.fillStyle = '#0b0b0c'; ctx.fillRect(0,0,280,158);
+      /* Dot pattern */
+      ctx.fillStyle = 'rgba(243,243,239,.12)';
+      for (var gx=14; gx<280; gx+=28) for (var gy=14; gy<158; gy+=28) { ctx.beginPath(); ctx.arc(gx,gy,1,0,Math.PI*2); ctx.fill(); }
+      /* Compute scale to fit all elements */
+      var els = Object.values(_elements);
+      if (els.length) {
+        var mx=Infinity,my=Infinity,mxr=-Infinity,myr=-Infinity;
+        els.forEach(function(d){ mx=Math.min(mx,d.x);my=Math.min(my,d.y);mxr=Math.max(mxr,d.x+(d.w||200));myr=Math.max(myr,d.y+(d.h||120)); });
+        var pad=12, fw=mxr-mx||600, fh=myr-my||400;
+        var sc=Math.min((280-pad*2)/fw,(158-pad*2)/fh,1);
+        var ox=pad-(mx*sc), oy=pad-(my*sc);
+        els.forEach(function(d){
+          var ex=(d.x*sc+ox), ey=(d.y*sc+oy), ew=(d.w||200)*sc, eh=(d.h||120)*sc;
+          if (d.type==='sticky') { ctx.fillStyle=d.color||'#ffd66e'; ctx.fillRect(ex,ey,ew,eh); }
+          else if (d.type==='rect') { ctx.strokeStyle=d.stroke||'#f3f3ef'; ctx.lineWidth=1; ctx.fillStyle=d.fill||'transparent'; if(d.fill&&d.fill!=='transparent')ctx.fillRect(ex,ey,ew,eh); ctx.strokeRect(ex,ey,ew,eh); }
+          else if (d.type==='circle') { ctx.beginPath(); ctx.ellipse(ex+ew/2,ey+eh/2,ew/2,eh/2,0,0,Math.PI*2); ctx.strokeStyle=d.stroke||'#f3f3ef'; ctx.lineWidth=1; ctx.stroke(); }
+          else if (d.type==='text') { ctx.fillStyle=d.color||'#f3f3ef'; ctx.font='7px sans-serif'; ctx.fillText(((d.content||'').replace(/<[^>]*>/g,'')+'').slice(0,20),ex,ey+10); }
+          else if (d.type==='image') { ctx.fillStyle='rgba(243,243,239,.07)'; ctx.fillRect(ex,ey,ew,eh); }
+          else if (d.type==='path'&&d.points&&d.points.length>1) {
+            ctx.beginPath(); ctx.moveTo(d.points[0][0]*sc+ox,d.points[0][1]*sc+oy);
+            d.points.forEach(function(p){ ctx.lineTo(p[0]*sc+ox,p[1]*sc+oy); });
+            ctx.strokeStyle=d.stroke||'#f3f3ef'; ctx.lineWidth=1; ctx.stroke();
+          }
+        });
+      }
+      var thumb = c.toDataURL('image/jpeg',0.7);
+      window.fb.boards.updateMeta(_boardId, { thumbnail: thumb });
+    }
+
+    /* ── Minimap ──────────────────────────────────────────── */
+    function scheduleMinimapUpdate() {
+      if (_minimapTimer) clearTimeout(_minimapTimer);
+      _minimapTimer = setTimeout(updateMinimap, 80);
+    }
+
+    function updateMinimap() {
+      if (!minimapCanvas || !minimapVp) return;
+      var mCtx = minimapCanvas.getContext('2d');
+      mCtx.clearRect(0,0,160,90);
+      mCtx.fillStyle='#0b0b0c'; mCtx.fillRect(0,0,160,90);
+      var els=Object.values(_elements);
+      if (!els.length) return;
+      var mx=Infinity,my=Infinity,mxr=-Infinity,myr=-Infinity;
+      els.forEach(function(d){ mx=Math.min(mx,d.x);my=Math.min(my,d.y);mxr=Math.max(mxr,d.x+(d.w||200));myr=Math.max(myr,d.y+(d.h||120)); });
+      var fw=Math.max(mxr-mx,600), fh=Math.max(myr-my,400);
+      var sc=Math.min(140/fw,80/fh);
+      var ox=10-(mx*sc), oy=5-(my*sc);
+      els.forEach(function(d){
+        mCtx.fillStyle=d.type==='sticky'?(d.color||'#ffd66e'):'rgba(243,243,239,.2)';
+        mCtx.fillRect(d.x*sc+ox,d.y*sc+oy,(d.w||200)*sc,(d.h||120)*sc);
+      });
+      /* Viewport rect */
+      var r=stage.getBoundingClientRect();
+      var vx=((-_panX/_zoom)*sc+ox), vy=((-_panY/_zoom)*sc+oy);
+      var vw=(r.width/_zoom*sc), vh=(r.height/_zoom*sc);
+      minimapVp.style.left=vx+'px'; minimapVp.style.top=vy+'px';
+      minimapVp.style.width=vw+'px'; minimapVp.style.height=vh+'px';
+    }
+
+    /* ── Notifications ───────────────────────────────────── */
+    function initNotifications(uid) {
+      if (_notifUnsub) { _notifUnsub(); _notifUnsub=null; }
+      if (!window.fb||!window.fb.mbNotifications) return;
+      _notifUnsub = window.fb.mbNotifications.watchAll(uid, function(data){
+        var all = Object.entries(data).map(function(e){ return Object.assign({},e[1],{_id:e[0]}); });
+        all.sort(function(a,b){ return b.ts-a.ts; });
+        var unread = all.filter(function(n){ return !n.read; }).length;
+        /* Update badges */
+        ['mbNotifBadge','mbCanvasNotifBadge'].forEach(function(bid){
+          var b=document.getElementById(bid); if(b){b.textContent=unread>0?unread:''; b.style.display=unread>0?'flex':'none';}
+        });
+        if (notifPanel) renderNotifPanel(all, uid);
+      });
+    }
+
+    function toggleNotifPanel(uid) {
+      if (notifPanel) { notifPanel.remove(); notifPanel=null; return; }
+      notifPanel = document.createElement('div');
+      notifPanel.className = 'mb-notif-panel';
+      notifPanel.id = 'mbNotifPanel';
+      notifPanel.innerHTML = '<div class="mb-notif-hd"><span class="mb-notif-hd-title">Notifications</span><button class="mb-notif-mark-all" id="mbMarkAll">Mark all read</button></div><div class="mb-notif-list" id="mbNotifList"><div class="mb-notif-empty">No notifications</div></div>';
+      document.body.appendChild(notifPanel);
+      notifPanel.querySelector('#mbMarkAll').addEventListener('click', function(){
+        if (window.fb&&window.fb.mbNotifications) window.fb.mbNotifications.markAllRead(uid);
+      });
+      /* Close on outside click */
+      setTimeout(function(){
+        document.addEventListener('mousedown', function onOutside(e){
+          if (!notifPanel||!notifPanel.contains(e.target)){
+            if(notifPanel){notifPanel.remove();notifPanel=null;}
+            document.removeEventListener('mousedown',onOutside);
+          }
+        });
+      }, 0);
+    }
+
+    function renderNotifPanel(notifs, uid) {
+      var list = notifPanel && notifPanel.querySelector('#mbNotifList');
+      if (!list) return;
+      if (!notifs.length) { list.innerHTML='<div class="mb-notif-empty">No notifications</div>'; return; }
+      list.innerHTML = notifs.slice(0,30).map(function(n){
+        var cls = 'mb-notif-item' + (n.read?'':' unread');
+        var time = relTimeStr(n.ts||Date.now());
+        var text='', actions='';
+        if (n.type==='edit_request') {
+          text = '<strong>'+escHtml(n.fromName||'Someone')+'</strong> wants to edit <strong>'+escHtml(n.boardName||'a board')+'</strong>';
+          if (isAdmin()) actions='<div class="mb-notif-actions"><button class="mb-notif-approve" data-reqid="'+n.requestId+'" data-uid="'+n.fromUid+'" data-bid="'+n.boardId+'" data-bname="'+escHtml(n.boardName||'')+'" data-fname="'+escHtml(n.fromName||'')+'">Approve</button><button class="mb-notif-deny" data-reqid="'+n.requestId+'">Deny</button></div>';
+        } else if (n.type==='request_approved') {
+          text = 'Your request to edit <strong>'+escHtml(n.boardName||'a board')+'</strong> was <strong style="color:#7ec882">approved</strong>';
+        } else if (n.type==='request_denied') {
+          text = 'Your request to edit <strong>'+escHtml(n.boardName||'a board')+'</strong> was <strong style="color:#e05c5c">denied</strong>';
+        } else if (n.type==='added_as_editor') {
+          text = 'You were added as editor to <strong>'+escHtml(n.boardName||'a board')+'</strong>';
+        }
+        return '<div class="'+cls+'" data-nid="'+n._id+'">'
+          +'<div class="mb-notif-row"><div class="mb-notif-dot"></div><div class="mb-notif-text">'+text+'</div></div>'
+          +'<div class="mb-notif-time">'+time+'</div>'
+          +actions+'</div>';
+      }).join('');
+
+      /* Mark read on click */
+      list.querySelectorAll('.mb-notif-item').forEach(function(item){
+        var nid = item.dataset.nid;
+        item.addEventListener('click', function(){ if(window.fb&&window.fb.mbNotifications)window.fb.mbNotifications.markRead(uid,nid); });
+      });
+      /* Approve/deny buttons */
+      list.querySelectorAll('.mb-notif-approve').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+          e.stopPropagation();
+          var reqId=btn.dataset.reqid, fromUid=btn.dataset.uid, boardId=btn.dataset.bid, boardName=btn.dataset.bname, fromName=btn.dataset.fname;
+          window.fb.boards.grantEditor(boardId, fromUid, { name:fromName, email:'', grantedBy:_myUid||'' });
+          window.fb.editRequests.update(reqId, { status:'approved' });
+          window.fb.mbNotifications.add(fromUid, { type:'request_approved', boardId:boardId, boardName:boardName, ts:Date.now() });
+          btn.closest('.mb-notif-item').remove();
+        });
+      });
+      list.querySelectorAll('.mb-notif-deny').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+          e.stopPropagation();
+          var reqId=btn.dataset.reqid;
+          var item=btn.closest('.mb-notif-item');
+          var fromUid=item.querySelector('.mb-notif-approve')&&item.querySelector('.mb-notif-approve').dataset.uid;
+          var bid=item.querySelector('.mb-notif-approve')&&item.querySelector('.mb-notif-approve').dataset.bid;
+          var bname=item.querySelector('.mb-notif-approve')&&item.querySelector('.mb-notif-approve').dataset.bname;
+          window.fb.editRequests.update(reqId, { status:'denied' });
+          if(fromUid)window.fb.mbNotifications.add(fromUid,{type:'request_denied',boardId:bid,boardName:bname,ts:Date.now()});
+          item.remove();
+        });
+      });
+    }
+
+    function watchEditRequests() {
+      if (!isAdmin()||!window.fb||!window.fb.editRequests) return;
+      if (_reqUnsub) { _reqUnsub(); _reqUnsub=null; }
+      _reqUnsub = window.fb.editRequests.watchPending(function(data){
+        var pending = Object.values(data).filter(function(r){ return r.status==='pending'; });
+        /* For each pending request, ensure admin has a notification */
+        /* This is handled at request creation time; here just count for badge */
+      });
+    }
+
+    /* ── Board Gallery ───────────────────────────────────── */
+    var _boards = {};
+    var _unsubBoards = null;
+
+    function initGallery() {
+      var grid = document.getElementById('mbGrid');
+      if (!grid) return;
+      if (_unsubBoards) { _unsubBoards(); }
+      _unsubBoards = window.fb.boards.watchAll(function(data){
+        _boards = data || {};
+        renderGallery();
+      });
+      document.getElementById('mbNewBoardBtn').addEventListener('click', function(){
+        showRenameModal('', function(name){
+          if (!name.trim()) return;
+          window.fb.boards.create(name.trim(), _myUid).then(function(id){
+            openBoard(id);
+          });
+        }, 'New Board', 'Create');
+      });
+      var nb=document.getElementById('mbNotifBtn'), cnb=document.getElementById('mbCanvasNotifBtn');
+      if(nb) nb.addEventListener('click', function(){ toggleNotifPanel(_myUid); });
+      if(cnb) cnb.addEventListener('click', function(){ toggleNotifPanel(_myUid); });
+    }
+
+    function renderGallery() {
+      var grid = document.getElementById('mbGrid');
+      if (!grid) return;
+      var boardList = Object.entries(_boards).map(function(e){ return Object.assign({},e[1].meta||{},{_id:e[0]}); });
+      boardList.sort(function(a,b){ return (b.updated||0)-(a.updated||0); });
+      if (!boardList.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;padding:60px 0;text-align:center;font-family:var(--font-en-mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-soft);opacity:.35;">No boards yet — click New Board to create one</div>';
+        return;
+      }
+      grid.innerHTML = boardList.map(function(b){
+        var thumb = b.thumbnail ? '<img src="'+b.thumbnail+'" alt="">' : '<div class="mb-card-thumb-empty"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="3" width="14" height="12" rx="2"/><path d="M2 9h14"/></svg></div>';
+        var meta = relTimeStr(b.updated||b.created||Date.now());
+        return '<div class="mb-card" data-bid="'+b._id+'">'
+          +'<div class="mb-card-thumb">'+thumb+'</div>'
+          +'<div class="mb-card-info"><p class="mb-card-name">'+escHtml(b.name||'Untitled')+'</p><p class="mb-card-meta">Edited '+meta+'</p></div>'
+          +'<button class="mb-card-menu-btn" data-bid="'+b._id+'" type="button"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="2.5" cy="7" r=".7" fill="currentColor"/><circle cx="7" cy="7" r=".7" fill="currentColor"/><circle cx="11.5" cy="7" r=".7" fill="currentColor"/></svg></button>'
+          +'</div>';
+      }).join('');
+      grid.querySelectorAll('.mb-card').forEach(function(card){
+        card.addEventListener('click', function(e){
+          if (e.target.closest('.mb-card-menu-btn')) return;
+          openBoard(card.dataset.bid);
+        });
+        card.querySelector('.mb-card-menu-btn').addEventListener('click', function(e){
+          e.stopPropagation(); showCardCtxMenu(card.dataset.bid, e.clientX, e.clientY);
+        });
+      });
+    }
+
+    function showCardCtxMenu(boardId, x, y) {
+      var existing = document.querySelector('.mb-ctx-menu'); if(existing)existing.remove();
+      var menu = document.createElement('div');
+      menu.className = 'mb-ctx-menu';
+      menu.innerHTML = '<div class="mb-ctx-item" data-act="open"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="2" y="2" width="10" height="10" rx="1"/><path d="M5 5h4M5 7.5h3"/></svg>Open</div>'
+        +'<div class="mb-ctx-item" data-act="rename"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 10.5h10M3.5 10.5V8l5-5 2 2-5 5z"/></svg>Rename</div>'
+        +'<div class="mb-ctx-item" data-act="share"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="11" cy="3" r="1.5"/><circle cx="11" cy="11" r="1.5"/><circle cx="3" cy="7" r="1.5"/><path d="M4.4 7.7l5.2 2.8M9.6 3.5 4.4 6.3"/></svg>Share link</div>'
+        +'<div class="mb-ctx-sep"></div>'
+        +'<div class="mb-ctx-item danger" data-act="delete"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 4h10M5 4V2.5h4V4M5.5 7v4M8.5 7v4M3 4l.7 7.5h6.6L11 4"/></svg>Delete</div>';
+      menu.style.left = Math.min(x, window.innerWidth-200)+'px';
+      menu.style.top  = Math.min(y, window.innerHeight-160)+'px';
+      document.body.appendChild(menu);
+      menu.querySelector('[data-act="open"]').addEventListener('click', function(){ menu.remove(); openBoard(boardId); });
+      menu.querySelector('[data-act="rename"]').addEventListener('click', function(){
+        menu.remove();
+        var bm=(_boards[boardId]&&_boards[boardId].meta)||{};
+        showRenameModal(bm.name||'', function(name){ if(name.trim())window.fb.boards.updateMeta(boardId,{name:name.trim()}); });
+      });
+      menu.querySelector('[data-act="share"]').addEventListener('click', function(){
+        menu.remove();
+        var bm=(_boards[boardId]&&_boards[boardId].meta)||{};
+        showShareModal(boardId, bm.shareToken||'');
+      });
+      menu.querySelector('[data-act="delete"]').addEventListener('click', function(){
+        menu.remove(); confirmDeleteBoard(boardId);
+      });
+      setTimeout(function(){
+        document.addEventListener('mousedown', function close(e){ if(!menu.contains(e.target)){menu.remove();document.removeEventListener('mousedown',close);} });
+      }, 0);
+    }
+
+    /* ── Open / Close board ───────────────────────────────── */
+    function openBoard(boardId) {
+      _boardId = boardId;
+      _elements = {}; _elDoms = {}; _selected = []; _undoStack=[]; _redoStack=[];
+      _zoom=1; _panX=0; _panY=0;
+      window.showView('moodboardCanvas');
+      /* Load board meta (from cache if available, then subscribe for live updates) */
+      var meta = (_boards[boardId]&&_boards[boardId].meta)||{};
+      _boardMeta = meta;
+      if (boardNameInput) { boardNameInput.value = meta.name||'Untitled'; boardNameInput.readOnly = !isAdmin(); }
+      if (stage) stage.className = 'mb-stage mb-bg-' + (meta.bg||'dots') + ' tool-select';
+      if (propbar) { propbar.innerHTML=''; propbar.classList.remove('show'); }
+      /* Live-subscribe to meta (needed when opening via share link — _boards cache is empty) */
+      if (_unsubMeta) { _unsubMeta(); _unsubMeta=null; }
+      _unsubMeta = window.fb.boards.watchOne(boardId, function(m){
+        if (!m) return;
+        _boardMeta = m;
+        if (boardNameInput && document.activeElement !== boardNameInput) boardNameInput.value = m.name||'Untitled';
+        if (stage) stage.className = 'mb-stage mb-bg-' + (m.bg||'dots') + ' tool-select';
+      });
+      applyTransform();
+      /* Check if current user is editor */
+      _isEditor = isAdmin();
+      if (!isAdmin() && _myUid && window.fb && window.fb.boards) {
+        window.fb.boards.isEditor(boardId, _myUid).then(function(yes){
+          _isEditor = yes;
+          showOrHideReadonlyBanner();
+          updateToolbarEnabled();
+        });
+      } else {
+        showOrHideReadonlyBanner();
+        updateToolbarEnabled();
+      }
+      /* Subscribe to elements */
+      if (_unsubElements) { _unsubElements(); _unsubElements=null; }
+      _unsubElements = window.fb.boards.elements.watchAll(boardId, function(data){
+        _elements = data || {};
+        renderAll();
+        scheduleMinimapUpdate();
+        scheduleThumbUpdate();
+      });
+      /* Subscribe to cursors */
+      if (_unsubCursors) { _unsubCursors(); _unsubCursors=null; }
+      _unsubCursors = window.fb.boards.cursors.watchAll(boardId, function(data){
+        renderCursors(data);
+        renderCollabAvatars(data);
+      });
+      /* Register my cursor removal on disconnect */
+      if (_myUid && window.fb && window.fb.boards) {
+        window.fb.boards.cursors.set(boardId, _myUid, { cx:0,cy:0,name:_myName||'Guest',color:_myColor||uidColor(_myUid),ts:Date.now() });
+      }
+    }
+
+    function closeBoard() {
+      if (_boardId && _myUid && window.fb && window.fb.boards) {
+        window.fb.boards.cursors.remove(_boardId, _myUid);
+      }
+      if (_unsubElements) { _unsubElements(); _unsubElements=null; }
+      if (_unsubCursors)  { _unsubCursors();  _unsubCursors=null; }
+      if (_unsubMeta)     { _unsubMeta();     _unsubMeta=null; }
+      /* Clean up remote cursor DOM elements */
+      Object.keys(_cursorEls).forEach(function(uid){ _cursorEls[uid].remove(); });
+      _cursorEls = {}; _allCursorData = {};
+      _boardId=null; _elements={}; _elDoms={}; _selected=[];
+      if (canvas) canvas.innerHTML='<svg class="mb-svg-layer" id="mbSvgLayer" xmlns="http://www.w3.org/2000/svg"></svg>';
+      svgLayer = document.getElementById('mbSvgLayer');
+      if (propbar) { propbar.innerHTML=''; propbar.classList.remove('show'); }
+      window.showView('moodboards');
+    }
+
+    function showOrHideReadonlyBanner() {
+      if (!readonlyBanner) return;
+      var show = _boardId && (_myRole !== 'admin') && !_isEditor;
+      readonlyBanner.style.display = show ? 'flex' : 'none';
+    }
+
+    function updateToolbarEnabled() {
+      if (!toolbar) return;
+      var editTools = toolbar.querySelectorAll('[data-tool="sticky"],[data-tool="text"],[data-tool="rect"],[data-tool="circle"],[data-tool="diamond"],[data-tool="arrow"],[data-tool="pen"],[data-tool="image"]');
+      editTools.forEach(function(btn){ btn.style.opacity=canEdit()?'1':'.3'; btn.style.pointerEvents=canEdit()?'all':'none'; });
+      if (boardNameInput) { boardNameInput.readOnly = !isAdmin(); }
+    }
+
+    /* ── Modals ───────────────────────────────────────────── */
+    function showRenameModal(currentName, onSave, titleText, saveBtnText) {
+      var modal = document.createElement('div');
+      modal.className = 'mb-rename-modal';
+      modal.innerHTML = '<div class="mb-rename-card">'
+        +'<div class="mb-rename-title">'+(titleText||'Rename Board')+'</div>'
+        +'<input class="mb-rename-input" type="text" value="'+escHtml(currentName)+'" placeholder="Board name">'
+        +'<div class="mb-rename-actions"><button class="mb-rename-cancel">Cancel</button><button class="mb-rename-save">'+(saveBtnText||'Save')+'</button></div>'
+        +'</div>';
+      document.body.appendChild(modal);
+      var inp=modal.querySelector('input');
+      inp.focus(); inp.select();
+      modal.querySelector('.mb-rename-cancel').addEventListener('click', function(){ modal.remove(); });
+      modal.querySelector('.mb-rename-save').addEventListener('click', function(){ onSave(inp.value); modal.remove(); });
+      inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){onSave(inp.value);modal.remove();} if(e.key==='Escape')modal.remove(); });
+    }
+
+    function confirmDeleteBoard(boardId) {
+      var bm=(_boards[boardId]&&_boards[boardId].meta)||{};
+      var modal=document.createElement('div');
+      modal.className='mb-delete-confirm';
+      modal.innerHTML='<div class="mb-delete-card"><h3 class="mb-delete-title">Delete board?</h3><p class="mb-delete-sub">This will permanently delete <strong>'+escHtml(bm.name||'Untitled')+'</strong> and all its elements. This cannot be undone.</p><div class="mb-delete-actions"><button class="mb-delete-cancel">Cancel</button><button class="mb-delete-confirm-btn">Delete</button></div></div>';
+      document.body.appendChild(modal);
+      modal.querySelector('.mb-delete-cancel').addEventListener('click', function(){ modal.remove(); });
+      modal.querySelector('.mb-delete-confirm-btn').addEventListener('click', function(){
+        window.fb.boards.delete(boardId).then(function(){ renderGallery(); });
+        modal.remove();
+      });
+    }
+
+    function showShareModal(boardId, shareToken) {
+      var url = window.location.origin + window.location.pathname + '?board=' + boardId + '&tok=' + shareToken;
+      var modal=document.createElement('div');
+      modal.className='mb-share-modal';
+      modal.innerHTML='<div class="mb-share-card"><h2 class="mb-share-title">Share board</h2><p class="mb-share-sub">Anyone with this link can view</p><div class="mb-share-link-row"><input class="mb-share-link-input" type="text" value="'+url+'" readonly><button class="mb-share-copy-btn" id="mbCopyLinkBtn">Copy</button></div><p class="mb-share-note">Viewers can see the board but cannot edit. To grant edit access, approve their request from the notifications panel.</p><button class="mb-share-close">Close</button></div>';
+      document.body.appendChild(modal);
+      modal.querySelector('#mbCopyLinkBtn').addEventListener('click',function(){
+        try{navigator.clipboard.writeText(url);this.textContent='Copied!';}catch(e){}
+      });
+      modal.querySelector('.mb-share-close').addEventListener('click',function(){modal.remove();});
+    }
+
+    /* ── Keyboard shortcuts ───────────────────────────────── */
+    function initKeyboard() {
+      document.addEventListener('keydown', function(e){
+        var view = document.body.dataset.view;
+        if (view !== 'moodboards' && view !== 'moodboardCanvas') return;
+        var tag=(document.activeElement||{}).tagName||'';
+        var inInput = tag==='INPUT'||tag==='TEXTAREA'||(document.activeElement&&document.activeElement.contentEditable==='true');
+
+        if (!inInput) {
+          if (e.key==='v'||e.key==='V') { setTool('select'); return; }
+          if (e.key==='h'||e.key==='H') { setTool('hand'); return; }
+          if (e.key==='s'||e.key==='S') { if(canEdit())setTool('sticky'); return; }
+          if (e.key==='t'||e.key==='T') { if(canEdit())setTool('text'); return; }
+          if (e.key==='r'||e.key==='R') { if(canEdit())setTool('rect'); return; }
+          if (e.key==='c'||e.key==='C') { if(canEdit())setTool('circle'); return; }
+          if (e.key==='d'||e.key==='D' && !e.ctrlKey && !e.metaKey) { if(canEdit())setTool('diamond'); return; }
+          if (e.key==='a'||e.key==='A') { if(canEdit())setTool('arrow'); return; }
+          if (e.key==='p'||e.key==='P') { if(canEdit())setTool('pen'); return; }
+          if (e.key==='i'||e.key==='I') { if(canEdit())setTool('image'); return; }
+          if (e.key==='Delete'||e.key==='Backspace') { deleteSelected(); return; }
+          if (e.key===' ') { _spaceDown=true; if(stage)stage.style.cursor='grab'; e.preventDefault(); return; }
+          if (e.key==='Escape') { _selected=[]; renderAll(); updatePropbar(); setTool('select'); return; }
+          if (e.key==='a' && (e.ctrlKey||e.metaKey)) { e.preventDefault(); _selected=Object.keys(_elements); renderAll(); updatePropbar(); return; }
+        }
+
+        if ((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key==='z') { e.preventDefault(); undo(); return; }
+        if ((e.ctrlKey||e.metaKey) && (e.shiftKey&&e.key==='z'||e.key==='y')) { e.preventDefault(); redo(); return; }
+        if ((e.ctrlKey||e.metaKey) && e.key==='d') { e.preventDefault(); duplicateSelected(); return; }
+        if ((e.ctrlKey||e.metaKey) && e.key==='=') { e.preventDefault(); setZoom(_zoom*1.2); return; }
+        if ((e.ctrlKey||e.metaKey) && e.key==='-') { e.preventDefault(); setZoom(_zoom/1.2); return; }
+        if ((e.ctrlKey||e.metaKey) && e.key==='0') { e.preventDefault(); fitAll(); return; }
+        if ((e.ctrlKey||e.metaKey) && e.key==='1') { e.preventDefault(); var r=stage.getBoundingClientRect(); _zoom=1; _panX=r.width/2-r.width/2; _panY=r.height/2-r.height/2; applyTransform(); return; }
+      });
+      document.addEventListener('keyup', function(e){
+        if (e.key===' ') { _spaceDown=false; if(stage)stage.style.cursor=''; }
+      });
+    }
+
+    /* ── Init canvas ─────────────────────────────────────── */
+    function initCanvas() {
+      stage     = document.getElementById('mbStage');
+      canvas    = document.getElementById('mbCanvas');
+      svgLayer  = document.getElementById('mbSvgLayer');
+      selbox    = document.getElementById('mbSelbox');
+      propbar   = document.getElementById('mbPropbar');
+      toolbar   = document.getElementById('mbToolbar');
+      topbar    = document.getElementById('mbTopbar');
+      boardNameInput  = document.getElementById('mbBoardNameInput');
+      zoomPctEl = document.getElementById('mbZoomPct');
+      collabAvatars   = document.getElementById('mbCollabAvatars');
+      readonlyBanner  = document.getElementById('mbReadonlyBanner');
+      requestEditBtn  = document.getElementById('mbRequestEditBtn');
+      dropOverlay     = document.getElementById('mbDropOverlay');
+      minimap         = document.getElementById('mbMinimap');
+      minimapCanvas   = document.getElementById('mbMinimapCanvas');
+      minimapVp       = document.getElementById('mbMinimapViewport');
+
+      stage.addEventListener('mousedown', onStageMouseDown);
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup',   onMouseUp);
+      stage.addEventListener('wheel', onStageWheel, { passive: false });
+
+      /* Tool buttons */
+      toolbar.querySelectorAll('.mb-tool-btn[data-tool]').forEach(function(btn){
+        btn.addEventListener('click', function(){ setTool(btn.dataset.tool); });
+      });
+
+      /* Zoom controls */
+      document.getElementById('mbZoomIn') .addEventListener('click', function(){ setZoom(_zoom*1.25); });
+      document.getElementById('mbZoomOut').addEventListener('click', function(){ setZoom(_zoom/1.25); });
+      document.getElementById('mbZoomPct').addEventListener('click', fitAll);
+
+      /* Back button */
+      document.getElementById('mbCanvasBack').addEventListener('click', closeBoard);
+
+      /* Board name edit */
+      boardNameInput.addEventListener('blur', function(){
+        if (isAdmin() && _boardId) window.fb.boards.updateMeta(_boardId, { name: boardNameInput.value.trim()||'Untitled' });
+      });
+      boardNameInput.addEventListener('keydown', function(e){ if(e.key==='Enter')boardNameInput.blur(); });
+
+      /* Share button */
+      document.getElementById('mbShareBtn').addEventListener('click', function(){
+        if (!_boardId) return;
+        var meta=_boardMeta||{};
+        showShareModal(_boardId, meta.shareToken||'');
+      });
+
+      /* Request edit access */
+      if (requestEditBtn) requestEditBtn.addEventListener('click', function(){
+        if (!_myUid||!_boardId) return;
+        requestEditBtn.disabled=true; requestEditBtn.textContent='Requested';
+        var reqData = { boardId:_boardId, boardName:(_boardMeta&&_boardMeta.name)||'', uid:_myUid, name:_myName||'Guest', email:(window.fb&&window.fb.currentUser&&window.fb.currentUser()?window.fb.currentUser().email||'':''), requestedAt:Date.now() };
+        window.fb.editRequests.create(reqData).then(function(reqId){
+          /* Look up admin UID from RTDB adminMeta, then notify them */
+          if (window.fb.adminMeta) {
+            window.fb.adminMeta.getAdminUid().then(function(adminUid){
+              if (adminUid && window.fb.mbNotifications) {
+                window.fb.mbNotifications.add(adminUid, Object.assign({},reqData,{ type:'edit_request', requestId:reqId, fromUid:_myUid, fromName:_myName||'Guest', ts:Date.now() }));
+              }
+            });
+          }
+        });
+      });
+
+      initDragDrop();
+    }
+
+    /* ── Role handling ────────────────────────────────────── */
+    function onRole(role) {
+      _myRole = role;
+      var user = window.fb && window.fb.currentUser ? window.fb.currentUser() : null;
+      _myUid  = user ? user.uid  : null;
+      _myName = user ? (user.displayName || user.email || 'Guest') : 'Guest';
+      _myColor= _myUid ? uidColor(_myUid) : UID_COLORS[0];
+
+      /* Only admin sees the gallery card */
+      var cardMB = document.getElementById('cardMoodboards');
+      if (cardMB) cardMB.style.display = (role==='admin') ? '' : 'none';
+
+      /* Notifications for signed-in users — always use real UID */
+      if (_myUid && (role==='admin'||role==='viewer') && window.fb && window.fb.mbNotifications) {
+        initNotifications(_myUid);
+        if (role==='admin') {
+          /* Register admin UID in RTDB so viewers can find where to send notifications */
+          if (window.fb.adminMeta) window.fb.adminMeta.setAdminUid(_myUid);
+          watchEditRequests();
+        }
+      }
+
+      /* Handle shared board link (?board=xxx) */
+      var urlParams = new URLSearchParams(window.location.search);
+      var sharedBoardId = urlParams.get('board');
+      if (sharedBoardId && _boardId !== sharedBoardId) {
+        /* Anyone can view a shared board */
+        setTimeout(function(){ openBoard(sharedBoardId); }, 200);
+      }
+    }
+
+    /* ── Bootstrap (runs exactly once) ─────────────────────── */
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function(){
+        initCanvas();
+        initKeyboard();
+        initGallery();
+      });
+    } else {
+      initCanvas();
+      initKeyboard();
+      initGallery();
+    }
+
+    document.addEventListener('cz-role', function(e){ onRole(e.detail.role); });
+    if (window._appRole) onRole(window._appRole);
+
+  })(); /* end Mood Board IIFE */
 
   </script>
 
