@@ -9178,6 +9178,8 @@
     var dropOverlay;
     var notifPanel = null;
     var _notifUnsub = null;
+    var _notifAllData = [];  /* cached notification list for panel re-open */
+    var _notifUid = null;    /* uid of the currently subscribed notification owner */
     var _reqUnsub   = null;
 
     /* ── Helpers ────────────────────────────────────────── */
@@ -10304,27 +10306,32 @@
     function initNotifications(uid) {
       if (_notifUnsub) { _notifUnsub(); _notifUnsub=null; }
       if (!window.fb||!window.fb.mbNotifications) return;
+      _notifUid = uid;
       _notifUnsub = window.fb.mbNotifications.watchAll(uid, function(data){
         var all = Object.entries(data).map(function(e){ return Object.assign({},e[1],{_id:e[0]}); });
         all.sort(function(a,b){ return b.ts-a.ts; });
+        _notifAllData = all; /* cache so the panel can render on open */
         var unread = all.filter(function(n){ return !n.read; }).length;
         /* Update badges */
         ['mbNotifBadge','mbCanvasNotifBadge'].forEach(function(bid){
           var b=document.getElementById(bid); if(b){b.textContent=unread>0?unread:''; b.style.display=unread>0?'flex':'none';}
         });
-        if (notifPanel) renderNotifPanel(all, uid);
+        if (notifPanel) renderNotifPanel(all, uid); /* live-update if panel is already open */
       });
     }
 
     function toggleNotifPanel(uid) {
       if (notifPanel) { notifPanel.remove(); notifPanel=null; return; }
+      var effUid = uid || _notifUid;
       notifPanel = document.createElement('div');
       notifPanel.className = 'mb-notif-panel';
       notifPanel.id = 'mbNotifPanel';
       notifPanel.innerHTML = '<div class="mb-notif-hd"><span class="mb-notif-hd-title">Notifications</span><button class="mb-notif-mark-all" id="mbMarkAll">Mark all read</button></div><div class="mb-notif-list" id="mbNotifList"><div class="mb-notif-empty">No notifications</div></div>';
       document.body.appendChild(notifPanel);
+      /* Render cached notifications immediately so the panel isn't empty on open */
+      renderNotifPanel(_notifAllData, effUid);
       notifPanel.querySelector('#mbMarkAll').addEventListener('click', function(){
-        if (window.fb&&window.fb.mbNotifications) window.fb.mbNotifications.markAllRead(uid);
+        if (window.fb&&window.fb.mbNotifications) window.fb.mbNotifications.markAllRead(effUid);
       });
       /* Close on outside click */
       setTimeout(function(){
