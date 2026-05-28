@@ -7744,12 +7744,26 @@
         _data[uid] = d;
 
         var color = uidColor(uid);
+        var isNew = !_els[uid];            /* true on very first render for this uid */
         var el    = getOrCreateEl(uid, color);
 
         /* Position + scale — both in one transform so clicking never loses position */
         var vx = d.px - window.scrollX;
         var vy = d.py - window.scrollY;
-        el.style.transform = 'translate(' + vx + 'px,' + vy + 'px)' + (d.cl ? ' scale(1.25)' : '');
+        var tx = 'translate(' + vx + 'px,' + vy + 'px)' + (d.cl ? ' scale(1.25)' : '');
+
+        if (isNew) {
+          /* New element: skip the CSS transition for this FIRST placement.
+             Without this, the element starts at transform:none (= top-left / 0,0)
+             and the "transition: transform .06s" visibly sweeps it in from the corner.
+             Force-reflow commits the position instantly; future moves will animate. */
+          el.style.transition = 'none';
+          el.style.transform  = tx;
+          void el.offsetHeight;       /* flush layout so position is committed */
+          el.style.transition = '';   /* restore smooth transition for all future ticks */
+        } else {
+          el.style.transform = tx;
+        }
 
         /* Live field-value preview (broadcast via RTDB alongside cursor position) */
         if (d.fid != null && d.ffld) {
@@ -7857,6 +7871,20 @@
       _unwatch = window.fb.cursor.watchAll(function(allData) {
         render(allData);
       });
+      /* Re-position all cursors whenever the admin scrolls.
+         Cursor coords are stored as page-absolute (d.px, d.py); the displayed
+         viewport offset (vx, vy) = d.px - scrollX, so it must update on scroll. */
+      window.addEventListener('scroll', function() {
+        Object.keys(_els).forEach(function(uid) {
+          var d = _data[uid];
+          if (!d || d.px == null) return;
+          var el = _els[uid];
+          if (!el) return;
+          var vx = d.px - window.scrollX;
+          var vy = d.py - window.scrollY;
+          el.style.transform = 'translate(' + vx + 'px,' + vy + 'px)' + (d.cl ? ' scale(1.25)' : '');
+        });
+      }, { passive: true });
       console.log('[Cursors] Admin watching all cursors. UID filter:', _myUidForFilter);
     }
 
