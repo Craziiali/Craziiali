@@ -7780,15 +7780,18 @@
       return y + '-' + pad2(mo) + '-' + pad2(d) + 'T' + pad2(h) + ':' + pad2(mi) + ':00' +
              sign + pad2(Math.floor(ao/60)) + ':' + pad2(ao%60);
     }
-    /* Google Calendar API event body (with a real 1-hour popup reminder). */
-    function buildGCalEvent(p){
+    /* Build a single Google Calendar API event.
+       isReminder=true → the "1 hour before" warning event. */
+    function buildGCalEvent(p, isReminder){
       var dp = plannerDateParts(p.date);
       if(!dp) return null;
-      var title = [p.name, p.client].filter(Boolean).join(' · ') || 'Shoot';
+      var baseTitle = [p.name, p.client].filter(Boolean).join(' · ') || 'Shoot';
+      var title = isReminder ? '⏰ 1hr Before: ' + baseTitle : baseTitle;
       var descParts = [];
       if(p.client)   descParts.push('Client: ' + p.client);
       if(p.notes)    descParts.push(p.notes);
       if(p.priority) descParts.push('Priority: ' + p.priority);
+      if(isReminder) descParts.push('🎬 Shoot starts at ' + fmt12(p.time));
       var ev = { summary: title };
       var loc = p.locationUrl || p.location || '';
       if(loc) ev.location = loc;
@@ -7797,16 +7800,20 @@
       var tm = String(p.time||'').match(/^(\d{1,2}):(\d{2})$/);
       if(tm){
         var sh = +tm[1], sm = +tm[2];
-        ev.start = { dateTime: rfc3339Local(dp.y, dp.mo, dp.d, sh, sm) };
-        var endTotal = sh*60 + sm + 60, ey = dp.y, emo = dp.mo, ed = dp.d;
-        if(endTotal >= 1440){ var nd = new Date(dp.y, dp.mo-1, dp.d+1); ey = nd.getFullYear(); emo = nd.getMonth()+1; ed = nd.getDate(); endTotal -= 1440; }
+        /* Reminder event starts 1 hour before the shoot */
+        var startTotal = isReminder ? (sh*60 + sm - 60) : (sh*60 + sm);
+        var sy = dp.y, smo = dp.mo, sd = dp.d;
+        if(startTotal < 0){ var pd = new Date(dp.y, dp.mo-1, dp.d-1); sy=pd.getFullYear(); smo=pd.getMonth()+1; sd=pd.getDate(); startTotal+=1440; }
+        ev.start = { dateTime: rfc3339Local(sy, smo, sd, Math.floor(startTotal/60), startTotal%60) };
+        var endTotal = startTotal + 60, ey = sy, emo = smo, ed = sd;
+        if(endTotal >= 1440){ var nd = new Date(sy, smo-1, sd+1); ey=nd.getFullYear(); emo=nd.getMonth()+1; ed=nd.getDate(); endTotal-=1440; }
         ev.end = { dateTime: rfc3339Local(ey, emo, ed, Math.floor(endTotal/60), endTotal%60) };
-        ev.reminders = { useDefault:false, overrides:[ { method:'popup', minutes:0 } ] };  /* rings at exact event time */
+        ev.reminders = { useDefault:false, overrides:[ { method:'popup', minutes:0 } ] };
       } else {
         var endAll = new Date(dp.y, dp.mo-1, dp.d+1);
         ev.start = { date: dp.y + '-' + pad2(dp.mo) + '-' + pad2(dp.d) };
         ev.end   = { date: endAll.getFullYear() + '-' + pad2(endAll.getMonth()+1) + '-' + pad2(endAll.getDate()) };
-        ev.reminders = { useDefault:false, overrides:[ { method:'popup', minutes:900 } ] }; /* ~9am day before */
+        ev.reminders = { useDefault:false, overrides:[ { method:'popup', minutes:900 } ] };
       }
       return ev;
     }
@@ -7835,14 +7842,18 @@
       var fb = window.fb;
       if(!(fb && fb.gcalInsert && fb.connectCalendar)){ fallbackTab(); return; }
 
-      var ev = buildGCalEvent(p);
+      var evMain     = buildGCalEvent(p, false); /* shoot event at exact time */
+      var evReminder = buildGCalEvent(p, true);  /* warning event 1 hour before */
       setBusy(true);
 
       function insert(){
-        return fb.gcalInsert(ev).then(function(){
+        /* Insert both events — main shoot + 1-hour-before warning */
+        var inserts = [fb.gcalInsert(evMain)];
+        if(evReminder) inserts.push(fb.gcalInsert(evReminder));
+        return Promise.all(inserts).then(function(){
           setBusy(false); flashOK();
-          plCalToast(p.time ? 'Added to your Google Calendar ✓ — it’ll ring 1 hour before.'
-                            : 'Added to your Google Calendar ✓');
+          plCalToast(p.time ? ‘2 events added ✓ — reminder 1hr before + shoot at ‘ + fmt12(p.time)
+                            : ‘Added to your Google Calendar ✓’);
         });
       }
       function ensureTokenThenInsert(){
