@@ -5738,8 +5738,10 @@
   .mb-tool-sep { width:1px; height:20px; background:rgba(243,243,239,.1); margin:0 5px; flex-shrink:0; }
   .mb-tool-btn[data-tip]::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); background:rgba(20,20,28,.98); color:rgba(243,243,239,.75); font-family:var(--font-en-mono); font-size:8.5px; letter-spacing:.08em; white-space:nowrap; padding:5px 10px; border-radius:6px; border:1px solid rgba(243,243,239,.12); pointer-events:none; opacity:0; transition:opacity .12s; z-index:999; box-shadow:0 4px 16px rgba(0,0,0,.5); }
   .mb-tool-btn[data-tip]:hover::after { opacity:1; }
-  .mb-propbar { position:absolute; top:62px; left:50%; transform:translateX(-50%); z-index:190; background:rgba(13,13,17,.95); border:1px solid rgba(243,243,239,.12); border-radius:14px; padding:6px 12px; display:flex; align-items:center; gap:8px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); pointer-events:none; white-space:nowrap; opacity:0; transition:opacity .15s; box-shadow:0 8px 32px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06); }
+  /* Contextual toolbar — JS anchors it directly above (or below) the selected element via inline left/top. */
+  .mb-propbar { position:absolute; top:62px; left:50%; transform:translate(-50%,-100%); z-index:600; background:rgba(13,13,17,.95); border:1px solid rgba(243,243,239,.12); border-radius:12px; padding:5px 8px; display:flex; align-items:center; gap:6px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); pointer-events:none; white-space:nowrap; opacity:0; transition:opacity .12s; box-shadow:0 8px 32px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06); }
   .mb-propbar.show { opacity:1; pointer-events:all; }
+  .mb-propbar.below { transform:translate(-50%,0); }
   .mb-prop-swatch { width:22px; height:22px; border-radius:50%; border:2px solid rgba(243,243,239,.15); cursor:pointer; flex-shrink:0; transition:border-color .15s,transform .15s; }
   .mb-prop-swatch:hover { border-color:rgba(243,243,239,.4); transform:scale(1.1); }
   .mb-prop-swatch.active { border-color:rgba(243,243,239,.8); }
@@ -9547,6 +9549,7 @@
       _wcTimer = setTimeout(function(){ if (canvas) canvas.style.willChange = 'auto'; }, 180);
       updateZoomPct();
       positionAllCursors();
+      positionPropbar();
     }
 
     function updateZoomPct() {
@@ -9980,12 +9983,14 @@
           var dom = _elDoms[op.id];
           if (dom) { dom.style.left=(op.x+ddx)+'px'; dom.style.top=(op.y+ddy)+'px'; }
         });
+        positionPropbar();
         return;
       }
 
       /* Resize */
       if (_resize) {
         doResize(e.clientX, e.clientY);
+        positionPropbar();
         return;
       }
 
@@ -10126,6 +10131,15 @@
 
     /* ── Stage mouse down: tool actions ─────────────────── */
     function onStageMouseDown(e) {
+      /* PAN takes priority over everything: space+drag or the hand tool pans the board no matter what
+         is under the cursor (an image, a sticky, empty space). Middle-mouse on an element is handled by
+         the element's own handler (delete) and stops propagation, so a button-1 event reaching here is
+         on empty canvas → pan. */
+      if (e.button === 0 && (_spaceDown || _tool === 'hand')) {
+        _isPanning = true; _panStart = { x: e.clientX, y: e.clientY };
+        stage.classList.add('panning');
+        e.preventDefault(); return;
+      }
       if (e.target !== stage && e.target !== canvas && !e.target.classList.contains('mb-bg-dots')) {
         /* .mb-el divs have their own mousedown handler — don't double-handle */
         if (e.target.closest('.mb-el')) return;
@@ -10538,6 +10552,45 @@
       });
       var dupBtn = propbar.querySelector('[data-act="duplicate"]');
       if (dupBtn) dupBtn.addEventListener('click', duplicateSelected);
+
+      positionPropbar();
+    }
+
+    /* Union of the selected elements' on-screen rects (viewport coords). */
+    function selectionScreenRect() {
+      if (!_selected.length) return null;
+      var minL=Infinity,minT=Infinity,maxR=-Infinity,maxB=-Infinity, found=false;
+      _selected.forEach(function(id){
+        var dom = _elDoms[id] || (svgLayer && svgLayer.querySelector('[data-id="'+id+'"]'));
+        if (!dom) return;
+        var r = dom.getBoundingClientRect();
+        if (!r.width && !r.height) return;
+        found = true;
+        minL=Math.min(minL,r.left); minT=Math.min(minT,r.top);
+        maxR=Math.max(maxR,r.right); maxB=Math.max(maxB,r.bottom);
+      });
+      return found ? { left:minL, top:minT, right:maxR, bottom:maxB } : null;
+    }
+
+    /* Anchor the contextual toolbar directly above the selection (or below if there's no room). */
+    function positionPropbar() {
+      if (!propbar || !propbar.classList.contains('show')) return;
+      var box = selectionScreenRect();
+      if (!box) return;
+      var op  = propbar.offsetParent || document.body;
+      var opr = op.getBoundingClientRect();
+      var ph  = propbar.offsetHeight || 40;
+      var gap = 12;
+      var cx  = (box.left + box.right) / 2 - opr.left;
+      /* Clamp so it never runs off the left/right edges. */
+      var pw  = propbar.offsetWidth || 160;
+      var minX = opr.left + pw/2 + 8 - opr.left, maxX = (op.clientWidth || window.innerWidth) - pw/2 - 8;
+      cx = Math.max(pw/2 + 8, Math.min(cx, maxX));
+      var aboveTop = box.top - opr.top - gap;        /* bottom edge of bar sits here (translate -100%) */
+      var below = aboveTop - ph < 4;                 /* not enough room above → flip below */
+      propbar.classList.toggle('below', below);
+      propbar.style.left = Math.round(cx) + 'px';
+      propbar.style.top  = Math.round(below ? (box.bottom - opr.top + gap) : aboveTop) + 'px';
     }
 
     /* ── Duplicate ──────────────────────────────────────── */
