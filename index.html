@@ -9470,6 +9470,12 @@
     /* Drag / resize / draw state */
     var _drag = null;   /* { ids, startX, startY, origPos[] } */
     var _resize= null;  /* { id, handle, origEl, startX, startY } */
+    /* True while an element is mid-drag/resize — used to stop renderAll from fighting live geometry. */
+    function _isBusy(id) {
+      if (_resize && _resize.id === id) return true;
+      if (_drag && _drag.origPos) { for (var i=0;i<_drag.origPos.length;i++){ if(_drag.origPos[i].id===id) return true; } }
+      return false;
+    }
     var _selbox= null;  /* { startX, startY } rubber-band */
     var _drawing=null;  /* { path SVG elem, points[] } — pen tool */
     var _arrowDraw=null;/* { svg line, x1,y1 } — arrow tool */
@@ -9578,15 +9584,20 @@
     function renderEl(id, d) {
       var isNew = !_elDoms[id];
       var el = _elDoms[id] || document.createElement('div');
+      /* While this element is actively being dragged or resized, don't let a remote/render pass
+         overwrite its live geometry — that's what made elements jump back / glitch mid-drag. */
+      var skipGeo = !isNew && _isBusy(id);
       /* Keep the type modifier (e.g. mb-sticky) on EVERY render. Previously it was only added on the
          first render, so re-rendering an existing sticky (e.g. on click) stripped mb-sticky — the note
          lost its rounded corners, padding and flex layout, and the caret jumped to the corner. */
       el.className = 'mb-el' + (d.type === 'sticky' ? ' mb-sticky' : '');
       el.dataset.id = id;
-      el.style.left = d.x + 'px';
-      el.style.top  = d.y + 'px';
-      el.style.width = (d.w||200) + 'px';
-      el.style.height= (d.h||120) + 'px';
+      if (!skipGeo) {
+        el.style.left = d.x + 'px';
+        el.style.top  = d.y + 'px';
+        el.style.width = (d.w||200) + 'px';
+        el.style.height= (d.h||120) + 'px';
+      }
       el.style.zIndex= d.z || 1;
       el.style.opacity = (d.opacity != null ? d.opacity : 1);
       if (d.locked) el.classList.add('locked');
@@ -9729,10 +9740,12 @@
         _elDoms[id] = el;
       } else {
         /* Update existing element */
-        el.style.left  = d.x + 'px';
-        el.style.top   = d.y + 'px';
-        el.style.width = (d.w||200) + 'px';
-        el.style.height= (d.h||120) + 'px';
+        if (!skipGeo) {
+          el.style.left  = d.x + 'px';
+          el.style.top   = d.y + 'px';
+          el.style.width = (d.w||200) + 'px';
+          el.style.height= (d.h||120) + 'px';
+        }
         el.style.zIndex= d.z || 1;
 
         if (d.type === 'sticky') {
@@ -9877,6 +9890,16 @@
     /* ── Element listeners (drag, select) ───────────────── */
     function attachElListeners(el, id) {
       el.addEventListener('mousedown', function(e){
+        /* Middle-mouse click deletes the element directly. */
+        if (e.button === 1) {
+          var dd = _elements[id];
+          if (dd && !dd.locked && canEdit()) {
+            e.preventDefault(); e.stopPropagation();
+            _selected = [id];
+            deleteSelected();
+          }
+          return;
+        }
         if (e.button !== 0) return;
         if (_tool !== 'select' && _tool !== 'hand') return;
         if (_tool === 'hand' || _spaceDown) return; /* hand tool pans instead */
@@ -10108,6 +10131,12 @@
         if (e.target.closest('.mb-el')) return;
         /* SVG elements (paths, arrows) — handle select here since they have no own handler */
         var svgDataEl = e.target.closest('[data-id]');
+        /* Middle-mouse click on a path/arrow deletes it. */
+        if (svgDataEl && e.button === 1) {
+          var delId = svgDataEl.getAttribute('data-id');
+          var dd2 = _elements[delId];
+          if (dd2 && !dd2.locked && canEdit()) { e.preventDefault(); e.stopPropagation(); _selected = [delId]; deleteSelected(); return; }
+        }
         if (svgDataEl && _tool === 'select') {
           var svgId = svgDataEl.getAttribute('data-id');
           if (e.shiftKey) {
@@ -10260,9 +10289,19 @@
         if (!d || d.locked) return;
         removed.push({ id:id, data: JSON.parse(JSON.stringify(d)) });
         delete _elements[id];
-        if (_elDoms[id]) { _elDoms[id].remove(); delete _elDoms[id]; }
+        var dom = _elDoms[id];
+        if (dom) {
+          /* Stop any <video> and release its blob so it doesn't keep decoding/playing after delete. */
+          var v = dom.querySelector('video');
+          if (v) { try { v.pause(); v.removeAttribute('src'); v.load(); } catch(_){} }
+          dom.remove();
+          delete _elDoms[id];
+        }
+        if (String(d.url||'').startsWith('blob:')) { try { URL.revokeObjectURL(d.url); } catch(_){} }
         var svgEl = svgLayer.querySelector('[data-id="'+id+'"]');
         if (svgEl) svgEl.remove();
+        /* Defensive sweep: remove any stray DOM node that still carries this id (orphaned frame/ring). */
+        if (canvas) canvas.querySelectorAll('[data-id="'+id+'"]').forEach(function(n){ n.remove(); });
         if (window.fb && window.fb.boards) window.fb.boards.elements.remove(_boardId, id);
       });
       if (removed.length) {
@@ -10585,8 +10624,11 @@
       d.aspect = natAr; d.w = Math.round(newW); d.h = newH;
       d.x = Math.round(cx - d.w / 2); d.y = Math.round(cy - d.h / 2);
       var dom = _elDoms[id];
-      if (dom) { dom.style.left=d.x+'px'; dom.style.top=d.y+'px'; dom.style.width=d.w+'px'; dom.style.height=d.h+'px'; }
-      if (canEdit()) commitElUpdate(id, { x:d.x, y:d.y, w:d.w, h:d.h, aspect:d.aspect });
+      if (dom && !_isBusy(id)) { dom.style.left=d.x+'px'; dom.style.top=d.y+'px'; dom.style.width=d.w+'px'; dom.style.height=d.h+'px'; }
+      /* Don't commit while the local URL is still a blob (upload not done) — that would write a
+         broken/temporary element to the DB and let it resurrect after a delete. The final commitElSet
+         after upload carries the corrected dimensions. */
+      if (canEdit() && !String(d.url||'').startsWith('blob:')) commitElUpdate(id, { x:d.x, y:d.y, w:d.w, h:d.h, aspect:d.aspect });
     }
 
     function openImagePicker(x, y) {
@@ -10607,8 +10649,10 @@
         applyNaturalSize(id, isVideo, localUrl, false);
         var path = 'moodboard-images/' + _boardId + '/' + id + '/' + file.name;
         window.fb.upload(file, path, null).then(function(result){
-          if (!result) return;
           URL.revokeObjectURL(localUrl);
+          /* If the user deleted this element while it was still uploading, do NOT recreate it. */
+          if (!_elements[id]) { if (window.fb && window.fb.boards) window.fb.boards.elements.remove(_boardId, id); return; }
+          if (!result) return;
           d.url = result.url; d.storagePath = result.path;
           commitElSet(id, d);
           renderEl(id, d);
@@ -10639,8 +10683,9 @@
           applyNaturalSize(id, isVideo, localUrl2, false);
           var path2 = 'moodboard-images/' + _boardId + '/' + id + '/' + file.name;
           window.fb.upload(file, path2, null).then(function(result){
-            if (!result) return;
             URL.revokeObjectURL(localUrl2);
+            if (!_elements[id]) { if (window.fb && window.fb.boards) window.fb.boards.elements.remove(_boardId, id); return; }
+            if (!result) return;
             d.url=result.url; d.storagePath=result.path;
             commitElSet(id, d); renderEl(id, d); scheduleThumbUpdate();
           });
