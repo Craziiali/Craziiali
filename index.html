@@ -9331,7 +9331,10 @@
     function renderEl(id, d) {
       var isNew = !_elDoms[id];
       var el = _elDoms[id] || document.createElement('div');
-      el.className = 'mb-el';
+      /* Keep the type modifier (e.g. mb-sticky) on EVERY render. Previously it was only added on the
+         first render, so re-rendering an existing sticky (e.g. on click) stripped mb-sticky — the note
+         lost its rounded corners, padding and flex layout, and the caret jumped to the corner. */
+      el.className = 'mb-el' + (d.type === 'sticky' ? ' mb-sticky' : '');
       el.dataset.id = id;
       el.style.left = d.x + 'px';
       el.style.top  = d.y + 'px';
@@ -9384,7 +9387,6 @@
 
       if (isNew) {
         if (d.type === 'sticky') {
-          el.className += ' mb-sticky';
           el.style.background = d.color || '#ffd66e';
           var ta = document.createElement('textarea');
           ta.className = 'mb-sticky-text';
