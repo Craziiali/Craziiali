@@ -7758,7 +7758,7 @@
       if(p.client)   descParts.push('Client: ' + p.client);
       if(p.notes)    descParts.push(p.notes);
       if(p.priority) descParts.push('Priority: ' + p.priority);
-      if(tm)         descParts.push('⏰ Set a 1-hour reminder after saving.');
+      if(tm)         descParts.push('⏰ Reminder set for ' + fmt12(p.time) + ' — exact time.');
       var desc = descParts.join('\n');
       var loc  = p.locationUrl || p.location || '';
 
@@ -7801,7 +7801,7 @@
         var endTotal = sh*60 + sm + 60, ey = dp.y, emo = dp.mo, ed = dp.d;
         if(endTotal >= 1440){ var nd = new Date(dp.y, dp.mo-1, dp.d+1); ey = nd.getFullYear(); emo = nd.getMonth()+1; ed = nd.getDate(); endTotal -= 1440; }
         ev.end = { dateTime: rfc3339Local(ey, emo, ed, Math.floor(endTotal/60), endTotal%60) };
-        ev.reminders = { useDefault:false, overrides:[ { method:'popup', minutes:60 } ] };  /* rings 1h before */
+        ev.reminders = { useDefault:false, overrides:[ { method:'popup', minutes:0 } ] };  /* rings at exact event time */
       } else {
         var endAll = new Date(dp.y, dp.mo-1, dp.d+1);
         ev.start = { date: dp.y + '-' + pad2(dp.mo) + '-' + pad2(dp.d) };
