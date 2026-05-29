@@ -36,6 +36,10 @@
     try { rtdb = getDatabase(app); } catch(e) { console.warn("[RTDB] Not available:", e.message); }
     const REF     = () => doc(db, 'craziiali', 'invoices');
 
+    /* Google Calendar OAuth access token (captured from Google sign-in). Short-lived (~1h). */
+    let gcalToken = null, gcalTokenExp = 0;
+    const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+
     window.fb = {
       auth,
       storage,
@@ -52,6 +56,40 @@
         const user = auth.currentUser;
         if (!user) return Promise.reject(new Error('Not signed in'));
         return linkWithCredential(user, EmailAuthProvider.credential(user.email, password));
+      },
+
+      /* ── Google Calendar integration ──────────────────────────
+         connectCalendar() pops a Google consent (calendar.events scope) and captures the
+         OAuth access token. Done on-demand the first time the user uses "Add to Calendar",
+         so normal sign-in is never burdened with a calendar prompt. */
+      connectCalendar: () => {
+        const provider = new GoogleAuthProvider();
+        provider.addScope(GCAL_SCOPE);
+        return signInWithPopup(auth, provider).then(function(result){
+          const cred = GoogleAuthProvider.credentialFromResult(result);
+          if (!cred || !cred.accessToken) throw { code:'no-token' };
+          gcalToken = cred.accessToken;
+          gcalTokenExp = Date.now() + 55 * 60 * 1000; /* refresh a bit before the ~1h expiry */
+          return gcalToken;
+        });
+      },
+      getGcalToken: () => (gcalToken && Date.now() < gcalTokenExp) ? gcalToken : null,
+      gcalInsert: (eventObj) => {
+        if (!gcalToken) return Promise.reject({ code:'no-token' });
+        return fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + gcalToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventObj)
+        }).then(function(res){
+          if (res.status === 401) { gcalToken = null; gcalTokenExp = 0; return Promise.reject({ code:'token-expired' }); }
+          if (!res.ok) {
+            return res.json().then(
+              function(j){ return Promise.reject({ code:'http-' + res.status, detail:j }); },
+              function(){  return Promise.reject({ code:'http-' + res.status }); }
+            );
+          }
+          return res.json();
+        });
       },
 
       /* ── Realtime cursor tracking ─────────────────────────── */
@@ -7733,16 +7771,103 @@
       if(loc) params.push('location=' + encodeURIComponent(loc));
       return 'https://calendar.google.com/calendar/render?' + params.join('&');
     }
+    /* RFC3339 timestamp with the device's local UTC offset, e.g. 2026-06-10T15:00:00+03:00 —
+       so the event lands at the real wall-clock time with no timezone drift. */
+    function rfc3339Local(y, mo, d, h, mi){
+      var dt  = new Date(y, mo-1, d, h||0, mi||0, 0);
+      var off = -dt.getTimezoneOffset();
+      var sign = off >= 0 ? '+' : '-', ao = Math.abs(off);
+      return y + '-' + pad2(mo) + '-' + pad2(d) + 'T' + pad2(h) + ':' + pad2(mi) + ':00' +
+             sign + pad2(Math.floor(ao/60)) + ':' + pad2(ao%60);
+    }
+    /* Google Calendar API event body (with a real 1-hour popup reminder). */
+    function buildGCalEvent(p){
+      var dp = plannerDateParts(p.date);
+      if(!dp) return null;
+      var title = [p.name, p.client].filter(Boolean).join(' · ') || 'Shoot';
+      var descParts = [];
+      if(p.client)   descParts.push('Client: ' + p.client);
+      if(p.notes)    descParts.push(p.notes);
+      if(p.priority) descParts.push('Priority: ' + p.priority);
+      var ev = { summary: title };
+      var loc = p.locationUrl || p.location || '';
+      if(loc) ev.location = loc;
+      if(descParts.length) ev.description = descParts.join('\n');
+
+      var tm = String(p.time||'').match(/^(\d{1,2}):(\d{2})$/);
+      if(tm){
+        var sh = +tm[1], sm = +tm[2];
+        ev.start = { dateTime: rfc3339Local(dp.y, dp.mo, dp.d, sh, sm) };
+        var endTotal = sh*60 + sm + 60, ey = dp.y, emo = dp.mo, ed = dp.d;
+        if(endTotal >= 1440){ var nd = new Date(dp.y, dp.mo-1, dp.d+1); ey = nd.getFullYear(); emo = nd.getMonth()+1; ed = nd.getDate(); endTotal -= 1440; }
+        ev.end = { dateTime: rfc3339Local(ey, emo, ed, Math.floor(endTotal/60), endTotal%60) };
+        ev.reminders = { useDefault:false, overrides:[ { method:'popup', minutes:60 } ] };  /* rings 1h before */
+      } else {
+        var endAll = new Date(dp.y, dp.mo-1, dp.d+1);
+        ev.start = { date: dp.y + '-' + pad2(dp.mo) + '-' + pad2(dp.d) };
+        ev.end   = { date: endAll.getFullYear() + '-' + pad2(endAll.getMonth()+1) + '-' + pad2(endAll.getDate()) };
+        ev.reminders = { useDefault:false, overrides:[ { method:'popup', minutes:900 } ] }; /* ~9am day before */
+      }
+      return ev;
+    }
+
     function openShootInGCal(p, btn){
-      var url = buildGCalUrl(p);
-      if(!url){
+      var dp = plannerDateParts(p.date);
+      if(!dp){
         plCalToast('Add a date to this shoot first.', true);
         var dateInp = btn && btn.closest('.shoot-row') ? btn.closest('.shoot-row').querySelector('.shoot-date') : null;
         if(dateInp) dateInp.focus();
         return;
       }
-      window.open(url, '_blank', 'noopener');
-      if(btn){ btn.classList.add('cal-flash'); setTimeout(function(){ btn.classList.remove('cal-flash'); }, 900); }
+
+      var span = btn ? btn.querySelector('span') : null;
+      var origLabel = span ? span.textContent : '';
+      function setBusy(on){ if(btn) btn.style.opacity = on ? '.6' : ''; if(span) span.textContent = on ? 'Adding…' : origLabel; }
+      function flashOK(){ if(btn){ btn.classList.add('cal-flash'); setTimeout(function(){ btn.classList.remove('cal-flash'); }, 1100); } }
+
+      /* Fallback: open Google Calendar pre-filled (manual Save) if the API path isn't available. */
+      function fallbackTab(msg){
+        var url = buildGCalUrl(p);
+        if(url) window.open(url, '_blank', 'noopener');
+        if(msg) plCalToast(msg, true);
+      }
+
+      var fb = window.fb;
+      if(!(fb && fb.gcalInsert && fb.connectCalendar)){ fallbackTab(); return; }
+
+      var ev = buildGCalEvent(p);
+      setBusy(true);
+
+      function insert(){
+        return fb.gcalInsert(ev).then(function(){
+          setBusy(false); flashOK();
+          plCalToast(p.time ? 'Added to your Google Calendar ✓ — it’ll ring 1 hour before.'
+                            : 'Added to your Google Calendar ✓');
+        });
+      }
+      function ensureTokenThenInsert(){
+        return fb.getGcalToken() ? insert() : fb.connectCalendar().then(insert);
+      }
+
+      ensureTokenThenInsert().catch(function(err){
+        var code = (err && err.code) || '';
+        /* User dismissed the Google popup — do nothing. */
+        if(code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request'){ setBusy(false); return; }
+        /* Token expired mid-flight → refresh once and retry. */
+        if(code === 'token-expired'){
+          fb.connectCalendar().then(insert).catch(function(){ setBusy(false); fallbackTab('Opened Google Calendar for you to save.'); });
+          return;
+        }
+        /* Calendar API not enabled yet (setup not finished) → fall back gracefully. */
+        if(code === 'http-403'){
+          setBusy(false);
+          fallbackTab('Almost there — finish the 1-time Google setup to make it automatic. Opened Calendar for now.');
+          return;
+        }
+        setBusy(false);
+        console.error('[GCal] insert failed', err);
+        fallbackTab('Opened Google Calendar for you to save.');
+      });
     }
 
     /* ── Render ────────────────────────────────────────────────── */
