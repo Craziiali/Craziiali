@@ -94,9 +94,13 @@ exports.checkShoots = functions.pubsub
   .timeZone('Asia/Riyadh')
   .onRun(async () => {
 
-    const cfg = functions.config().pushover || {};
+    const cfg = {
+      token: process.env.PUSHOVER_TOKEN,
+      user:  process.env.PUSHOVER_USER,
+      site:  process.env.PUSHOVER_SITE,
+    };
     if (!cfg.token || !cfg.user) {
-      functions.logger.error('Pushover config missing — run: firebase functions:config:set pushover.token="..." pushover.user="..."');
+      functions.logger.error('Pushover env vars missing (PUSHOVER_TOKEN / PUSHOVER_USER)');
       return null;
     }
 
