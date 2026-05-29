@@ -4723,11 +4723,32 @@
     transition: max-height .35s cubic-bezier(.4,0,.2,1), opacity .25s ease;
     opacity: 0;
   }
-  .shoot-row.open .shoot-expand { max-height: 60px; opacity: 1; }
+  .shoot-row.open .shoot-expand { max-height: 80px; opacity: 1; }
   .shoot-expand-inner {
     padding: 0 28px 16px 60px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   }
   .shoot-status-sel { display: flex; gap: 6px; flex-wrap: wrap; }
+  /* Add-to-Calendar button (exports an .ics for Apple/Google with a 1-hour reminder) */
+  .shoot-cal {
+    display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+    font-family: var(--font-en-mono); font-size: 7.5px; letter-spacing: .12em; text-transform: uppercase;
+    border-radius: 100px; border: 1px solid rgba(126,140,247,.4); background: rgba(126,140,247,.08);
+    color: #b4bcff; padding: 4px 12px; cursor: pointer; white-space: nowrap;
+    transition: border-color .22s, color .22s, background .22s;
+  }
+  .shoot-cal:hover { border-color: rgba(126,140,247,.72); background: rgba(126,140,247,.16); color: #cdd1ff; }
+  .shoot-cal svg { width: 11px; height: 11px; }
+  .shoot-cal.cal-flash { border-color: rgba(50,200,110,.6); background: rgba(50,200,110,.12); color: #6fe39a; }
+  .pl-cal-toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(12px);
+    background: rgba(13,13,17,.96); border: 1px solid rgba(243,243,239,.14); border-radius: 12px;
+    padding: 11px 18px; font-family: var(--font-en-mono); font-size: 10px; letter-spacing: .04em;
+    color: var(--ink); box-shadow: 0 12px 40px rgba(0,0,0,.6); z-index: 99999; pointer-events: none;
+    opacity: 0; transition: opacity .2s, transform .2s; max-width: min(420px, calc(100vw - 32px)); text-align: center;
+  }
+  .pl-cal-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .pl-cal-toast.warn { border-color: rgba(240,180,60,.45); color: #f0b43c; }
   .ss-btn {
     font-family: var(--font-en-mono);
     font-size: 7.5px; letter-spacing: .12em; text-transform: uppercase;
@@ -5261,7 +5282,7 @@
     }
 
     /* Expand panel: taller on mobile to fit 2 rows of status btns */
-    .shoot-row.open .shoot-expand { max-height: 90px; }
+    .shoot-row.open .shoot-expand { max-height: 150px; }
 
     /* Enlarge tap target for the delete button */
     .shoot-del { min-height: 36px; min-width: 36px; }
@@ -7646,6 +7667,117 @@
       set('statDone',      projects.filter(function(p){ return p.status==='done';      }).length);
     }
 
+    /* ── Add to Calendar (.ics export) ─────────────────────────────
+       Builds a standard iCalendar file from a shoot row so it can be added to Apple Calendar
+       (iPhone) or Google Calendar (Android/desktop) from the same button — no login, no API.
+       The event start is the shoot's real Date + Time (the time you need to be there), written as
+       FLOATING LOCAL time so it never drifts by timezone, with a reminder 1 hour before that. */
+    function icsEscape(s){
+      return String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+    }
+    function icsFold(line){
+      /* RFC 5545: fold lines longer than 75 octets */
+      if(line.length <= 73) return line;
+      var out = '', i = 0;
+      while(line.length - i > 73){ out += line.substr(i,73) + '\r\n '; i += 73; }
+      return out + line.substr(i);
+    }
+    function plannerDateParts(dateStr){
+      var m = String(dateStr||'').match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})$/);
+      return m ? { y:+m[1], mo:+m[2], d:+m[3] } : null;
+    }
+    function plCalToast(msg, warn){
+      var t = document.getElementById('plCalToast');
+      if(!t){ t = document.createElement('div'); t.id = 'plCalToast'; t.className = 'pl-cal-toast'; document.body.appendChild(t); }
+      t.textContent = msg;
+      t.classList.toggle('warn', !!warn);
+      void t.offsetWidth;
+      t.classList.add('show');
+      clearTimeout(t._tmr);
+      t._tmr = setTimeout(function(){ t.classList.remove('show'); }, 3200);
+    }
+    function buildShootICS(p){
+      var dp = plannerDateParts(p.date);
+      if(!dp) return null;
+      var title = [p.name, p.client].filter(Boolean).join(' · ') || 'Shoot';
+      var descParts = [];
+      if(p.client)   descParts.push('Client: ' + p.client);
+      if(p.notes)    descParts.push(p.notes);
+      if(p.priority) descParts.push('Priority: ' + p.priority);
+      var desc = descParts.join('\n');
+      var loc  = p.locationUrl || p.location || '';
+      var uid  = 'shoot-' + (p.id!=null ? p.id : Date.now()) + '-' + Date.now() + '@craziiali';
+      var now  = new Date();
+      var dtstamp = now.getUTCFullYear()+pad2(now.getUTCMonth()+1)+pad2(now.getUTCDate())+'T'+
+                    pad2(now.getUTCHours())+pad2(now.getUTCMinutes())+pad2(now.getUTCSeconds())+'Z';
+      var datePart = dp.y + pad2(dp.mo) + pad2(dp.d);
+
+      var L = [];
+      L.push('BEGIN:VCALENDAR');
+      L.push('VERSION:2.0');
+      L.push('PRODID:-//Craziiali//Shoot Planner//EN');
+      L.push('CALSCALE:GREGORIAN');
+      L.push('METHOD:PUBLISH');
+      L.push('BEGIN:VEVENT');
+      L.push('UID:' + uid);
+      L.push('DTSTAMP:' + dtstamp);
+
+      var tm = String(p.time||'').match(/^(\d{1,2}):(\d{2})$/);
+      if(tm){
+        var sh = +tm[1], sm = +tm[2];
+        L.push('DTSTART:' + datePart + 'T' + pad2(sh) + pad2(sm) + '00');
+        var endTotal = sh*60 + sm + 60, endDate = datePart;
+        if(endTotal >= 1440){
+          var nd = new Date(dp.y, dp.mo-1, dp.d+1);
+          endDate = nd.getFullYear()+pad2(nd.getMonth()+1)+pad2(nd.getDate());
+          endTotal -= 1440;
+        }
+        L.push('DTEND:' + endDate + 'T' + pad2(Math.floor(endTotal/60)) + pad2(endTotal%60) + '00');
+        L.push('BEGIN:VALARM');
+        L.push('ACTION:DISPLAY');
+        L.push('DESCRIPTION:' + icsEscape('Reminder · ' + title));
+        L.push('TRIGGER:-PT1H');   /* 1 hour before the real start time */
+        L.push('END:VALARM');
+      } else {
+        /* No time set → all-day event with a reminder the morning before (≈9am day before). */
+        var endAll = new Date(dp.y, dp.mo-1, dp.d+1);
+        L.push('DTSTART;VALUE=DATE:' + datePart);
+        L.push('DTEND;VALUE=DATE:' + endAll.getFullYear()+pad2(endAll.getMonth()+1)+pad2(endAll.getDate()));
+        L.push('BEGIN:VALARM');
+        L.push('ACTION:DISPLAY');
+        L.push('DESCRIPTION:' + icsEscape('Reminder · ' + title));
+        L.push('TRIGGER:-PT15H');
+        L.push('END:VALARM');
+      }
+
+      L.push('SUMMARY:' + icsEscape(title));
+      if(desc) L.push('DESCRIPTION:' + icsEscape(desc));
+      if(loc)  L.push('LOCATION:' + icsEscape(loc));
+      L.push('STATUS:CONFIRMED');
+      L.push('END:VEVENT');
+      L.push('END:VCALENDAR');
+      return L.map(icsFold).join('\r\n');
+    }
+    function downloadShootICS(p, btn){
+      var ics = buildShootICS(p);
+      if(!ics){
+        plCalToast('Add a date to this shoot first, then add it to your calendar.', true);
+        var dateInp = btn && btn.closest('.shoot-row') ? btn.closest('.shoot-row').querySelector('.shoot-date') : null;
+        if(dateInp){ dateInp.focus(); }
+        return;
+      }
+      var blob = new Blob([ics], { type:'text/calendar;charset=utf-8' });
+      var url  = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      var safe = (p.name || p.client || 'shoot').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'_').slice(0,40) || 'shoot';
+      a.href = url; a.download = safe + '.ics';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+      if(btn){ btn.classList.add('cal-flash'); setTimeout(function(){ btn.classList.remove('cal-flash'); }, 900); }
+      plCalToast(p.time ? 'Calendar file ready — open it on your phone to add the shoot (rings 1h before).'
+                        : 'Calendar file ready — open it on your phone to add the shoot.');
+    }
+
     /* ── Render ────────────────────────────────────────────────── */
     function renderPlanner(){
       var list  = document.getElementById('plannerList');
@@ -7733,6 +7865,10 @@
                          ' data-s="'+s+'">'+SLABELS[s]+'</button>';
                 }).join('')+
               '</div>'+
+              '<button class="shoot-cal" type="button" title="Add this shoot to your phone calendar with a 1-hour reminder (Apple or Google)">'+
+                '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.8" width="11" height="9.7" rx="1.5"/><path d="M1.5 5.6h11M4.3 1.3v2.4M9.7 1.3v2.4M7 7.4v3M5.5 8.9h3"/></svg>'+
+                '<span>Add to Calendar</span>'+
+              '</button>'+
             '</div>'+
           '</div>';
 
@@ -7811,6 +7947,14 @@
             projects = projects.filter(function(x){ return x.id!==p.id; });
             renderPlanner(); updateStats(); savePlanner();
           });
+        });
+
+        /* ── Bind: Add to Calendar (.ics export) ── */
+        var calBtn = row.querySelector('.shoot-cal');
+        if(calBtn) calBtn.addEventListener('click', function(e){
+          e.stopPropagation();
+          var proj = projects.find(function(x){ return x.id===p.id; }) || p;
+          downloadShootICS(proj, calBtn);
         });
 
         /* ── Bind: status buttons (expand) — in-place update, no re-render ── */
