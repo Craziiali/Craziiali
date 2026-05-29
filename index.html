@@ -5646,12 +5646,14 @@
   #viewMoodboardCanvas { overflow:hidden; position:fixed; inset:0; background:var(--bg); }
   .mb-topbar { position:absolute; top:0; left:0; right:0; z-index:200; height:64px; background:transparent; border-bottom:none; backdrop-filter:none; display:flex; align-items:center; padding:12px 16px; gap:0; pointer-events:none; justify-content:space-between; }
   .mb-topbar-left { display:flex; align-items:center; gap:0; background:rgba(13,13,17,.94); border:1px solid rgba(243,243,239,.13); border-radius:14px; padding:0 14px; height:38px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); box-shadow:0 4px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06); pointer-events:all; flex-shrink:0; max-width:55vw; overflow:hidden; }
-  .mb-topbar-right { display:flex; align-items:center; gap:6px; background:rgba(13,13,17,.94); border:1px solid rgba(243,243,239,.13); border-radius:14px; padding:0 8px 0 12px; height:38px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); box-shadow:0 4px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06); pointer-events:all; flex-shrink:0; }
+  .mb-topbar-right { display:flex; align-items:center; gap:8px; background:rgba(13,13,17,.94); border:1px solid rgba(243,243,239,.13); border-radius:14px; padding:0 10px 0 14px; height:38px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); box-shadow:0 4px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06); pointer-events:all; flex-shrink:0; }
+  .mb-topbar-rsep { width:1px; height:18px; background:rgba(243,243,239,.13); flex-shrink:0; }
   .mb-topbar-back { display:flex; align-items:center; gap:6px; font-family:var(--font-en-mono); font-size:8.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft); opacity:.65; cursor:pointer; border:none; background:transparent; padding:4px 0; transition:opacity .2s; flex-shrink:0; }
   .mb-topbar-back:hover { opacity:1; }
   .mb-topbar-back svg { width:9px; height:9px; }
   .mb-topbar-sep { width:1px; height:18px; background:rgba(243,243,239,.12); flex-shrink:0; margin:0 10px; }
-  .mb-board-name-input { flex:1; min-width:60px; max-width:220px; background:transparent; border:none; outline:none; font-family:var(--font-en-display); font-style:italic; font-size:15px; font-weight:400; color:var(--ink); padding:0; cursor:text; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* width is driven by JS (autosizeBoardName) to hug the text — no dead space after short names. */
+  .mb-board-name-input { flex:0 0 auto; width:84px; min-width:24px; max-width:240px; background:transparent; border:none; outline:none; font-family:var(--font-en-display); font-style:italic; font-size:15px; font-weight:400; color:var(--ink); padding:0; cursor:text; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .mb-board-name-input[readonly] { cursor:default; pointer-events:none; }
   .mb-zoom-ctrl { display:flex; align-items:center; gap:2px; flex-shrink:0; }
   .mb-zoom-btn { width:28px; height:28px; border-radius:4px; border:1px solid transparent; background:transparent; color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:var(--font-en-mono); font-size:10px; transition:background .15s,border-color .15s,color .15s; }
@@ -5698,7 +5700,10 @@
   .mb-stage.tool-pen,.mb-stage.tool-sticky,.mb-stage.tool-rect,.mb-stage.tool-circle,.mb-stage.tool-diamond,.mb-stage.tool-arrow { cursor:crosshair; }
   .mb-stage.tool-text { cursor:text; }
   .mb-stage.tool-image { cursor:copy; }
-  .mb-canvas { position:absolute; top:0; left:0; width:0; height:0; transform-origin:0 0; will-change:transform; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  /* NOTE: no permanent will-change here — that pins a 1x raster that the GPU upscales (blurry until re-paint).
+     will-change is toggled on only during an active pan/zoom gesture in JS, then cleared so the canvas
+     re-rasterizes crisply at the current scale. */
+  .mb-canvas { position:absolute; top:0; left:0; width:0; height:0; transform-origin:0 0; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
   .mb-bg-dots { background-image:radial-gradient(circle,rgba(243,243,239,.16) 1px,transparent 1px); background-size:24px 24px; }
   .mb-bg-grid { background-image:linear-gradient(rgba(243,243,239,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(243,243,239,.06) 1px,transparent 1px); background-size:40px 40px; }
   .mb-bg-lines { background-image:linear-gradient(rgba(243,243,239,.06) 1px,transparent 1px); background-size:40px 40px; }
@@ -5712,13 +5717,16 @@
   .mb-textblock { min-width:100px; min-height:30px; padding:4px 6px; border-radius:2px; outline:none; background:transparent; word-break:break-word; }
   .mb-textblock:focus { outline:2px solid rgba(126,140,247,.4); }
   .mb-shape-svg { width:100%; height:100%; overflow:visible; pointer-events:none; }
-  .mb-img { width:100%; height:100%; object-fit:contain; display:block; border-radius:6px; pointer-events:none; user-select:none; -webkit-user-drag:none; }
-  /* Polished frame overlay on image elements */
-  .mb-img-frame { position:absolute; inset:0; border-radius:8px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.1), 0 8px 28px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.3); pointer-events:none; z-index:2; background:transparent; }
+  /* Box is sized to the media's true aspect ratio (see fitMediaSize in JS), so object-fit:cover
+     fills it edge-to-edge with no letterbox gap — the frame and selection ring then hug the image. */
+  .mb-img { width:100%; height:100%; object-fit:cover; display:block; border-radius:7px; pointer-events:none; user-select:none; -webkit-user-drag:none; }
+  /* Polished frame overlay on image elements. Inset hairline counter-scales so it stays crisp at zoom. */
+  .mb-img-frame { position:absolute; inset:0; border-radius:7px; box-shadow:inset 0 0 0 calc(1px / var(--mbz,1)) rgba(255,255,255,.12), 0 8px 28px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.3); pointer-events:none; z-index:2; background:transparent; }
   .mb-img-placeholder { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:rgba(243,243,239,.04); border:1px dashed rgba(243,243,239,.15); border-radius:4px; color:var(--ink-soft); opacity:.4; font-family:var(--font-en-mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
   .mb-img-placeholder svg { width:24px; height:24px; }
-  .mb-handle { position:absolute; width:8px; height:8px; background:#fff; border:1.5px solid #8e9bf8; border-radius:3px; z-index:10; pointer-events:all; transform:translate(-50%,-50%); box-shadow:0 1px 4px rgba(0,0,0,.4),0 0 0 1px rgba(126,140,247,.2); transition:transform .1s; }
-  .mb-handle:hover { transform:translate(-50%,-50%) scale(1.25); }
+  /* Resize handles counter-scale with zoom so they stay a constant ~9px on screen. */
+  .mb-handle { position:absolute; width:calc(9px / var(--mbz,1)); height:calc(9px / var(--mbz,1)); background:#fff; border:calc(1.5px / var(--mbz,1)) solid #8e9bf8; border-radius:calc(2.5px / var(--mbz,1)); z-index:10; pointer-events:all; transform:translate(-50%,-50%); box-shadow:0 calc(1px / var(--mbz,1)) calc(4px / var(--mbz,1)) rgba(0,0,0,.4); transition:transform .1s; }
+  .mb-handle:hover { transform:translate(-50%,-50%) scale(1.3); }
   .mb-handle[data-h="nw"] { top:0; left:0; cursor:nw-resize; }
   .mb-handle[data-h="n"]  { top:0; left:50%; cursor:n-resize; }
   .mb-handle[data-h="ne"] { top:0; left:100%; cursor:ne-resize; }
@@ -5728,6 +5736,16 @@
   .mb-handle[data-h="sw"] { top:100%; left:0; cursor:sw-resize; }
   .mb-handle[data-h="w"]  { top:50%; left:0; cursor:w-resize; }
   .mb-selbox { position:absolute; border:1.5px solid #7e8cf7; background:rgba(126,140,247,.08); pointer-events:none; z-index:500; }
+  /* Drag-to-place ghost dragged out of the toolbar (follows the cursor until released on the canvas). */
+  .mb-tool-ghost { position:fixed; left:0; top:0; z-index:99999; pointer-events:none; transform:translate(-50%,-50%); opacity:.92; border-radius:10px; }
+  .mb-tool-ghost-sticky { width:92px; height:74px; border-radius:10px; box-shadow:0 14px 34px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.28),0 0 0 1px rgba(0,0,0,.1); }
+  .mb-tool-ghost-text { padding:6px 14px; font-family:var(--font-en-display); font-style:italic; font-size:20px; color:#f3f3ef; background:rgba(13,13,17,.78); box-shadow:0 12px 30px rgba(0,0,0,.5); }
+  .mb-tool-ghost-shape { width:78px; height:58px; border:2px solid #8e9bf8; background:rgba(126,140,247,.14); box-shadow:0 12px 30px rgba(0,0,0,.45); }
+  .mb-tool-ghost-shape.circle { border-radius:50%; }
+  .mb-tool-ghost-shape.diamond { transform:translate(-50%,-50%) rotate(45deg); border-radius:6px; }
+  .mb-tool-ghost-img { width:84px; height:62px; border:2px dashed rgba(126,140,247,.65); background:rgba(126,140,247,.1); display:flex; align-items:center; justify-content:center; color:#a0aaff; box-shadow:0 12px 30px rgba(0,0,0,.4); }
+  .mb-tool-ghost-img svg { width:24px; height:24px; }
+  body.mb-tool-dragging, body.mb-tool-dragging * { cursor:grabbing !important; }
   .mb-svg-layer { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
   .mb-path-el { pointer-events:stroke; cursor:pointer; }
   .mb-path-el.selected-path { filter:drop-shadow(0 0 4px rgba(126,140,247,.8)); }
@@ -5829,7 +5847,9 @@
   .mb-canvas-entering .mb-toolbar { animation:mbToolbarFocusIn .45s cubic-bezier(.16,1,.3,1) both; animation-delay:100ms; }
   .home-entering .tool-card:nth-child(4) { animation:focusIn .70s cubic-bezier(.16,1,.3,1) both; animation-delay:640ms; }
   /* Selection ring drawn on top of selected .mb-el */
-  .mb-el-sel-ring { position:absolute; inset:-3px; border:1.5px solid #8e9bf8; border-radius:6px; pointer-events:none; z-index:5; box-shadow:0 0 0 1px rgba(126,140,247,.15),0 0 16px rgba(126,140,247,.12); }
+  /* Selection ring counter-scales with zoom (var --mbz set on .mb-canvas) so it stays a
+     constant ~1.5px on screen at any zoom level, like Figma. */
+  .mb-el-sel-ring { position:absolute; inset:calc(-2px / var(--mbz,1)); border:calc(1.5px / var(--mbz,1)) solid #8e9bf8; border-radius:calc(7px / var(--mbz,1)); pointer-events:none; z-index:5; box-shadow:0 0 0 calc(1px / var(--mbz,1)) rgba(126,140,247,.18); }
 
   /* Live pen-draw preview path */
   .mb-drawing-path { pointer-events:none; }
@@ -5960,6 +5980,7 @@
           <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.5a5 5 0 0 1 5 5c0 3 1.3 4.5 1.3 4.5H2.7S4 10.5 4 7.5a5 5 0 0 1 5-5z"/><path d="M7.8 15.5a1.2 1.2 0 0 0 2.4 0"/></svg>
           <span class="mb-notif-badge" id="mbCanvasNotifBadge"></span>
         </button>
+        <div class="mb-topbar-rsep"></div>
         <button class="mb-share-btn" id="mbShareBtn" type="button">
           <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="3" r="1.5"/><circle cx="11" cy="11" r="1.5"/><circle cx="3" cy="7" r="1.5"/><path d="M4.4 7.7l5.2 2.8M9.6 3.5 4.4 6.3"/></svg>
           Share
@@ -9213,6 +9234,8 @@
     /* Throttle: cursor broadcast */
     var _cursorTimer=null, _lastCx=-9999, _lastCy=-9999;
     var _thumbTimer=null;
+    var _wcTimer=null;            /* clears will-change after a pan/zoom so the canvas re-rasterizes crisply */
+    var _suppressToolClick=false; /* set after a toolbar drag so the trailing click doesn't re-activate the tool */
 
     /* ── DOM refs ──────────────────────────────────────── */
     var stage, canvas, svgLayer, selbox, propbar;
@@ -9262,6 +9285,13 @@
 
     function applyTransform() {
       canvas.style.transform = 'translate(' + _panX + 'px,' + _panY + 'px) scale(' + _zoom + ')';
+      /* Expose zoom to CSS so selection chrome / hairlines counter-scale and stay crisp at any zoom. */
+      canvas.style.setProperty('--mbz', _zoom);
+      /* Promote to a GPU layer only while actively transforming, then clear so the browser
+         re-rasterizes at the current scale — this is what stops the "blurry until I touch it" effect. */
+      canvas.style.willChange = 'transform';
+      if (_wcTimer) clearTimeout(_wcTimer);
+      _wcTimer = setTimeout(function(){ if (canvas) canvas.style.willChange = 'auto'; }, 180);
       updateZoomPct();
       positionAllCursors();
     }
@@ -9388,8 +9418,8 @@
           vid.className = 'mb-img';
           vid.src = d.url || '';
           vid.autoplay = true; vid.loop = true; vid.muted = true; vid.playsInline = true;
-          vid.style.objectFit = 'cover';
           vid.draggable = false;
+          vid.addEventListener('loadedmetadata', function(){ healMediaAspect(id, vid.videoWidth, vid.videoHeight); });
           el.appendChild(vid);
           if (!el.querySelector('.mb-img-frame')) {
             var vframe = document.createElement('div');
@@ -9403,6 +9433,7 @@
             img.className = 'mb-img';
             img.src = d.url;
             img.draggable = false;
+            img.addEventListener('load', function(){ healMediaAspect(id, img.naturalWidth, img.naturalHeight); });
             el.appendChild(img);
             /* Polished frame overlay */
             if (!el.querySelector('.mb-img-frame')) {
@@ -10010,6 +10041,18 @@
       if (h.indexOf('s')>=0) nh=Math.max(40,r.origEl.h+ddy);
       if (h.indexOf('w')>=0) { nx=r.origEl.x+ddx; nw=Math.max(40,r.origEl.w-ddx); }
       if (h.indexOf('n')>=0) { ny=r.origEl.y+ddy; nh=Math.max(40,r.origEl.h-ddy); }
+
+      /* Images & videos keep their aspect ratio so they never stretch and the frame stays flush. */
+      if (d.type === 'image' || d.type === 'video') {
+        var ar = r.origEl.aspect || ((r.origEl.w||1) / (r.origEl.h||1)) || 1;
+        if (h === 'n' || h === 's') nw = nh * ar;   /* vertical edge drives height → derive width */
+        else                        nh = nw / ar;   /* corners & horizontal edges drive width → derive height */
+        if (nw < 40) { nw = 40; nh = nw / ar; }
+        if (nh < 40) { nh = 40; nw = nh * ar; }
+        /* Re-anchor the opposite corner for top / left handles after the ratio adjustment. */
+        if (h.indexOf('w') >= 0) nx = r.origEl.x + r.origEl.w - nw;
+        if (h.indexOf('n') >= 0) ny = r.origEl.y + r.origEl.h - nh;
+      }
       d.x=Math.round(nx); d.y=Math.round(ny); d.w=Math.round(nw); d.h=Math.round(nh);
       var dom = _elDoms[r.id];
       if (dom) { dom.style.left=d.x+'px'; dom.style.top=d.y+'px'; dom.style.width=d.w+'px'; dom.style.height=d.h+'px'; }
@@ -10238,6 +10281,65 @@
     }
 
     /* ── Image upload ─────────────────────────────────────── */
+    /* Scale a media element's natural pixel size down to a sensible default canvas size while
+       preserving its exact aspect ratio. */
+    function fitMediaSize(natW, natH) {
+      var MAX = 360, MIN = 90;
+      if (!natW || !natH) return { w: 280, h: 200 };
+      var ar = natW / natH, w, h;
+      if (natW >= natH) { w = Math.min(natW, MAX); h = w / ar; }
+      else              { h = Math.min(natH, MAX); w = h * ar; }
+      if (w < MIN) { w = MIN; h = w / ar; }
+      if (h < MIN) { h = MIN; w = h * ar; }
+      return { w: Math.round(w), h: Math.round(h) };
+    }
+
+    /* Once the real media metadata is available, resize the placed element to the true aspect ratio,
+       keeping it centred on where it was dropped, and remember the aspect for ratio-locked resizing. */
+    function applyNaturalSize(id, isVideo, srcUrl, andCommit) {
+      function setDims(natW, natH) {
+        var d = _elements[id];
+        if (!d || !natW || !natH) return;
+        var fit = fitMediaSize(natW, natH);
+        var cx = d.x + (d.w || fit.w) / 2;
+        var cy = d.y + (d.h || fit.h) / 2;
+        d.aspect = natW / natH;
+        d.w = fit.w; d.h = fit.h;
+        d.x = Math.round(cx - fit.w / 2);
+        d.y = Math.round(cy - fit.h / 2);
+        renderEl(id, d);
+        if (andCommit) commitElUpdate(id, { x:d.x, y:d.y, w:d.w, h:d.h, aspect:d.aspect });
+      }
+      if (isVideo) {
+        var v = document.createElement('video');
+        v.preload = 'metadata'; v.muted = true;
+        v.onloadedmetadata = function(){ setDims(v.videoWidth, v.videoHeight); };
+        v.src = srcUrl;
+      } else {
+        var im = new Image();
+        im.onload = function(){ setDims(im.naturalWidth, im.naturalHeight); };
+        im.src = srcUrl;
+      }
+    }
+
+    /* Safety net for media whose stored box doesn't match the real aspect ratio (e.g. items created
+       before aspect was tracked). Runs once when the media loads and corrects the box around its centre
+       so object-fit:cover never crops or letterboxes. */
+    function healMediaAspect(id, natW, natH) {
+      var d = _elements[id];
+      if (!d || !natW || !natH || !d.w || !d.h) return;
+      var natAr = natW / natH;
+      var curAr = d.w / d.h;
+      if (Math.abs(curAr - natAr) < 0.02) { if (!d.aspect) d.aspect = natAr; return; }
+      var cx = d.x + d.w / 2, cy = d.y + d.h / 2;
+      var newW = d.w, newH = Math.round(newW / natAr);
+      d.aspect = natAr; d.w = Math.round(newW); d.h = newH;
+      d.x = Math.round(cx - d.w / 2); d.y = Math.round(cy - d.h / 2);
+      var dom = _elDoms[id];
+      if (dom) { dom.style.left=d.x+'px'; dom.style.top=d.y+'px'; dom.style.width=d.w+'px'; dom.style.height=d.h+'px'; }
+      if (canEdit()) commitElUpdate(id, { x:d.x, y:d.y, w:d.w, h:d.h, aspect:d.aspect });
+    }
+
     function openImagePicker(x, y) {
       var inp = document.createElement('input');
       inp.type = 'file'; inp.accept = 'image/*,video/*';
@@ -10248,9 +10350,12 @@
         var id = genId();
         /* Show instantly from local object URL — no waiting for upload */
         var localUrl = URL.createObjectURL(file);
-        var d = { type: isVideo ? 'video' : 'image', x:Math.round(x), y:Math.round(y), w: isVideo ? 320 : 240, h: isVideo ? 200 : 180, url:localUrl, z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
+        /* Provisional size centred on the cursor; corrected to true aspect ratio once metadata loads. */
+        var pw = isVideo ? 320 : 240, ph = isVideo ? 200 : 180;
+        var d = { type: isVideo ? 'video' : 'image', x:Math.round(x - pw/2), y:Math.round(y - ph/2), w: pw, h: ph, url:localUrl, z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
         _elements[id] = d;
         renderEl(id, d);
+        applyNaturalSize(id, isVideo, localUrl, false);
         var path = 'moodboard-images/' + _boardId + '/' + id + '/' + file.name;
         window.fb.upload(file, path, null).then(function(result){
           if (!result) return;
@@ -10278,9 +10383,11 @@
           var isVideo = file.type.startsWith('video/');
           var id = genId();
           var localUrl2 = URL.createObjectURL(file);
-          var d = { type: isVideo ? 'video' : 'image', x:Math.round(pos3.x + i*20), y:Math.round(pos3.y + i*20), w: isVideo ? 320 : 240, h: isVideo ? 200 : 180, url:localUrl2, z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
+          var pw2 = isVideo ? 320 : 240, ph2 = isVideo ? 200 : 180;
+          var d = { type: isVideo ? 'video' : 'image', x:Math.round(pos3.x + i*20 - pw2/2), y:Math.round(pos3.y + i*20 - ph2/2), w: pw2, h: ph2, url:localUrl2, z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
           _elements[id] = d;
           renderEl(id, d);
+          applyNaturalSize(id, isVideo, localUrl2, false);
           var path2 = 'moodboard-images/' + _boardId + '/' + id + '/' + file.name;
           window.fb.upload(file, path2, null).then(function(result){
             if (!result) return;
@@ -10348,6 +10455,27 @@
     }
 
     function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    /* Size the board-name input to its text so short names ("Ali") don't leave a big empty gap,
+       while long names grow up to the max-width and then ellipsize. */
+    var _nameMeasure = null;
+    function autosizeBoardName() {
+      if (!boardNameInput) return;
+      if (!_nameMeasure) {
+        _nameMeasure = document.createElement('span');
+        _nameMeasure.style.cssText = 'position:absolute;left:-9999px;top:-9999px;white-space:pre;visibility:hidden;pointer-events:none;';
+        document.body.appendChild(_nameMeasure);
+      }
+      var cs = getComputedStyle(boardNameInput);
+      _nameMeasure.style.font = cs.font;
+      _nameMeasure.style.fontStyle = cs.fontStyle;
+      _nameMeasure.style.fontFamily = cs.fontFamily;
+      _nameMeasure.style.fontSize = cs.fontSize;
+      _nameMeasure.style.letterSpacing = cs.letterSpacing;
+      _nameMeasure.textContent = boardNameInput.value || boardNameInput.placeholder || '';
+      var w = _nameMeasure.offsetWidth + 4; /* tiny breathing room for the caret */
+      boardNameInput.style.width = Math.max(24, w) + 'px';
+    }
 
     /* ── Collab avatars in topbar ────────────────────────── */
     function renderCollabAvatars(cursors) {
@@ -10826,7 +10954,7 @@
       /* Load board meta (from cache if available, then subscribe for live updates) */
       var meta = (_boards[boardId]&&_boards[boardId].meta)||{};
       _boardMeta = meta;
-      if (boardNameInput) { boardNameInput.value = meta.name||'Untitled'; boardNameInput.readOnly = !isAdmin(); }
+      if (boardNameInput) { boardNameInput.value = meta.name||'Untitled'; boardNameInput.readOnly = !isAdmin(); autosizeBoardName(); }
       if (stage) stage.className = 'mb-stage mb-bg-' + (meta.bg||'dots') + ' tool-select';
       if (propbar) { propbar.innerHTML=''; propbar.classList.remove('show'); }
       /* Live-subscribe to meta (needed when opening via share link — _boards cache is empty) */
@@ -10834,7 +10962,7 @@
       _unsubMeta = window.fb.boards.watchOne(boardId, function(m){
         if (!m) return;
         _boardMeta = m;
-        if (boardNameInput && document.activeElement !== boardNameInput) boardNameInput.value = m.name||'Untitled';
+        if (boardNameInput && document.activeElement !== boardNameInput) { boardNameInput.value = m.name||'Untitled'; autosizeBoardName(); }
         if (stage) stage.className = 'mb-stage mb-bg-' + (m.bg||'dots') + ' tool-select';
       });
       applyTransform();
@@ -10980,6 +11108,81 @@
       });
     }
 
+    /* ── Drag a tool out of the toolbar to place it ──────────
+       Press & hold a creation tool, drag onto the canvas, release to drop it where the cursor is.
+       A plain click (no drag) still just activates the tool, so click-then-click placing also works. */
+    function defaultDims(tool) {
+      if (tool === 'sticky') return { w:200, h:160 };
+      if (tool === 'text')   return { w:180, h:50 };
+      return { w:160, h:120 };
+    }
+
+    function makeToolGhost(tool) {
+      var g = document.createElement('div');
+      g.className = 'mb-tool-ghost';
+      if (tool === 'sticky') {
+        g.classList.add('mb-tool-ghost-sticky');
+        g.style.background = _propStickyColor || '#ffd66e';
+      } else if (tool === 'text') {
+        g.classList.add('mb-tool-ghost-text');
+        g.textContent = 'Text';
+      } else if (tool === 'image') {
+        g.classList.add('mb-tool-ghost-img');
+        g.innerHTML = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3.5" width="14" height="11" rx="1.5"/><circle cx="6.5" cy="7.5" r="1.2"/><path d="M2 12l3.5-3.5 3 3 2.5-2.5L16 14"/></svg>';
+      } else {
+        g.classList.add('mb-tool-ghost-shape');
+        if (tool === 'circle') g.classList.add('circle');
+        else if (tool === 'diamond') g.classList.add('diamond');
+      }
+      return g;
+    }
+
+    function initToolbarDrag() {
+      var DRAGGABLE = { sticky:1, text:1, rect:1, circle:1, diamond:1, image:1 };
+      toolbar.querySelectorAll('.mb-tool-btn[data-tool]').forEach(function(btn){
+        var tool = btn.dataset.tool;
+        if (!DRAGGABLE[tool]) return;
+        btn.addEventListener('mousedown', function(e){
+          if (e.button !== 0 || !canEdit()) return;
+          var startX = e.clientX, startY = e.clientY;
+          var ghost = null, dragging = false;
+          function move(ev){
+            if (!dragging && Math.abs(ev.clientX-startX) < 5 && Math.abs(ev.clientY-startY) < 5) return;
+            if (!dragging) {
+              dragging = true;
+              ghost = makeToolGhost(tool);
+              document.body.appendChild(ghost);
+              document.body.classList.add('mb-tool-dragging');
+            }
+            ghost.style.left = ev.clientX + 'px';
+            ghost.style.top  = ev.clientY + 'px';
+          }
+          function up(ev){
+            document.removeEventListener('mousemove', move);
+            document.removeEventListener('mouseup', up);
+            document.body.classList.remove('mb-tool-dragging');
+            if (ghost) ghost.remove();
+            if (!dragging) return; /* treated as a plain click → the click handler activates the tool */
+            _suppressToolClick = true;
+            var r = stage.getBoundingClientRect();
+            var inside = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+            if (inside) {
+              var pos = screenToCanvas(ev.clientX, ev.clientY);
+              if (tool === 'image') {
+                openImagePicker(pos.x, pos.y);
+              } else {
+                var dm = defaultDims(tool);
+                addElement(tool, pos.x - dm.w/2, pos.y - dm.h/2, dm.w, dm.h);
+              }
+            }
+            setTool('select');
+          }
+          document.addEventListener('mousemove', move);
+          document.addEventListener('mouseup', up);
+        });
+      });
+    }
+
     /* ── Init canvas ─────────────────────────────────────── */
     function initCanvas() {
       stage     = document.getElementById('mbStage');
@@ -11001,10 +11204,14 @@
       document.addEventListener('mouseup',   onMouseUp);
       stage.addEventListener('wheel', onStageWheel, { passive: false });
 
-      /* Tool buttons */
+      /* Tool buttons — click activates the tool; a click that follows a drag-to-place is suppressed. */
       toolbar.querySelectorAll('.mb-tool-btn[data-tool]').forEach(function(btn){
-        btn.addEventListener('click', function(){ setTool(btn.dataset.tool); });
+        btn.addEventListener('click', function(){
+          if (_suppressToolClick) { _suppressToolClick = false; return; }
+          setTool(btn.dataset.tool);
+        });
       });
+      initToolbarDrag();
 
       /* Fun panel button */
       var funBtn = document.getElementById('mbt-fun');
@@ -11021,6 +11228,8 @@
         if (isAdmin() && _boardId) window.fb.boards.updateMeta(_boardId, { name: boardNameInput.value.trim()||'Untitled' });
       });
       boardNameInput.addEventListener('keydown', function(e){ if(e.key==='Enter')boardNameInput.blur(); });
+      boardNameInput.addEventListener('input', autosizeBoardName);
+      autosizeBoardName();
 
       /* Share button */
       document.getElementById('mbShareBtn').addEventListener('click', function(){
