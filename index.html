@@ -7852,8 +7852,8 @@
         if(evReminder) inserts.push(fb.gcalInsert(evReminder));
         return Promise.all(inserts).then(function(){
           setBusy(false); flashOK();
-          plCalToast(p.time ? ‘2 events added ✓ — reminder 1hr before + shoot at ‘ + fmt12(p.time)
-                            : ‘Added to your Google Calendar ✓’);
+          plCalToast(p.time ? '2 events added ✓ — reminder 1hr before + shoot at ' + fmt12(p.time)
+                            : 'Added to your Google Calendar ✓');
         });
       }
       function ensureTokenThenInsert(){
