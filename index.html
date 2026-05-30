@@ -7319,16 +7319,17 @@
     window._hasExplicitRoute = !!routeViewFromPath();
     var _startupRevealAnimated = false;
     window._clearAppLoader = function(){
+      var shouldAnimateStartup = !_startupRevealAnimated;
+      var revealMoodboard = shouldAnimateStartup && current === 'moodboardCanvas' && window._prepareMoodboardReloadElements && window._startMoodboardReloadElements;
+      if (revealMoodboard) window._prepareMoodboardReloadElements();
       var l = document.getElementById('appLoader');
       if (l) l.remove();
-      if (!_startupRevealAnimated) {
+      if (shouldAnimateStartup) {
         _startupRevealAnimated = true;
         requestAnimationFrame(function(){
           requestAnimationFrame(function(){
             triggerEntrance(current);
-            if (current === 'moodboardCanvas') {
-              if (window._revealMoodboardReloadElements) window._revealMoodboardReloadElements();
-            }
+            if (revealMoodboard) window._startMoodboardReloadElements();
           });
         });
       }
@@ -9891,13 +9892,18 @@
       void media.offsetHeight;
     }
 
-    function softRevealElement(el, targetOpacity, force) {
+    function prepareSoftRevealElement(el, targetOpacity, force) {
       if (!el || (!force && el.dataset.softRevealed === '1')) return;
       el.dataset.softRevealed = '1';
       if (el._softRevealTimer) clearTimeout(el._softRevealTimer);
       el.classList.remove('mb-soft-enter-on');
       el.style.setProperty('--mb-enter-opacity', targetOpacity != null ? targetOpacity : 1);
       el.classList.add('mb-soft-enter');
+      void el.offsetHeight;
+    }
+
+    function startSoftRevealElement(el) {
+      if (!el || !el.classList.contains('mb-soft-enter')) return;
       requestAnimationFrame(function(){
         requestAnimationFrame(function(){
           el.classList.add('mb-soft-enter-on');
@@ -9908,6 +9914,11 @@
           }, 2500);
         });
       });
+    }
+
+    function softRevealElement(el, targetOpacity, force) {
+      prepareSoftRevealElement(el, targetOpacity, force);
+      startSoftRevealElement(el);
     }
 
     function revealEmbedCard(ecard, loading) {
@@ -10305,27 +10316,59 @@
       if (_revealOnNextRender) setTimeout(revealRenderedMoodboardElements, 80);
     }
 
-    function revealRenderedMoodboardElements() {
+    function forEachRenderedMoodboardElement(cb) {
       var ids = Object.keys(_elements);
-      if (!ids.length) { _revealOnNextRender = true; return; }
-      _revealOnNextRender = false;
+      if (!ids.length) return false;
       ids.forEach(function(id){
         var d = _elements[id];
         var el = _elDoms[id];
-        if (el) softRevealElement(el, d && d.opacity != null ? d.opacity : 1, true);
+        if (el) cb(el, d && d.opacity != null ? d.opacity : 1);
       });
       if (svgLayer) {
         svgLayer.querySelectorAll('.mb-path-el').forEach(function(el){
-          softRevealElement(el, 1, true);
+          cb(el, 1);
         });
       }
+      return true;
     }
 
-    window._revealMoodboardReloadElements = function(){
+    function revealRenderedMoodboardElements() {
+      if (!forEachRenderedMoodboardElement(function(el, opacity){
+        softRevealElement(el, opacity, true);
+      })) {
+        _revealOnNextRender = true;
+        return;
+      }
+      _revealOnNextRender = false;
+    }
+
+    function prepareRenderedMoodboardElements() {
+      if (!forEachRenderedMoodboardElement(function(el, opacity){
+        prepareSoftRevealElement(el, opacity, true);
+      })) {
+        _revealOnNextRender = true;
+        return false;
+      }
+      _revealOnNextRender = false;
+      return true;
+    }
+
+    function startPreparedMoodboardElements() {
+      forEachRenderedMoodboardElement(function(el){
+        startSoftRevealElement(el);
+      });
+    }
+
+    window._prepareMoodboardReloadElements = function(){
       _revealOnNextRender = true;
-      revealRenderedMoodboardElements();
-      setTimeout(revealRenderedMoodboardElements, 80);
-      setTimeout(revealRenderedMoodboardElements, 420);
+      prepareRenderedMoodboardElements();
+      setTimeout(prepareRenderedMoodboardElements, 80);
+    };
+
+    window._startMoodboardReloadElements = function(){
+      startPreparedMoodboardElements();
+      setTimeout(startPreparedMoodboardElements, 80);
+      setTimeout(startPreparedMoodboardElements, 420);
     };
 
     /* ── Element listeners (drag, select) ───────────────── */
