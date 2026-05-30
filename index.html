@@ -5815,8 +5815,10 @@
   .mb-tool-ghost-img { width:84px; height:62px; border:2px dashed rgba(126,140,247,.65); background:rgba(126,140,247,.1); display:flex; align-items:center; justify-content:center; color:#a0aaff; box-shadow:0 12px 30px rgba(0,0,0,.4); }
   .mb-tool-ghost-img svg { width:24px; height:24px; }
   body.mb-tool-dragging, body.mb-tool-dragging * { cursor:grabbing !important; }
-  .mb-svg-layer { position:absolute; top:0; left:0; pointer-events:none; overflow:visible; }
-  .mb-path-el { pointer-events:stroke; cursor:pointer; }
+  /* SVG offset by -10000 so negative canvas coords (drawn near centered origin) are within hit-test bounds.
+     The inner <g transform="translate(10000,10000)"> cancels the offset for coordinate math. */
+  .mb-svg-layer { position:absolute; top:-10000px; left:-10000px; pointer-events:none; overflow:visible; }
+  .mb-path-el { cursor:pointer; }
   .mb-path-el.selected-path { filter:drop-shadow(0 0 4px rgba(126,140,247,.8)); }
   /* ── Remote cursor: glass circle (matches planner style) ── */
   .mb-cursor { position:absolute; top:0; left:0; pointer-events:none; z-index:900; transform-origin:0 0; transition:transform .06s linear; will-change:transform; }
@@ -5955,6 +5957,11 @@
   .mb-embed-exit-btn { position:absolute; top:8px; right:8px; z-index:10; width:26px; height:26px; border-radius:50%; background:rgba(0,0,0,.7); border:1px solid rgba(243,243,239,.15); color:rgba(243,243,239,.8); cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); transition:background .15s,color .15s; }
   .mb-embed-exit-btn:hover { background:rgba(224,92,92,.35); color:#f3f3ef; }
   .mb-embed-exit-btn svg { width:9px; height:9px; }
+  .mb-embed-open-link { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border:1px solid rgba(243,243,239,.14); border-radius:5px; font-family:var(--font-en-mono); font-size:8px; letter-spacing:.1em; text-transform:uppercase; color:rgba(243,243,239,.5); text-decoration:none; transition:border-color .15s,color .15s; margin-top:4px; }
+  .mb-embed-open-link:hover { border-color:rgba(243,243,239,.3); color:#f3f3ef; }
+  .mb-embed-thumb-empty { width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse at 50% 40%,rgba(243,243,239,.04) 0%,transparent 70%); }
+  .mb-embed-thumb-icon { width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .mb-embed-thumb-icon svg { width:26px; height:26px; }
   .home-entering .tool-card:nth-child(4) { animation:focusIn .70s cubic-bezier(.16,1,.3,1) both; animation-delay:640ms; }
   /* Selection ring drawn on top of selected .mb-el */
   /* Selection ring counter-scales with zoom (var --mbz set on .mb-canvas) so it stays a
@@ -6166,7 +6173,7 @@
       <!-- Infinite canvas world -->
       <div class="mb-canvas" id="mbCanvas">
         <!-- SVG layer for paths and arrows -->
-        <svg class="mb-svg-layer" id="mbSvgLayer" xmlns="http://www.w3.org/2000/svg" width="20000" height="20000"></svg>
+        <svg class="mb-svg-layer" id="mbSvgLayer" xmlns="http://www.w3.org/2000/svg" width="20000" height="20000"><g id="mbSvgContent" transform="translate(10000,10000)"></g></svg>
         <!-- DOM elements (stickies, text, images, shapes) injected by JS -->
       </div>
       <!-- Rubber-band selection box -->
@@ -9552,26 +9559,35 @@
       if (yt) return { platform:'youtube', id:yt[1], url:str };
       var vm = str.match(/vimeo\.com\/(?:video\/)?(\d+)/);
       if (vm) return { platform:'vimeo', id:vm[1], url:str };
-      var ig = str.match(/instagram\.com\/(?:p|reel|reels)\/([a-zA-Z0-9_-]+)/);
-      if (ig) return { platform:'instagram', id:ig[1], url:str };
+      var ig = str.match(/instagram\.com\/(?:([a-z]+)\/)?(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/);
+      if (ig) { var igType = /reel/.test(str) ? 'reel' : (/\/tv\//.test(str) ? 'tv' : 'p'); return { platform:'instagram', id:ig[2], igType:igType, url:str }; }
+      var pin = str.match(/pinterest\.[a-z.]+\/pin\/(\d+)/);
+      if (pin) return { platform:'pinterest', id:pin[1], url:str };
+      if (/pin\.it\//.test(str)) return { platform:'pinterest', id:null, url:str };
+      if (/tiktok\.com\/.*\/video\/(\d+)/.test(str)) { var tk = str.match(/video\/(\d+)/); return { platform:'tiktok', id:tk[1], url:str }; }
       if (/^https?:\/\//.test(str)) return { platform:'web', id:null, url:str };
       return null;
     }
     function embedIframeUrl(info) {
       if (info.platform==='youtube')   return 'https://www.youtube.com/embed/'+info.id+'?autoplay=1&rel=0';
       if (info.platform==='vimeo')     return 'https://player.vimeo.com/video/'+info.id+'?autoplay=1';
+      if (info.platform==='instagram') return 'https://www.instagram.com/'+(info.igType==='reel'?'reel':(info.igType==='tv'?'tv':'p'))+'/'+info.id+'/embed/';
+      if (info.platform==='pinterest' && info.id) return 'https://assets.pinterest.com/ext/embed.html?id='+info.id;
+      if (info.platform==='tiktok')    return 'https://www.tiktok.com/embed/v2/'+info.id;
       return null;
     }
     function embedThumbnailUrl(info) {
       if (info.platform==='youtube') return 'https://img.youtube.com/vi/'+info.id+'/hqdefault.jpg';
       return null;
     }
-    function embedPlatformLabel(p) { return {youtube:'YouTube',vimeo:'Vimeo',instagram:'Instagram',web:'Link'}[p]||'Link'; }
-    function embedBadgeClass(p)    { return {youtube:'mb-embed-badge-yt',vimeo:'mb-embed-badge-vm',instagram:'mb-embed-badge-ig'}[p]||'mb-embed-badge-xx'; }
+    function embedPlatformLabel(p) { return {youtube:'YouTube',vimeo:'Vimeo',instagram:'Instagram',pinterest:'Pinterest',tiktok:'TikTok',web:'Link'}[p]||'Link'; }
+    function embedBadgeClass(p)    { return {youtube:'mb-embed-badge-yt',vimeo:'mb-embed-badge-vm',instagram:'mb-embed-badge-ig',pinterest:'mb-embed-badge-pt',tiktok:'mb-embed-badge-xx'}[p]||'mb-embed-badge-xx'; }
     function embedPlatformSvg(p) {
       if (p==='youtube') return '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M14.5 4.5c-.2-.8-.9-1.4-1.6-1.5C11.6 3 8 3 8 3s-3.6 0-4.9.1C2.4 3.1 1.7 3.7 1.5 4.5 1.3 5.8 1.3 8 1.3 8s0 2.2.2 3.5c.2.8.9 1.4 1.6 1.4C4.4 13 8 13 8 13s3.6 0 4.9-.1c.7-.1 1.4-.7 1.6-1.4.2-1.3.2-3.5.2-3.5s0-2.2-.2-3.5zM6.5 10.3V5.7L10.8 8l-4.3 2.3z"/></svg>';
       if (p==='vimeo')   return '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M14 5.1c-.1 2.6-1.9 6.1-5.4 10.5C5.1 20 2.7 17 2.5 13.1c-.1-1.7 1-3.3 2.9-3.3 1.1 0 1.9.7 2.6 1.7.6-1.4 1.7-3.8 1.4-5.7-.2-1.4-1-2.2-2.1-2.2-2.8 0-4.5 3.6-4.5 6.7"/></svg>';
       if (p==='instagram') return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2" width="12" height="12" rx="3.5"/><circle cx="8" cy="8" r="2.8"/><circle cx="11.5" cy="4.5" r=".6" fill="currentColor" stroke="none"/></svg>';
+      if (p==='pinterest') return '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 0 0-2.4 12.5c-.05-.5-.1-1.3.02-1.86.1-.5.7-3 .7-3s-.18-.36-.18-.9c0-.83.48-1.46 1.08-1.46.51 0 .76.38.76.84 0 .51-.33 1.28-.5 1.99-.14.6.3 1.08.88 1.08 1.06 0 1.87-1.12 1.87-2.73 0-1.43-1.03-2.43-2.5-2.43-1.7 0-2.7 1.27-2.7 2.59 0 .51.2 1.06.44 1.36.05.06.06.11.04.17l-.17.69c-.03.11-.09.14-.21.08-.78-.36-1.27-1.5-1.27-2.42 0-1.97 1.43-3.78 4.13-3.78 2.17 0 3.85 1.55 3.85 3.61 0 2.16-1.36 3.89-3.24 3.89-.63 0-1.23-.33-1.43-.72l-.39 1.49c-.14.54-.52 1.22-.78 1.63A6.5 6.5 0 1 0 8 1.5z"/></svg>';
+      if (p==='tiktok')    return '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M11 1.5c.2 1.4 1 2.5 2.4 2.6v1.7c-.8.08-1.6-.15-2.4-.6v3.8a3.9 3.9 0 1 1-3.9-3.9c.2 0 .4 0 .6.05v1.8a2.1 2.1 0 1 0 1.5 2V1.5H11z"/></svg>';
       return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 0v14M1 8h14M2.2 4.5h11.6M2.2 11.5h11.6"/></svg>';
     }
     function embedExtractDomain(url) { try { return new URL(url).hostname.replace(/^www\./,''); } catch(e) { return url; } }
@@ -9860,7 +9876,8 @@
           } else {
             var eempty = document.createElement('div');
             eempty.className = 'mb-embed-thumb-empty';
-            eempty.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" width="28" height="28"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 0v14M1 8h14"/></svg>';
+            /* Show the platform's own icon, sized up, instead of a generic globe */
+            eempty.innerHTML = '<div class="mb-embed-thumb-icon ' + embedBadgeClass(d.platform||'web') + '">' + embedPlatformSvg(d.platform||'web') + '</div>';
             ethumb.appendChild(eempty);
           }
           if (d.embedUrl) {
@@ -9886,6 +9903,16 @@
           emeta.className = 'mb-embed-meta';
           emeta.textContent = d.author || embedExtractDomain(d.url||'');
           einfo.appendChild(emeta);
+          /* Open-in-browser link — always available as a reliable fallback */
+          if (d.url) {
+            var eopen = document.createElement('a');
+            eopen.className = 'mb-embed-open-link';
+            eopen.href = d.url; eopen.target = '_blank'; eopen.rel = 'noopener noreferrer';
+            eopen.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2H2.5v7.5h7.5v-2M7 2h3v3M5 7l5-5"/></svg><span>Open</span>';
+            eopen.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
+            eopen.addEventListener('click', function(ev){ ev.stopPropagation(); });
+            einfo.appendChild(eopen);
+          }
           ecard.appendChild(einfo);
           el.appendChild(ecard);
           if (!el.querySelector('.mb-img-frame')) {
@@ -9993,42 +10020,57 @@
     }
 
     function renderSvgEl(id, d) {
-      /* Draw path (pen) or arrow in the SVG layer */
+      /* Draw path (pen) or arrow in the SVG layer.
+         Each element is wrapped in a <g data-id> with a wide invisible hit-path so thin strokes
+         are easy to click. The SVG layer itself is at left:-10000px/top:-10000px with an inner
+         <g transform="translate(10000,10000)"> so negative canvas coords are within the hit-test box. */
       var existing = svgLayer.querySelector('[data-id="' + id + '"]');
       if (existing) existing.remove();
 
       if (d.type === 'path' && d.points && d.points.length > 1) {
-        var pathEl = document.createElementNS('http://www.w3.org/2000/svg','path');
-        pathEl.setAttribute('data-id', id);
-        pathEl.setAttribute('class', 'mb-path-el');
-        pathEl.setAttribute('d', smoothPath(d.points));
-        pathEl.setAttribute('fill','none');
-        pathEl.setAttribute('stroke', d.stroke || '#f3f3ef');
-        pathEl.setAttribute('stroke-width', d.strokeWidth || 2);
-        pathEl.setAttribute('stroke-linecap','round');
-        pathEl.setAttribute('stroke-linejoin','round');
-        if (_selected.indexOf(id) >= 0) pathEl.classList.add('selected-path');
-        svgLayer.appendChild(pathEl);
+        var svg_ns = 'http://www.w3.org/2000/svg';
+        var pg = document.createElementNS(svg_ns,'g');
+        pg.setAttribute('data-id', id); pg.setAttribute('class','mb-path-el');
+        /* Wide invisible hit area — makes thin strokes easy to click */
+        var hitP = document.createElementNS(svg_ns,'path');
+        hitP.setAttribute('d', smoothPath(d.points)); hitP.setAttribute('fill','none');
+        hitP.setAttribute('stroke','rgba(255,255,255,.015)');
+        hitP.setAttribute('stroke-width', String(Math.max(16,(d.strokeWidth||2)*2)));
+        hitP.setAttribute('stroke-linecap','round'); hitP.style.pointerEvents='stroke';
+        pg.appendChild(hitP);
+        /* Visible path */
+        var pathEl = document.createElementNS(svg_ns,'path');
+        pathEl.setAttribute('d', smoothPath(d.points)); pathEl.setAttribute('fill','none');
+        pathEl.setAttribute('stroke', d.stroke||'#f3f3ef');
+        pathEl.setAttribute('stroke-width', String(d.strokeWidth||2));
+        pathEl.setAttribute('stroke-linecap','round'); pathEl.setAttribute('stroke-linejoin','round');
+        pg.appendChild(pathEl);
+        if (_selected.indexOf(id) >= 0) pg.classList.add('selected-path');
+        svgLayer.appendChild(pg);
       } else if (d.type === 'arrow') {
-        var g = document.createElementNS('http://www.w3.org/2000/svg','g');
-        g.setAttribute('data-id', id);
-        g.setAttribute('class','mb-path-el');
-        var ln = document.createElementNS('http://www.w3.org/2000/svg','line');
-        ln.setAttribute('x1', d.x); ln.setAttribute('y1', d.y);
-        ln.setAttribute('x2', d.x2); ln.setAttribute('y2', d.y2);
-        ln.setAttribute('stroke', d.stroke||'#f3f3ef');
-        ln.setAttribute('stroke-width', d.strokeWidth||2);
-        ln.setAttribute('stroke-linecap','round');
-        var ah = arrowheadPath(d.x,d.y,d.x2,d.y2);
-        var ap = document.createElementNS('http://www.w3.org/2000/svg','path');
-        ap.setAttribute('d', ah);
-        ap.setAttribute('fill','none');
-        ap.setAttribute('stroke', d.stroke||'#f3f3ef');
-        ap.setAttribute('stroke-width', d.strokeWidth||2);
-        ap.setAttribute('stroke-linecap','round');
-        g.appendChild(ln); g.appendChild(ap);
-        if (_selected.indexOf(id) >= 0) g.classList.add('selected-path');
-        svgLayer.appendChild(g);
+        var svg_ns = 'http://www.w3.org/2000/svg';
+        var ag = document.createElementNS(svg_ns,'g');
+        ag.setAttribute('data-id', id); ag.setAttribute('class','mb-path-el');
+        /* Wide invisible hit line */
+        var hitLn = document.createElementNS(svg_ns,'line');
+        hitLn.setAttribute('x1',d.x); hitLn.setAttribute('y1',d.y);
+        hitLn.setAttribute('x2',d.x2); hitLn.setAttribute('y2',d.y2);
+        hitLn.setAttribute('stroke','rgba(255,255,255,.015)'); hitLn.setAttribute('stroke-width','16');
+        hitLn.style.pointerEvents='stroke';
+        ag.appendChild(hitLn);
+        /* Visible line + arrowhead */
+        var ln = document.createElementNS(svg_ns,'line');
+        ln.setAttribute('x1',d.x); ln.setAttribute('y1',d.y);
+        ln.setAttribute('x2',d.x2); ln.setAttribute('y2',d.y2);
+        ln.setAttribute('stroke',d.stroke||'#f3f3ef');
+        ln.setAttribute('stroke-width',String(d.strokeWidth||2)); ln.setAttribute('stroke-linecap','round');
+        var ap = document.createElementNS(svg_ns,'path');
+        ap.setAttribute('d', arrowheadPath(d.x,d.y,d.x2,d.y2));
+        ap.setAttribute('fill','none'); ap.setAttribute('stroke',d.stroke||'#f3f3ef');
+        ap.setAttribute('stroke-width',String(d.strokeWidth||2)); ap.setAttribute('stroke-linecap','round');
+        ag.appendChild(ln); ag.appendChild(ap);
+        if (_selected.indexOf(id) >= 0) ag.classList.add('selected-path');
+        svgLayer.appendChild(ag);
       }
     }
 
@@ -10542,8 +10584,8 @@
       if (h.indexOf('w')>=0) { nx=r.origEl.x+ddx; nw=Math.max(40,r.origEl.w-ddx); }
       if (h.indexOf('n')>=0) { ny=r.origEl.y+ddy; nh=Math.max(40,r.origEl.h-ddy); }
 
-      /* Images & videos keep their aspect ratio so they never stretch and the frame stays flush. */
-      if (d.type === 'image' || d.type === 'video') {
+      /* Images, videos and embed cards keep their aspect ratio. */
+      if (d.type === 'image' || d.type === 'video' || d.type === 'embed') {
         var ar = r.origEl.aspect || ((r.origEl.w||1) / (r.origEl.h||1)) || 1;
         if (h === 'n' || h === 's') nw = nh * ar;   /* vertical edge drives height → derive width */
         else                        nh = nw / ar;   /* corners & horizontal edges drive width → derive height */
@@ -11594,8 +11636,8 @@
       Object.keys(_cursorEls).forEach(function(uid){ _cursorEls[uid].remove(); });
       _cursorEls = {}; _allCursorData = {};
       _boardId=null; _elements={}; _elDoms={}; _selected=[];
-      if (canvas) canvas.innerHTML='<svg class="mb-svg-layer" id="mbSvgLayer" xmlns="http://www.w3.org/2000/svg" width="20000" height="20000"></svg>';
-      svgLayer = document.getElementById('mbSvgLayer');
+      if (canvas) canvas.innerHTML='<svg class="mb-svg-layer" id="mbSvgLayer" xmlns="http://www.w3.org/2000/svg" width="20000" height="20000"><g id="mbSvgContent" transform="translate(10000,10000)"></g></svg>';
+      svgLayer = document.getElementById('mbSvgContent');
       if (propbar) { propbar.innerHTML=''; propbar.classList.remove('show'); }
       window.showView('moodboards');
     }
@@ -11686,13 +11728,18 @@
       var r = stage.getBoundingClientRect();
       var cx = (r.width/2 - _panX) / _zoom;
       var cy = (r.height/2 - _panY) / _zoom;
-      var w = 320, h = 250;
+      /* Initial size: YouTube/Vimeo get 16:9 thumbnail (180px) + ~80px info strip = 260px tall.
+         Instagram square (1:1) + info strip. Others get a neutral card. */
+      var w, h;
+      if (info.platform==='youtube'||info.platform==='vimeo') { w=320; h=260; }
+      else if (info.platform==='instagram')                   { w=280; h=360; }
+      else                                                    { w=300; h=250; }
       var id = genId();
       var d = {
         type:'embed', url:info.url, platform:info.platform,
         embedId:info.id||'', embedUrl:embedIframeUrl(info)||'',
         thumbnail:embedThumbnailUrl(info)||'', title:'', author:'',
-        x:Math.round(cx-w/2), y:Math.round(cy-h/2), w:w, h:h,
+        x:Math.round(cx-w/2), y:Math.round(cy-h/2), w:w, h:h, aspect:w/h,
         z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now()
       };
       _elements[id] = d;
@@ -11853,7 +11900,7 @@
     function initCanvas() {
       stage     = document.getElementById('mbStage');
       canvas    = document.getElementById('mbCanvas');
-      svgLayer  = document.getElementById('mbSvgLayer');
+      svgLayer  = document.getElementById('mbSvgContent');
       selbox    = document.getElementById('mbSelbox');
       propbar   = document.getElementById('mbPropbar');
       toolbar   = document.getElementById('mbToolbar');
