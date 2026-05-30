@@ -7211,6 +7211,22 @@
         window.history[method]({ view:name }, '', url);
       } catch(e) {}
     }
+    function triggerEntrance(name){
+      if (name === 'invoice') {
+        var inv = document.querySelector('main.invoice');
+        if (inv) {
+          inv.classList.remove('invoice-entering');
+          void inv.offsetWidth;
+          inv.classList.add('invoice-entering');
+        }
+        return;
+      }
+      var el = OVERLAYS[name], cls = ENTER_CLS[name];
+      if (!el || !cls) return;
+      el.classList.remove(cls);
+      void el.offsetWidth;
+      el.classList.add(cls);
+    }
 
     function showView(name){
       if(name === current){ updateRoute(name, false); return; }
@@ -7228,13 +7244,7 @@
       if(name === 'invoice'){
         var ae = document.activeElement;
         if(ae && ae.blur) ae.blur();
-        /* Trigger invoice entrance animation */
-        var _invEl = document.querySelector('main.invoice');
-        if(_invEl){
-          _invEl.classList.remove('invoice-entering');
-          void _invEl.offsetWidth;
-          _invEl.classList.add('invoice-entering');
-        }
+        triggerEntrance('invoice');
         var prevEl0 = OVERLAYS[prev];
         if(prevEl0){
           if(ENTER_CLS[prev]) prevEl0.classList.remove(ENTER_CLS[prev]); /* stop entrance anim on exit */
@@ -7269,11 +7279,7 @@
       }
 
       /* Re-trigger the destination's entrance cascade every time it opens */
-      if(ENTER_CLS[name]){
-        nextEl.classList.remove(ENTER_CLS[name]);
-        void nextEl.offsetWidth; /* force reflow — restarts CSS animations */
-        nextEl.classList.add(ENTER_CLS[name]);
-      }
+      triggerEntrance(name);
 
       requestAnimationFrame(function(){
         requestAnimationFrame(function(){ nextEl.classList.remove('v-hidden'); });
@@ -7304,9 +7310,16 @@
     window.showView = showView;
     window._getCurrentView = function(){ return current; };
     window._hasExplicitRoute = !!routeViewFromPath();
+    var _startupRevealAnimated = false;
     window._clearAppLoader = function(){
       var l = document.getElementById('appLoader');
       if (l) l.remove();
+      if (!_startupRevealAnimated) {
+        _startupRevealAnimated = true;
+        requestAnimationFrame(function(){
+          requestAnimationFrame(function(){ triggerEntrance(current); });
+        });
+      }
     };
 
     /* ── Starting view ──────────────────────────────────────────── */
@@ -7333,13 +7346,6 @@
       current = _startView;
       if (OVERLAYS[_startView]) {
         OVERLAYS[_startView].classList.remove('v-hidden', 'v-gone');
-      } else if (_startView === 'invoice') {
-        var _startInv = document.querySelector('main.invoice');
-        if (_startInv) {
-          _startInv.classList.remove('invoice-entering');
-          void _startInv.offsetWidth;
-          _startInv.classList.add('invoice-entering');
-        }
       }
       updateRoute(_startView, true);
     } else if (_optimisticRole === 'viewer') {
