@@ -11781,11 +11781,24 @@
       var cw = ecard.clientWidth || (dd && dd.w) || W;
       var sc = cw / W;
       scaler.style.transform = 'scale(' + sc + ')';
-      var fitH = Math.round(natH * sc);
+      var visualNatH = embedVisualHeight(dd || {}, natH);
+      var fitH = Math.round(visualNatH * sc);
       if (dd) {
-        dd.aspect = W / natH;
+        dd.aspect = W / visualNatH;
         if (Math.abs((dd.h||0) - fitH) > 1) { dd.h = fitH; el.style.height = fitH + 'px'; }
       }
+    }
+
+    /* Some fixed-layout provider embeds reserve transparent space under the visible card.
+       Keep that internal space available inside the iframe, but crop the outer element so
+       selection and resize handles hug the visible card bottom. */
+    function embedVisualHeight(info, natH) {
+      var p = info && info.platform;
+      var trim = 0;
+      if (p === 'pinterest') trim = 58;
+      if (p === 'instagram' && info.igType !== 'reel') trim = 24;
+      if (p === 'tiktok') trim = 18;
+      return Math.max(80, natH - trim);
     }
 
     /* A measured height arrived from the provider: store it as the natural height and refit. */
