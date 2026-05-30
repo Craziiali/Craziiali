@@ -5786,7 +5786,11 @@
   .mb-shape-svg { width:100%; height:100%; overflow:visible; pointer-events:none; }
   /* Box is sized to the media's true aspect ratio (see fitMediaSize in JS), so object-fit:cover
      fills it edge-to-edge with no letterbox gap — the frame and selection ring then hug the image. */
-  .mb-img { width:100%; height:100%; object-fit:cover; display:block; border-radius:7px; pointer-events:none; user-select:none; -webkit-user-drag:none; }
+  .mb-img { width:100%; height:100%; object-fit:cover; display:block; border-radius:7px; pointer-events:none; user-select:none; -webkit-user-drag:none; opacity:0; transition:opacity 1.4s cubic-bezier(.4,0,.2,1); }
+  .mb-img.mb-loaded { opacity:1; }
+  /* Skeleton shimmer shown while image/video loads */
+  .mb-skeleton { position:absolute; inset:0; border-radius:7px; z-index:1; pointer-events:none; background:linear-gradient(90deg,#0d0d12 25%,#1e1e28 50%,#0d0d12 75%); background-size:400% 100%; animation:mbShimmer 1.9s ease-in-out infinite; }
+  @keyframes mbShimmer { 0%{background-position:100% 0} 100%{background-position:-100% 0} }
   /* Polished frame overlay on image elements. Inset hairline counter-scales so it stays crisp at zoom. */
   .mb-img-frame { position:absolute; inset:0; border-radius:7px; box-shadow:inset 0 0 0 calc(1px / var(--mbz,1)) rgba(255,255,255,.12), 0 8px 28px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.3); pointer-events:none; z-index:2; background:transparent; }
   .mb-img-placeholder { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:rgba(243,243,239,.04); border:1px dashed rgba(243,243,239,.15); border-radius:4px; color:var(--ink-soft); opacity:.4; font-family:var(--font-en-mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
@@ -9683,12 +9687,19 @@
           el.appendChild(tb);
         } else if (d.type === 'video') {
           el.className = 'mb-el';
+          var vskel = document.createElement('div');
+          vskel.className = 'mb-skeleton';
+          el.appendChild(vskel);
           var vid = document.createElement('video');
           vid.className = 'mb-img';
           vid.src = d.url || '';
           vid.autoplay = true; vid.loop = true; vid.muted = true; vid.playsInline = true;
           vid.draggable = false;
           vid.addEventListener('loadedmetadata', function(){ healMediaAspect(id, vid.videoWidth, vid.videoHeight); });
+          vid.addEventListener('canplay', function(){
+            vid.classList.add('mb-loaded');
+            setTimeout(function(){ if(vskel.parentNode) vskel.parentNode.removeChild(vskel); }, 1500);
+          });
           el.appendChild(vid);
           if (!el.querySelector('.mb-img-frame')) {
             var vframe = document.createElement('div');
@@ -9698,11 +9709,18 @@
         } else if (d.type === 'image') {
           el.className = 'mb-el';
           if (d.url) {
+            var iskel = document.createElement('div');
+            iskel.className = 'mb-skeleton';
+            el.appendChild(iskel);
             var img = document.createElement('img');
             img.className = 'mb-img';
             img.src = d.url;
             img.draggable = false;
-            img.addEventListener('load', function(){ healMediaAspect(id, img.naturalWidth, img.naturalHeight); });
+            img.addEventListener('load', function(){
+              healMediaAspect(id, img.naturalWidth, img.naturalHeight);
+              img.classList.add('mb-loaded');
+              setTimeout(function(){ if(iskel.parentNode) iskel.parentNode.removeChild(iskel); }, 1500);
+            });
             el.appendChild(img);
             /* Polished frame overlay */
             if (!el.querySelector('.mb-img-frame')) {
