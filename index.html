@@ -5927,6 +5927,34 @@
   .mb-vbar-fill { position:absolute; left:0; top:0; height:100%; background:rgba(243,243,239,.6); border-radius:2px; pointer-events:none; }
   .mb-vbar-thumb { position:absolute; top:50%; transform:translate(50%,-50%); width:10px; height:10px; background:#f3f3ef; border-radius:50%; box-shadow:0 1px 4px rgba(0,0,0,.5); pointer-events:none; opacity:0; transition:opacity .15s; right:0; }
   .mb-vbar-track:hover .mb-vbar-thumb { opacity:1; }
+  /* ── Embed / Link cards (pasted URLs) ──────────────────────── */
+  .mb-embed-card { position:absolute; inset:0; border-radius:7px; overflow:hidden; display:flex; flex-direction:column; background:#0b0b0f; cursor:pointer; }
+  .mb-embed-thumb { position:relative; flex:1; min-height:0; overflow:hidden; background:#111116; }
+  .mb-embed-thumb img { width:100%; height:100%; object-fit:cover; display:block; opacity:0; transition:opacity 1.2s cubic-bezier(.4,0,.2,1); }
+  .mb-embed-thumb img.mb-loaded { opacity:1; }
+  .mb-embed-thumb-empty { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+  .mb-embed-thumb-empty svg { width:28px; height:28px; color:rgba(243,243,239,.15); }
+  .mb-embed-play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s; }
+  .mb-embed-card:hover .mb-embed-play { opacity:1; }
+  .mb-embed-play-btn { width:44px; height:44px; border-radius:50%; background:rgba(0,0,0,.55); border:1.5px solid rgba(255,255,255,.75); display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); transition:transform .18s,background .18s; }
+  .mb-embed-card:hover .mb-embed-play-btn { transform:scale(1.06); background:rgba(0,0,0,.72); }
+  .mb-embed-play-btn svg { width:16px; height:16px; color:#fff; margin-left:2px; }
+  .mb-embed-info { padding:10px 12px 12px; flex-shrink:0; border-top:1px solid rgba(243,243,239,.07); background:#0b0b0f; }
+  .mb-embed-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:4px; font-family:var(--font-en-mono); font-size:8px; letter-spacing:.12em; text-transform:uppercase; margin-bottom:6px; }
+  .mb-embed-badge-yt  { background:rgba(255,50,50,.12);  color:#ff6060; border:1px solid rgba(255,50,50,.18); }
+  .mb-embed-badge-vm  { background:rgba(26,183,214,.12); color:#1ab7d6; border:1px solid rgba(26,183,214,.18); }
+  .mb-embed-badge-ig  { background:rgba(193,53,132,.12); color:#c97ab8; border:1px solid rgba(193,53,132,.18); }
+  .mb-embed-badge-pt  { background:rgba(230,0,35,.12);   color:#e05555; border:1px solid rgba(230,0,35,.18); }
+  .mb-embed-badge-xx  { background:rgba(243,243,239,.06); color:rgba(243,243,239,.45); border:1px solid rgba(243,243,239,.1); }
+  .mb-embed-badge svg { width:9px; height:9px; }
+  .mb-embed-title { font-family:var(--font-en-display); font-style:italic; font-size:13px; font-weight:400; color:#f3f3ef; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0 0 3px; }
+  .mb-embed-meta  { font-family:var(--font-en-mono); font-size:8px; color:rgba(243,243,239,.38); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.04em; margin:0; }
+  /* Live iframe mode */
+  .mb-embed-card.mb-embed-live { cursor:default; }
+  .mb-embed-iframe { position:absolute; inset:0; width:100%; height:100%; border:none; }
+  .mb-embed-exit-btn { position:absolute; top:8px; right:8px; z-index:10; width:26px; height:26px; border-radius:50%; background:rgba(0,0,0,.7); border:1px solid rgba(243,243,239,.15); color:rgba(243,243,239,.8); cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); transition:background .15s,color .15s; }
+  .mb-embed-exit-btn:hover { background:rgba(224,92,92,.35); color:#f3f3ef; }
+  .mb-embed-exit-btn svg { width:9px; height:9px; }
   .home-entering .tool-card:nth-child(4) { animation:focusIn .70s cubic-bezier(.16,1,.3,1) both; animation-delay:640ms; }
   /* Selection ring drawn on top of selected .mb-el */
   /* Selection ring counter-scales with zoom (var --mbz set on .mb-canvas) so it stays a
@@ -9517,6 +9545,43 @@
     var _propFontSize    = 16;
     var _propStickyColor = '#ffd66e';
 
+    /* ── Embed / Link URL utilities ──────────────────────────── */
+    function detectEmbedUrl(str) {
+      str = (str||'').trim();
+      var yt = str.match(/(?:youtube\.com\/(?:watch\?.*v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      if (yt) return { platform:'youtube', id:yt[1], url:str };
+      var vm = str.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+      if (vm) return { platform:'vimeo', id:vm[1], url:str };
+      var ig = str.match(/instagram\.com\/(?:p|reel|reels)\/([a-zA-Z0-9_-]+)/);
+      if (ig) return { platform:'instagram', id:ig[1], url:str };
+      if (/^https?:\/\//.test(str)) return { platform:'web', id:null, url:str };
+      return null;
+    }
+    function embedIframeUrl(info) {
+      if (info.platform==='youtube')   return 'https://www.youtube.com/embed/'+info.id+'?autoplay=1&rel=0';
+      if (info.platform==='vimeo')     return 'https://player.vimeo.com/video/'+info.id+'?autoplay=1';
+      return null;
+    }
+    function embedThumbnailUrl(info) {
+      if (info.platform==='youtube') return 'https://img.youtube.com/vi/'+info.id+'/hqdefault.jpg';
+      return null;
+    }
+    function embedPlatformLabel(p) { return {youtube:'YouTube',vimeo:'Vimeo',instagram:'Instagram',web:'Link'}[p]||'Link'; }
+    function embedBadgeClass(p)    { return {youtube:'mb-embed-badge-yt',vimeo:'mb-embed-badge-vm',instagram:'mb-embed-badge-ig'}[p]||'mb-embed-badge-xx'; }
+    function embedPlatformSvg(p) {
+      if (p==='youtube') return '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M14.5 4.5c-.2-.8-.9-1.4-1.6-1.5C11.6 3 8 3 8 3s-3.6 0-4.9.1C2.4 3.1 1.7 3.7 1.5 4.5 1.3 5.8 1.3 8 1.3 8s0 2.2.2 3.5c.2.8.9 1.4 1.6 1.4C4.4 13 8 13 8 13s3.6 0 4.9-.1c.7-.1 1.4-.7 1.6-1.4.2-1.3.2-3.5.2-3.5s0-2.2-.2-3.5zM6.5 10.3V5.7L10.8 8l-4.3 2.3z"/></svg>';
+      if (p==='vimeo')   return '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M14 5.1c-.1 2.6-1.9 6.1-5.4 10.5C5.1 20 2.7 17 2.5 13.1c-.1-1.7 1-3.3 2.9-3.3 1.1 0 1.9.7 2.6 1.7.6-1.4 1.7-3.8 1.4-5.7-.2-1.4-1-2.2-2.1-2.2-2.8 0-4.5 3.6-4.5 6.7"/></svg>';
+      if (p==='instagram') return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2" width="12" height="12" rx="3.5"/><circle cx="8" cy="8" r="2.8"/><circle cx="11.5" cy="4.5" r=".6" fill="currentColor" stroke="none"/></svg>';
+      return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 0v14M1 8h14M2.2 4.5h11.6M2.2 11.5h11.6"/></svg>';
+    }
+    function embedExtractDomain(url) { try { return new URL(url).hostname.replace(/^www\./,''); } catch(e) { return url; } }
+    function fetchEmbedMeta(url, cb) {
+      fetch('https://noembed.com/embed?url='+encodeURIComponent(url))
+        .then(function(r){ return r.json(); })
+        .then(function(d){ cb({ title:d.title||'', author:d.author_name||'', thumbnail:d.thumbnail_url||'' }); })
+        .catch(function(){ cb({ title:'', author:'', thumbnail:'' }); });
+    }
+
     /* Drag / resize / draw state */
     var _drag = null;   /* { ids, startX, startY, origPos[] } */
     var _resize= null;  /* { id, handle, origEl, startX, startY } */
@@ -9778,6 +9843,56 @@
             ph.innerHTML = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3.5" width="14" height="11" rx="1.5"/><circle cx="6.5" cy="7.5" r="1.2"/><path d="M2 12l3.5-3.5 3 3 2.5-2.5L16 14"/></svg><span>Loading…</span>';
             el.appendChild(ph);
           }
+        } else if (d.type === 'embed') {
+          el.className = 'mb-el';
+          var ecard = document.createElement('div');
+          ecard.className = 'mb-embed-card';
+          /* Thumbnail */
+          var ethumb = document.createElement('div');
+          ethumb.className = 'mb-embed-thumb';
+          if (d.thumbnail) {
+            var eimg = document.createElement('img');
+            eimg.src = d.thumbnail; eimg.alt = d.title || '';
+            eimg.addEventListener('load', function(){
+              requestAnimationFrame(function(){ void eimg.offsetHeight; eimg.classList.add('mb-loaded'); });
+            });
+            ethumb.appendChild(eimg);
+          } else {
+            var eempty = document.createElement('div');
+            eempty.className = 'mb-embed-thumb-empty';
+            eempty.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" width="28" height="28"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 0v14M1 8h14"/></svg>';
+            ethumb.appendChild(eempty);
+          }
+          if (d.embedUrl) {
+            var eplay = document.createElement('div');
+            eplay.className = 'mb-embed-play';
+            eplay.innerHTML = '<div class="mb-embed-play-btn"><svg viewBox="0 0 18 18" fill="currentColor"><path d="M5 3.5l10 5.5-10 5.5z"/></svg></div>';
+            (function(capturedId, capturedD){ eplay.addEventListener('click', function(ev){ ev.stopPropagation(); activateEmbed(_elDoms[capturedId], capturedD); }); })(id, d);
+            ethumb.appendChild(eplay);
+          }
+          ecard.appendChild(ethumb);
+          /* Info strip */
+          var einfo = document.createElement('div');
+          einfo.className = 'mb-embed-info';
+          var ebadge = document.createElement('div');
+          ebadge.className = 'mb-embed-badge ' + embedBadgeClass(d.platform||'web');
+          ebadge.innerHTML = embedPlatformSvg(d.platform||'web') + '<span>' + embedPlatformLabel(d.platform||'web') + '</span>';
+          einfo.appendChild(ebadge);
+          var etitle = document.createElement('p');
+          etitle.className = 'mb-embed-title';
+          etitle.textContent = d.title || embedExtractDomain(d.url||'') || 'Link';
+          einfo.appendChild(etitle);
+          var emeta = document.createElement('p');
+          emeta.className = 'mb-embed-meta';
+          emeta.textContent = d.author || embedExtractDomain(d.url||'');
+          einfo.appendChild(emeta);
+          ecard.appendChild(einfo);
+          el.appendChild(ecard);
+          if (!el.querySelector('.mb-img-frame')) {
+            var eframe = document.createElement('div');
+            eframe.className = 'mb-img-frame';
+            el.appendChild(eframe);
+          }
         } else if (d.type === 'rect' || d.type === 'circle' || d.type === 'diamond') {
           el.className = 'mb-el';
           var svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -9839,6 +9954,19 @@
         } else if (d.type === 'image') {
           var img2 = el.querySelector('img');
           if (img2 && d.url && img2.src !== d.url) img2.src = d.url;
+        } else if (d.type === 'embed') {
+          var etitle2 = el.querySelector('.mb-embed-title');
+          if (etitle2 && d.title) etitle2.textContent = d.title;
+          var emeta2 = el.querySelector('.mb-embed-meta');
+          if (emeta2 && d.author) emeta2.textContent = d.author;
+          /* Add thumbnail if it arrived late (e.g. from oEmbed async) */
+          var ethumb2 = el.querySelector('.mb-embed-thumb');
+          if (ethumb2 && d.thumbnail && !ethumb2.querySelector('img')) {
+            var eempty2 = ethumb2.querySelector('.mb-embed-thumb-empty'); if(eempty2) eempty2.remove();
+            var elateImg = document.createElement('img'); elateImg.src = d.thumbnail; elateImg.alt = d.title||'';
+            elateImg.addEventListener('load', function(){ requestAnimationFrame(function(){ void elateImg.offsetHeight; elateImg.classList.add('mb-loaded'); }); });
+            ethumb2.insertBefore(elateImg, ethumb2.querySelector('.mb-embed-play') || null);
+          }
         } else if (d.type === 'rect' || d.type === 'circle' || d.type === 'diamond') {
           var shp2 = el.querySelector('rect,ellipse,polygon');
           if (shp2) {
@@ -9974,6 +10102,7 @@
         if (e.button !== 0) return;
         if (_tool !== 'select' && _tool !== 'hand') return;
         if (_tool === 'hand' || _spaceDown) return; /* hand tool pans instead */
+        if (el.querySelector('.mb-embed-live')) { e.stopPropagation(); return; } /* iframe active — let it handle events */
         e.stopPropagation();
         var d = _elements[id];
         if (!d) return;
@@ -11527,6 +11656,73 @@
       modal.querySelector('.mb-share-close').addEventListener('click',function(){modal.remove();});
     }
 
+    /* ── Embed card: toggle to iframe player ─────────────── */
+    function activateEmbed(el, d) {
+      if (!d.embedUrl) return;
+      var ecard = el.querySelector('.mb-embed-card');
+      if (!ecard || ecard.classList.contains('mb-embed-live')) return;
+      ecard.classList.add('mb-embed-live');
+      var iframe = document.createElement('iframe');
+      iframe.className = 'mb-embed-iframe';
+      iframe.src = d.embedUrl;
+      iframe.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+      iframe.allowFullscreen = true;
+      ecard.appendChild(iframe);
+      var exitBtn = document.createElement('button');
+      exitBtn.className = 'mb-embed-exit-btn';
+      exitBtn.title = 'Close player';
+      exitBtn.innerHTML = '<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1l8 8M9 1L1 9"/></svg>';
+      exitBtn.addEventListener('click', function(ev) {
+        ev.stopPropagation();
+        ecard.classList.remove('mb-embed-live');
+        iframe.remove(); exitBtn.remove();
+      });
+      ecard.appendChild(exitBtn);
+    }
+
+    /* ── Create embed element from pasted URL ────────────── */
+    function createEmbedElement(info) {
+      if (!canEdit()) return;
+      var r = stage.getBoundingClientRect();
+      var cx = (r.width/2 - _panX) / _zoom;
+      var cy = (r.height/2 - _panY) / _zoom;
+      var w = 320, h = 250;
+      var id = genId();
+      var d = {
+        type:'embed', url:info.url, platform:info.platform,
+        embedId:info.id||'', embedUrl:embedIframeUrl(info)||'',
+        thumbnail:embedThumbnailUrl(info)||'', title:'', author:'',
+        x:Math.round(cx-w/2), y:Math.round(cy-h/2), w:w, h:h,
+        z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now()
+      };
+      _elements[id] = d;
+      commitElSet(id, d);
+      renderEl(id, d);
+      pushUndo({ type:'create', id:id, data:JSON.parse(JSON.stringify(d)) });
+      _selected = [id]; updatePropbar();
+      /* Async: fetch title / author / thumbnail via noembed */
+      fetchEmbedMeta(info.url, function(meta){
+        if (!_elements[id]) return;
+        var upd = {};
+        if (meta.title)     { _elements[id].title     = meta.title;     upd.title     = meta.title; }
+        if (meta.author)    { _elements[id].author    = meta.author;    upd.author    = meta.author; }
+        if (meta.thumbnail && !_elements[id].thumbnail) { _elements[id].thumbnail = meta.thumbnail; upd.thumbnail = meta.thumbnail; }
+        if (Object.keys(upd).length) scheduleElUpdate(id, upd);
+        var dom = _elDoms[id]; if (!dom) return;
+        if (upd.title)  { var t = dom.querySelector('.mb-embed-title'); if(t) t.textContent = meta.title; }
+        if (upd.author) { var m = dom.querySelector('.mb-embed-meta');  if(m) m.textContent = meta.author; }
+        if (upd.thumbnail) {
+          var th = dom.querySelector('.mb-embed-thumb');
+          if (th && !th.querySelector('img')) {
+            var emp = th.querySelector('.mb-embed-thumb-empty'); if(emp) emp.remove();
+            var ni = document.createElement('img'); ni.src = meta.thumbnail; ni.alt = meta.title||'';
+            ni.addEventListener('load', function(){ requestAnimationFrame(function(){ void ni.offsetHeight; ni.classList.add('mb-loaded'); }); });
+            th.insertBefore(ni, th.querySelector('.mb-embed-play') || null);
+          }
+        }
+      });
+    }
+
     /* ── Keyboard shortcuts ───────────────────────────────── */
     function initKeyboard() {
       document.addEventListener('keydown', function(e){
@@ -11562,6 +11758,19 @@
       });
       document.addEventListener('keyup', function(e){
         if (e.key===' ') { _spaceDown=false; if(stage)stage.style.cursor=''; if(toolbar)toolbar.querySelectorAll('.mb-tool-btn').forEach(function(b){b.classList.toggle('active',b.dataset.tool===_tool);}); }
+      });
+      /* Paste URL → create embed card on canvas */
+      document.addEventListener('paste', function(e){
+        if (document.body.dataset.view !== 'moodboardCanvas') return;
+        if (!_boardId) return;
+        var tag = (document.activeElement||{}).tagName||'';
+        if (tag==='INPUT'||tag==='TEXTAREA'||(document.activeElement&&document.activeElement.isContentEditable)) return;
+        var text = e.clipboardData && e.clipboardData.getData('text/plain');
+        if (!text) return;
+        var info = detectEmbedUrl(text.trim());
+        if (!info) return;
+        e.preventDefault();
+        createEmbedElement(info);
       });
     }
 
