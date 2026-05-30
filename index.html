@@ -11790,10 +11790,12 @@
        ratio and the iframe is scaled by (cardWidth / baseWidth) so it always fills exactly. */
     function embedBaseSize(info) {
       var p = info.platform;
-      if (p === 'tiktok')    return { w:325, h:730 };
-      if (p === 'pinterest') return { w:345, h:620 };
-      if (p === 'instagram') return info.igType === 'reel' ? { w:340, h:600 } : { w:360, h:470 };
-      return { w:340, h:560 };
+      /* Heights are generous so the embed's full chrome (title + "published by") fits
+         inside the scaled box without the bottom being clipped. */
+      if (p === 'tiktok')    return { w:325, h:760 };
+      if (p === 'pinterest') return { w:345, h:730 };
+      if (p === 'instagram') return info.igType === 'reel' ? { w:340, h:640 } : { w:360, h:540 };
+      return { w:340, h:600 };
     }
 
     /* Default aspect ratio (w/h) for a freshly pasted embed, by platform/type */
