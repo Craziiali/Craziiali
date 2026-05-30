@@ -1050,7 +1050,11 @@
           .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').split('-')[0];
       }
       function setURL(inv){
-        try{ if(history.replaceState) history.replaceState(null,'','#'+getSlug(inv)); }catch(e){}
+        try{
+          if(history.replaceState && window.location.hash) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+          }
+        }catch(e){}
       }
       function loadFromHash(){
         var hash=(window.location.hash||'').replace('#','').toLowerCase().trim();
