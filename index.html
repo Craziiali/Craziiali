@@ -11795,7 +11795,7 @@
     function embedVisualHeight(info, natH) {
       var p = info && info.platform;
       var trim = 0;
-      if (p === 'pinterest') trim = 58;
+      if (p === 'pinterest') trim = 0;
       if (p === 'instagram' && info.igType !== 'reel') trim = 24;
       if (p === 'tiktok') trim = 18;
       return Math.max(80, natH - trim);
