@@ -9697,8 +9697,10 @@
           vid.draggable = false;
           vid.addEventListener('loadedmetadata', function(){ healMediaAspect(id, vid.videoWidth, vid.videoHeight); });
           vid.addEventListener('canplay', function(){
-            vid.classList.add('mb-loaded');
-            setTimeout(function(){ if(vskel.parentNode) vskel.parentNode.removeChild(vskel); }, 1500);
+            requestAnimationFrame(function(){ requestAnimationFrame(function(){
+              vid.classList.add('mb-loaded');
+              setTimeout(function(){ if(vskel.parentNode) vskel.parentNode.removeChild(vskel); }, 1500);
+            }); });
           });
           el.appendChild(vid);
           if (!el.querySelector('.mb-img-frame')) {
@@ -9718,8 +9720,10 @@
             img.draggable = false;
             img.addEventListener('load', function(){
               healMediaAspect(id, img.naturalWidth, img.naturalHeight);
-              img.classList.add('mb-loaded');
-              setTimeout(function(){ if(iskel.parentNode) iskel.parentNode.removeChild(iskel); }, 1500);
+              requestAnimationFrame(function(){ requestAnimationFrame(function(){
+                img.classList.add('mb-loaded');
+                setTimeout(function(){ if(iskel.parentNode) iskel.parentNode.removeChild(iskel); }, 1500);
+              }); });
             });
             el.appendChild(img);
             /* Polished frame overlay */
