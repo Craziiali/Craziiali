@@ -5929,39 +5929,40 @@
   .mb-vbar-fill { position:absolute; left:0; top:0; height:100%; background:rgba(243,243,239,.6); border-radius:2px; pointer-events:none; }
   .mb-vbar-thumb { position:absolute; top:50%; transform:translate(50%,-50%); width:10px; height:10px; background:#f3f3ef; border-radius:50%; box-shadow:0 1px 4px rgba(0,0,0,.5); pointer-events:none; opacity:0; transition:opacity .15s; right:0; }
   .mb-vbar-track:hover .mb-vbar-thumb { opacity:1; }
-  /* ── Embed / Link cards (pasted URLs) ──────────────────────── */
-  .mb-embed-card { position:absolute; inset:0; border-radius:7px; overflow:hidden; display:flex; flex-direction:column; background:#0b0b0f; cursor:pointer; }
-  .mb-embed-thumb { position:relative; flex:1; min-height:0; overflow:hidden; background:#111116; }
-  .mb-embed-thumb img { width:100%; height:100%; object-fit:cover; display:block; opacity:0; transition:opacity 1.2s cubic-bezier(.4,0,.2,1); }
-  .mb-embed-thumb img.mb-loaded { opacity:1; }
-  .mb-embed-thumb-empty { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
-  .mb-embed-thumb-empty svg { width:28px; height:28px; color:rgba(243,243,239,.15); }
-  .mb-embed-play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s; }
-  .mb-embed-card:hover .mb-embed-play { opacity:1; }
-  .mb-embed-play-btn { width:44px; height:44px; border-radius:50%; background:rgba(0,0,0,.55); border:1.5px solid rgba(255,255,255,.75); display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); transition:transform .18s,background .18s; }
-  .mb-embed-card:hover .mb-embed-play-btn { transform:scale(1.06); background:rgba(0,0,0,.72); }
-  .mb-embed-play-btn svg { width:16px; height:16px; color:#fff; margin-left:2px; }
-  .mb-embed-info { padding:10px 12px 12px; flex-shrink:0; border-top:1px solid rgba(243,243,239,.07); background:#0b0b0f; }
-  .mb-embed-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:4px; font-family:var(--font-en-mono); font-size:8px; letter-spacing:.12em; text-transform:uppercase; margin-bottom:6px; }
-  .mb-embed-badge-yt  { background:rgba(255,50,50,.12);  color:#ff6060; border:1px solid rgba(255,50,50,.18); }
-  .mb-embed-badge-vm  { background:rgba(26,183,214,.12); color:#1ab7d6; border:1px solid rgba(26,183,214,.18); }
-  .mb-embed-badge-ig  { background:rgba(193,53,132,.12); color:#c97ab8; border:1px solid rgba(193,53,132,.18); }
-  .mb-embed-badge-pt  { background:rgba(230,0,35,.12);   color:#e05555; border:1px solid rgba(230,0,35,.18); }
-  .mb-embed-badge-xx  { background:rgba(243,243,239,.06); color:rgba(243,243,239,.45); border:1px solid rgba(243,243,239,.1); }
-  .mb-embed-badge svg { width:9px; height:9px; }
-  .mb-embed-title { font-family:var(--font-en-display); font-style:italic; font-size:13px; font-weight:400; color:#f3f3ef; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0 0 3px; }
-  .mb-embed-meta  { font-family:var(--font-en-mono); font-size:8px; color:rgba(243,243,239,.38); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:.04em; margin:0; }
-  /* Live iframe mode */
-  .mb-embed-card.mb-embed-live { cursor:default; }
-  .mb-embed-iframe { position:absolute; inset:0; width:100%; height:100%; border:none; }
-  .mb-embed-exit-btn { position:absolute; top:8px; right:8px; z-index:10; width:26px; height:26px; border-radius:50%; background:rgba(0,0,0,.7); border:1px solid rgba(243,243,239,.15); color:rgba(243,243,239,.8); cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); transition:background .15s,color .15s; }
-  .mb-embed-exit-btn:hover { background:rgba(224,92,92,.35); color:#f3f3ef; }
-  .mb-embed-exit-btn svg { width:9px; height:9px; }
-  .mb-embed-open-link { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border:1px solid rgba(243,243,239,.14); border-radius:5px; font-family:var(--font-en-mono); font-size:8px; letter-spacing:.1em; text-transform:uppercase; color:rgba(243,243,239,.5); text-decoration:none; transition:border-color .15s,color .15s; margin-top:4px; }
-  .mb-embed-open-link:hover { border-color:rgba(243,243,239,.3); color:#f3f3ef; }
-  .mb-embed-thumb-empty { width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse at 50% 40%,rgba(243,243,239,.04) 0%,transparent 70%); }
-  .mb-embed-thumb-icon { width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
-  .mb-embed-thumb-icon svg { width:26px; height:26px; }
+  /* ── Embed / Link cards (pasted URLs) ──────────────────────────
+     The iframe fills the whole card and shows the provider's real poster/thumbnail
+     AND plays inline. A transparent shield keeps the card draggable until the user
+     clicks "play"; corner overlays carry the badge + open + play/done controls. */
+  .mb-embed-card { position:absolute; inset:0; border-radius:7px; overflow:hidden; background:#0b0b0f; }
+  .mb-embed-iframe { position:absolute; inset:0; width:100%; height:100%; border:none; display:block; background:#0b0b0f; }
+  /* Drag shield: catches pointer events so the card can be dragged. Removed in live mode. */
+  .mb-embed-shield { position:absolute; inset:0; z-index:3; cursor:move; background:transparent; }
+  .mb-embed-card.mb-embed-live .mb-embed-shield { display:none; }
+  /* Loading shimmer behind the iframe until it paints */
+  .mb-embed-loading { position:absolute; inset:0; z-index:1; display:flex; align-items:center; justify-content:center; background:linear-gradient(90deg,#0d0d12 25%,#1a1a22 50%,#0d0d12 75%); background-size:400% 100%; animation:mbShimmer 1.9s ease-in-out infinite; }
+  .mb-embed-loading-icon { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; opacity:.6; }
+  .mb-embed-loading-icon svg { width:24px; height:24px; }
+  /* Center play overlay (poster mode only) */
+  .mb-embed-play { position:absolute; inset:0; z-index:4; display:flex; align-items:center; justify-content:center; pointer-events:none; transition:opacity .2s; }
+  .mb-embed-card.mb-embed-live .mb-embed-play { opacity:0; pointer-events:none; }
+  .mb-embed-play-btn { width:52px; height:52px; border-radius:50%; background:rgba(0,0,0,.5); border:1.5px solid rgba(255,255,255,.8); display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); transition:transform .18s,background .18s; }
+  .mb-embed-shield:hover + .mb-embed-play .mb-embed-play-btn { transform:scale(1.08); background:rgba(0,0,0,.68); }
+  .mb-embed-play-btn svg { width:18px; height:18px; color:#fff; margin-left:3px; }
+  /* Corner overlays */
+  .mb-embed-badge { position:absolute; top:8px; left:8px; z-index:5; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:5px; font-family:var(--font-en-mono); font-size:8px; letter-spacing:.12em; text-transform:uppercase; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); pointer-events:none; }
+  .mb-embed-badge-yt  { background:rgba(20,10,10,.7);  color:#ff6060; }
+  .mb-embed-badge-vm  { background:rgba(10,18,20,.7);  color:#1ab7d6; }
+  .mb-embed-badge-ig  { background:rgba(20,10,18,.7);  color:#e08ad0; }
+  .mb-embed-badge-pt  { background:rgba(20,8,10,.7);   color:#e96b6b; }
+  .mb-embed-badge-xx  { background:rgba(13,13,17,.7);  color:rgba(243,243,239,.6); }
+  .mb-embed-badge svg { width:10px; height:10px; }
+  .mb-embed-corner-btns { position:absolute; top:7px; right:7px; z-index:6; display:flex; gap:5px; }
+  .mb-embed-cbtn { width:26px; height:26px; border-radius:50%; background:rgba(0,0,0,.6); border:1px solid rgba(243,243,239,.14); color:rgba(243,243,239,.82); cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); transition:background .15s,color .15s; text-decoration:none; }
+  .mb-embed-cbtn:hover { background:rgba(30,30,38,.85); color:#fff; }
+  .mb-embed-cbtn svg { width:11px; height:11px; }
+  .mb-embed-cbtn-done { display:none; }
+  .mb-embed-card.mb-embed-live .mb-embed-cbtn-done { display:flex; }
+  .mb-embed-cbtn-done:hover { background:rgba(224,92,92,.4); }
   .home-entering .tool-card:nth-child(4) { animation:focusIn .70s cubic-bezier(.16,1,.3,1) both; animation-delay:640ms; }
   /* Selection ring drawn on top of selected .mb-el */
   /* Selection ring counter-scales with zoom (var --mbz set on .mb-canvas) so it stays a
@@ -9569,8 +9570,9 @@
       return null;
     }
     function embedIframeUrl(info) {
-      if (info.platform==='youtube')   return 'https://www.youtube.com/embed/'+info.id+'?autoplay=1&rel=0';
-      if (info.platform==='vimeo')     return 'https://player.vimeo.com/video/'+info.id+'?autoplay=1';
+      /* Poster URLs — NO autoplay (shows the provider's thumbnail). activateEmbed() appends autoplay=1. */
+      if (info.platform==='youtube')   return 'https://www.youtube.com/embed/'+info.id+'?rel=0&playsinline=1';
+      if (info.platform==='vimeo')     return 'https://player.vimeo.com/video/'+info.id;
       if (info.platform==='instagram') return 'https://www.instagram.com/'+(info.igType==='reel'?'reel':(info.igType==='tv'?'tv':'p'))+'/'+info.id+'/embed/';
       if (info.platform==='pinterest' && info.id) return 'https://assets.pinterest.com/ext/embed.html?id='+info.id;
       if (info.platform==='tiktok')    return 'https://www.tiktok.com/embed/v2/'+info.id;
@@ -9594,8 +9596,8 @@
     function fetchEmbedMeta(url, cb) {
       fetch('https://noembed.com/embed?url='+encodeURIComponent(url))
         .then(function(r){ return r.json(); })
-        .then(function(d){ cb({ title:d.title||'', author:d.author_name||'', thumbnail:d.thumbnail_url||'' }); })
-        .catch(function(){ cb({ title:'', author:'', thumbnail:'' }); });
+        .then(function(d){ cb({ title:d.title||'', author:d.author_name||'', thumbnail:d.thumbnail_url||'', width:+d.width||0, height:+d.height||0 }); })
+        .catch(function(){ cb({ title:'', author:'', thumbnail:'', width:0, height:0 }); });
     }
 
     /* Drag / resize / draw state */
@@ -9861,65 +9863,7 @@
           }
         } else if (d.type === 'embed') {
           el.className = 'mb-el';
-          var ecard = document.createElement('div');
-          ecard.className = 'mb-embed-card';
-          /* Thumbnail */
-          var ethumb = document.createElement('div');
-          ethumb.className = 'mb-embed-thumb';
-          if (d.thumbnail) {
-            var eimg = document.createElement('img');
-            eimg.src = d.thumbnail; eimg.alt = d.title || '';
-            eimg.addEventListener('load', function(){
-              requestAnimationFrame(function(){ void eimg.offsetHeight; eimg.classList.add('mb-loaded'); });
-            });
-            ethumb.appendChild(eimg);
-          } else {
-            var eempty = document.createElement('div');
-            eempty.className = 'mb-embed-thumb-empty';
-            /* Show the platform's own icon, sized up, instead of a generic globe */
-            eempty.innerHTML = '<div class="mb-embed-thumb-icon ' + embedBadgeClass(d.platform||'web') + '">' + embedPlatformSvg(d.platform||'web') + '</div>';
-            ethumb.appendChild(eempty);
-          }
-          if (d.embedUrl) {
-            var eplay = document.createElement('div');
-            eplay.className = 'mb-embed-play';
-            eplay.innerHTML = '<div class="mb-embed-play-btn"><svg viewBox="0 0 18 18" fill="currentColor"><path d="M5 3.5l10 5.5-10 5.5z"/></svg></div>';
-            (function(capturedId, capturedD){ eplay.addEventListener('click', function(ev){ ev.stopPropagation(); activateEmbed(_elDoms[capturedId], capturedD); }); })(id, d);
-            ethumb.appendChild(eplay);
-          }
-          ecard.appendChild(ethumb);
-          /* Info strip */
-          var einfo = document.createElement('div');
-          einfo.className = 'mb-embed-info';
-          var ebadge = document.createElement('div');
-          ebadge.className = 'mb-embed-badge ' + embedBadgeClass(d.platform||'web');
-          ebadge.innerHTML = embedPlatformSvg(d.platform||'web') + '<span>' + embedPlatformLabel(d.platform||'web') + '</span>';
-          einfo.appendChild(ebadge);
-          var etitle = document.createElement('p');
-          etitle.className = 'mb-embed-title';
-          etitle.textContent = d.title || embedExtractDomain(d.url||'') || 'Link';
-          einfo.appendChild(etitle);
-          var emeta = document.createElement('p');
-          emeta.className = 'mb-embed-meta';
-          emeta.textContent = d.author || embedExtractDomain(d.url||'');
-          einfo.appendChild(emeta);
-          /* Open-in-browser link — always available as a reliable fallback */
-          if (d.url) {
-            var eopen = document.createElement('a');
-            eopen.className = 'mb-embed-open-link';
-            eopen.href = d.url; eopen.target = '_blank'; eopen.rel = 'noopener noreferrer';
-            eopen.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2H2.5v7.5h7.5v-2M7 2h3v3M5 7l5-5"/></svg><span>Open</span>';
-            eopen.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
-            eopen.addEventListener('click', function(ev){ ev.stopPropagation(); });
-            einfo.appendChild(eopen);
-          }
-          ecard.appendChild(einfo);
-          el.appendChild(ecard);
-          if (!el.querySelector('.mb-img-frame')) {
-            var eframe = document.createElement('div');
-            eframe.className = 'mb-img-frame';
-            el.appendChild(eframe);
-          }
+          buildEmbedCard(el, id, d);
         } else if (d.type === 'rect' || d.type === 'circle' || d.type === 'diamond') {
           el.className = 'mb-el';
           var svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -9982,18 +9926,9 @@
           var img2 = el.querySelector('img');
           if (img2 && d.url && img2.src !== d.url) img2.src = d.url;
         } else if (d.type === 'embed') {
-          var etitle2 = el.querySelector('.mb-embed-title');
-          if (etitle2 && d.title) etitle2.textContent = d.title;
-          var emeta2 = el.querySelector('.mb-embed-meta');
-          if (emeta2 && d.author) emeta2.textContent = d.author;
-          /* Add thumbnail if it arrived late (e.g. from oEmbed async) */
-          var ethumb2 = el.querySelector('.mb-embed-thumb');
-          if (ethumb2 && d.thumbnail && !ethumb2.querySelector('img')) {
-            var eempty2 = ethumb2.querySelector('.mb-embed-thumb-empty'); if(eempty2) eempty2.remove();
-            var elateImg = document.createElement('img'); elateImg.src = d.thumbnail; elateImg.alt = d.title||'';
-            elateImg.addEventListener('load', function(){ requestAnimationFrame(function(){ void elateImg.offsetHeight; elateImg.classList.add('mb-loaded'); }); });
-            ethumb2.insertBefore(elateImg, ethumb2.querySelector('.mb-embed-play') || null);
-          }
+          /* If the embed card hasn't been built yet (or url changed), rebuild it */
+          if (!el.querySelector('.mb-embed-card')) buildEmbedCard(el, id, d);
+          el.title = d.title || d.url || '';
         } else if (d.type === 'rect' || d.type === 'circle' || d.type === 'diamond') {
           var shp2 = el.querySelector('rect,ellipse,polygon');
           if (shp2) {
@@ -11698,28 +11633,131 @@
       modal.querySelector('.mb-share-close').addEventListener('click',function(){modal.remove();});
     }
 
-    /* ── Embed card: toggle to iframe player ─────────────── */
+    /* ── Build an embed card: iframe poster + drag shield + overlays ─────
+       The iframe loads the provider embed immediately, so it shows the real
+       thumbnail/poster of the actual video. A transparent shield sits on top so
+       the card stays draggable. Clicking play removes the shield and reloads the
+       iframe with autoplay so it plays inline on the board. */
+    function buildEmbedCard(el, id, d) {
+      /* Clear any prior card */
+      var old = el.querySelector('.mb-embed-card'); if (old) old.remove();
+      var plat = d.platform || 'web';
+      var ecard = document.createElement('div');
+      ecard.className = 'mb-embed-card';
+
+      /* Loading shimmer (sits behind the iframe until it paints) */
+      var loading = document.createElement('div');
+      loading.className = 'mb-embed-loading';
+      loading.innerHTML = '<div class="mb-embed-loading-icon ' + embedBadgeClass(plat) + '">' + embedPlatformSvg(plat) + '</div>';
+      ecard.appendChild(loading);
+
+      /* The poster iframe (no autoplay) — shows the real thumbnail and is click-to-play */
+      if (d.embedUrl) {
+        var iframe = document.createElement('iframe');
+        iframe.className = 'mb-embed-iframe';
+        iframe.src = d.embedUrl;
+        iframe.loading = 'lazy';
+        iframe.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write';
+        iframe.allowFullscreen = true;
+        iframe.setAttribute('scrolling','no');
+        iframe.addEventListener('load', function(){ if(loading.parentNode) loading.parentNode.removeChild(loading); });
+        ecard.appendChild(iframe);
+      }
+
+      /* Drag shield (transparent) — keeps the card draggable in poster mode.
+         mousedown bubbles to the element (so the canvas drag system runs); a mouseup
+         without movement counts as a click and enters play mode. */
+      var shield = document.createElement('div');
+      shield.className = 'mb-embed-shield';
+      ecard.appendChild(shield);
+
+      /* Center play button (poster mode) */
+      if (d.embedUrl) {
+        var play = document.createElement('div');
+        play.className = 'mb-embed-play';
+        play.innerHTML = '<div class="mb-embed-play-btn"><svg viewBox="0 0 18 18" fill="currentColor"><path d="M5 3.5l10 5.5-10 5.5z"/></svg></div>';
+        ecard.appendChild(play);
+        (function(cid){
+          var dx0 = 0, dy0 = 0;
+          shield.addEventListener('mousedown', function(ev){ dx0 = ev.clientX; dy0 = ev.clientY; });
+          shield.addEventListener('click', function(ev){
+            ev.stopPropagation();
+            if (Math.abs(ev.clientX - dx0) > 4 || Math.abs(ev.clientY - dy0) > 4) return; /* was a drag */
+            activateEmbed(_elDoms[cid], _elements[cid]);
+          });
+        })(id);
+      }
+
+      /* Platform badge (top-left) */
+      var badge = document.createElement('div');
+      badge.className = 'mb-embed-badge ' + embedBadgeClass(plat);
+      badge.innerHTML = embedPlatformSvg(plat) + '<span>' + embedPlatformLabel(plat) + '</span>';
+      ecard.appendChild(badge);
+
+      /* Corner buttons (top-right): Open + Done */
+      var cbtns = document.createElement('div');
+      cbtns.className = 'mb-embed-corner-btns';
+      if (d.url) {
+        var openBtn = document.createElement('a');
+        openBtn.className = 'mb-embed-cbtn mb-embed-cbtn-open';
+        openBtn.href = d.url; openBtn.target = '_blank'; openBtn.rel = 'noopener noreferrer';
+        openBtn.title = 'Open original';
+        openBtn.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2H2.5v7.5h7.5v-2M7 2h3v3M5 7l5-5"/></svg>';
+        openBtn.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
+        openBtn.addEventListener('click', function(ev){ ev.stopPropagation(); });
+        cbtns.appendChild(openBtn);
+      }
+      var doneBtn = document.createElement('button');
+      doneBtn.className = 'mb-embed-cbtn mb-embed-cbtn-done';
+      doneBtn.title = 'Stop & make draggable';
+      doneBtn.innerHTML = '<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1l8 8M9 1L1 9"/></svg>';
+      (function(cid){
+        doneBtn.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
+        doneBtn.addEventListener('click', function(ev){ ev.stopPropagation(); deactivateEmbed(_elDoms[cid], _elements[cid]); });
+      })(id);
+      cbtns.appendChild(doneBtn);
+      ecard.appendChild(cbtns);
+
+      el.title = d.title || d.url || '';
+      el.appendChild(ecard);
+      if (!el.querySelector('.mb-img-frame')) {
+        var eframe = document.createElement('div');
+        eframe.className = 'mb-img-frame';
+        el.appendChild(eframe);
+      }
+    }
+
+    /* Enter live/play mode: reload iframe with autoplay, drop the shield */
     function activateEmbed(el, d) {
-      if (!d.embedUrl) return;
+      if (!el || !d || !d.embedUrl) return;
       var ecard = el.querySelector('.mb-embed-card');
       if (!ecard || ecard.classList.contains('mb-embed-live')) return;
+      var iframe = ecard.querySelector('.mb-embed-iframe');
+      if (iframe) {
+        var sep = d.embedUrl.indexOf('?') >= 0 ? '&' : '?';
+        iframe.src = d.embedUrl + sep + 'autoplay=1';
+      }
       ecard.classList.add('mb-embed-live');
-      var iframe = document.createElement('iframe');
-      iframe.className = 'mb-embed-iframe';
-      iframe.src = d.embedUrl;
-      iframe.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
-      iframe.allowFullscreen = true;
-      ecard.appendChild(iframe);
-      var exitBtn = document.createElement('button');
-      exitBtn.className = 'mb-embed-exit-btn';
-      exitBtn.title = 'Close player';
-      exitBtn.innerHTML = '<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1l8 8M9 1L1 9"/></svg>';
-      exitBtn.addEventListener('click', function(ev) {
-        ev.stopPropagation();
-        ecard.classList.remove('mb-embed-live');
-        iframe.remove(); exitBtn.remove();
-      });
-      ecard.appendChild(exitBtn);
+    }
+
+    /* Back to poster mode: reload poster iframe (stops playback), restore shield */
+    function deactivateEmbed(el, d) {
+      if (!el || !d) return;
+      var ecard = el.querySelector('.mb-embed-card');
+      if (!ecard) return;
+      var iframe = ecard.querySelector('.mb-embed-iframe');
+      if (iframe && d.embedUrl) iframe.src = d.embedUrl;  /* reload without autoplay = stops video */
+      ecard.classList.remove('mb-embed-live');
+    }
+
+    /* Default aspect ratio (w/h) for a freshly pasted embed, by platform/type */
+    function embedDefaultAspect(info) {
+      if (info.platform === 'youtube') return /\/shorts\//.test(info.url||'') ? 9/16 : 16/9;
+      if (info.platform === 'vimeo')   return 16/9;
+      if (info.platform === 'tiktok')  return 0.52;       /* tall, includes chrome */
+      if (info.platform === 'instagram') return info.igType === 'reel' ? 0.62 : 0.85;
+      if (info.platform === 'pinterest') return 0.66;     /* ~2:3 portrait */
+      return 16/9;
     }
 
     /* ── Create embed element from pasted URL ────────────── */
@@ -11728,18 +11766,18 @@
       var r = stage.getBoundingClientRect();
       var cx = (r.width/2 - _panX) / _zoom;
       var cy = (r.height/2 - _panY) / _zoom;
-      /* Initial size: YouTube/Vimeo get 16:9 thumbnail (180px) + ~80px info strip = 260px tall.
-         Instagram square (1:1) + info strip. Others get a neutral card. */
+      /* Size the card to the true video aspect ratio (horizontal for YouTube,
+         vertical for Reels/TikTok). Keep a sensible on-screen footprint (~440px max edge). */
+      var ar = embedDefaultAspect(info);   /* width / height */
       var w, h;
-      if (info.platform==='youtube'||info.platform==='vimeo') { w=320; h=260; }
-      else if (info.platform==='instagram')                   { w=280; h=360; }
-      else                                                    { w=300; h=250; }
+      if (ar >= 1) { w = 420; h = Math.round(w / ar); }
+      else         { h = 440; w = Math.round(h * ar); }
       var id = genId();
       var d = {
         type:'embed', url:info.url, platform:info.platform,
         embedId:info.id||'', embedUrl:embedIframeUrl(info)||'',
-        thumbnail:embedThumbnailUrl(info)||'', title:'', author:'',
-        x:Math.round(cx-w/2), y:Math.round(cy-h/2), w:w, h:h, aspect:w/h,
+        igType:info.igType||'', title:'', author:'',
+        x:Math.round(cx-w/2), y:Math.round(cy-h/2), w:w, h:h, aspect:ar,
         z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now()
       };
       _elements[id] = d;
@@ -11747,26 +11785,32 @@
       renderEl(id, d);
       pushUndo({ type:'create', id:id, data:JSON.parse(JSON.stringify(d)) });
       _selected = [id]; updatePropbar();
-      /* Async: fetch title / author / thumbnail via noembed */
+      /* Async: fetch real title/author AND real width/height (refines the ratio) via noembed */
       fetchEmbedMeta(info.url, function(meta){
         if (!_elements[id]) return;
         var upd = {};
-        if (meta.title)     { _elements[id].title     = meta.title;     upd.title     = meta.title; }
-        if (meta.author)    { _elements[id].author    = meta.author;    upd.author    = meta.author; }
-        if (meta.thumbnail && !_elements[id].thumbnail) { _elements[id].thumbnail = meta.thumbnail; upd.thumbnail = meta.thumbnail; }
-        if (Object.keys(upd).length) scheduleElUpdate(id, upd);
-        var dom = _elDoms[id]; if (!dom) return;
-        if (upd.title)  { var t = dom.querySelector('.mb-embed-title'); if(t) t.textContent = meta.title; }
-        if (upd.author) { var m = dom.querySelector('.mb-embed-meta');  if(m) m.textContent = meta.author; }
-        if (upd.thumbnail) {
-          var th = dom.querySelector('.mb-embed-thumb');
-          if (th && !th.querySelector('img')) {
-            var emp = th.querySelector('.mb-embed-thumb-empty'); if(emp) emp.remove();
-            var ni = document.createElement('img'); ni.src = meta.thumbnail; ni.alt = meta.title||'';
-            ni.addEventListener('load', function(){ requestAnimationFrame(function(){ void ni.offsetHeight; ni.classList.add('mb-loaded'); }); });
-            th.insertBefore(ni, th.querySelector('.mb-embed-play') || null);
+        if (meta.title)  { _elements[id].title  = meta.title;  upd.title  = meta.title; }
+        if (meta.author) { _elements[id].author = meta.author; upd.author = meta.author; }
+        /* Refine aspect ratio from the provider's real dimensions */
+        if (meta.width && meta.height) {
+          var realAr = meta.width / meta.height;
+          if (realAr > 0.2 && realAr < 5 && Math.abs(realAr - _elements[id].aspect) > 0.03) {
+            var cw = _elements[id].w, ch = _elements[id].h;
+            var ccx = _elements[id].x + cw/2, ccy = _elements[id].y + ch/2;
+            var nh, nw;
+            if (realAr >= 1) { nw = Math.max(cw, ch); nh = Math.round(nw/realAr); }
+            else             { nh = Math.max(cw, ch); nw = Math.round(nh*realAr); }
+            _elements[id].aspect = realAr;
+            _elements[id].w = nw; _elements[id].h = nh;
+            _elements[id].x = Math.round(ccx - nw/2); _elements[id].y = Math.round(ccy - nh/2);
+            upd.aspect = realAr; upd.w = nw; upd.h = nh; upd.x = _elements[id].x; upd.y = _elements[id].y;
+            var dm = _elDoms[id];
+            if (dm) { dm.style.left=_elements[id].x+'px'; dm.style.top=_elements[id].y+'px'; dm.style.width=nw+'px'; dm.style.height=nh+'px'; }
           }
         }
+        if (Object.keys(upd).length) scheduleElUpdate(id, upd);
+        var dom = _elDoms[id];
+        if (dom) dom.title = _elements[id].title || _elements[id].url || '';
       });
     }
 
