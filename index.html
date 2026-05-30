@@ -5799,11 +5799,11 @@
   .mb-handle[data-h="nw"] { top:0; left:0; cursor:nw-resize; }
   .mb-handle[data-h="n"]  { top:0; left:50%; cursor:n-resize; }
   .mb-handle[data-h="ne"] { top:0; left:100%; cursor:ne-resize; }
-  .mb-handle[data-h="e"]  { top:50%; left:100%; cursor:e-resize; }
-  .mb-handle[data-h="se"] { top:100%; left:100%; cursor:se-resize; }
-  .mb-handle[data-h="s"]  { top:100%; left:50%; cursor:s-resize; }
-  .mb-handle[data-h="sw"] { top:100%; left:0; cursor:sw-resize; }
-  .mb-handle[data-h="w"]  { top:50%; left:0; cursor:w-resize; }
+  .mb-handle[data-h="e"]  { top:calc((100% - var(--mb-select-gap,0px)) / 2); left:100%; cursor:e-resize; }
+  .mb-handle[data-h="se"] { top:calc(100% - var(--mb-select-gap,0px)); left:100%; cursor:se-resize; }
+  .mb-handle[data-h="s"]  { top:calc(100% - var(--mb-select-gap,0px)); left:50%; cursor:s-resize; }
+  .mb-handle[data-h="sw"] { top:calc(100% - var(--mb-select-gap,0px)); left:0; cursor:sw-resize; }
+  .mb-handle[data-h="w"]  { top:calc((100% - var(--mb-select-gap,0px)) / 2); left:0; cursor:w-resize; }
   .mb-selbox { position:absolute; border:1.5px solid #7e8cf7; background:rgba(126,140,247,.08); pointer-events:none; z-index:500; }
   /* Drag-to-place ghost dragged out of the toolbar (follows the cursor until released on the canvas). */
   .mb-tool-ghost { position:fixed; left:0; top:0; z-index:99999; pointer-events:none; transform:translate(-50%,-50%); opacity:.92; border-radius:10px; }
@@ -5974,7 +5974,7 @@
   /* Selection ring drawn on top of selected .mb-el */
   /* Selection ring counter-scales with zoom (var --mbz set on .mb-canvas) so it stays a
      constant ~1.5px on screen at any zoom level, like Figma. */
-  .mb-el-sel-ring { position:absolute; inset:calc(-2px / var(--mbz,1)); border:calc(1.5px / var(--mbz,1)) solid #8e9bf8; border-radius:calc(7px / var(--mbz,1)); pointer-events:none; z-index:5; box-shadow:0 0 0 calc(1px / var(--mbz,1)) rgba(126,140,247,.18); }
+  .mb-el-sel-ring { position:absolute; left:calc(-2px / var(--mbz,1)); top:calc(-2px / var(--mbz,1)); right:calc(-2px / var(--mbz,1)); bottom:calc(var(--mb-select-gap,0px) - (2px / var(--mbz,1))); border:calc(1.5px / var(--mbz,1)) solid #8e9bf8; border-radius:calc(7px / var(--mbz,1)); pointer-events:none; z-index:5; box-shadow:0 0 0 calc(1px / var(--mbz,1)) rgba(126,140,247,.18); }
 
   /* Live pen-draw preview path */
   .mb-drawing-path { pointer-events:none; }
@@ -11781,24 +11781,24 @@
       var cw = ecard.clientWidth || (dd && dd.w) || W;
       var sc = cw / W;
       scaler.style.transform = 'scale(' + sc + ')';
-      var visualNatH = embedVisualHeight(dd || {}, natH);
-      var fitH = Math.round(visualNatH * sc);
+      var selectionGap = Math.round(embedSelectionTrim(dd || {}) * sc);
+      el.style.setProperty('--mb-select-gap', selectionGap + 'px');
+      var fitH = Math.round(natH * sc);
       if (dd) {
-        dd.aspect = W / visualNatH;
+        dd.aspect = W / natH;
         if (Math.abs((dd.h||0) - fitH) > 1) { dd.h = fitH; el.style.height = fitH + 'px'; }
       }
     }
 
     /* Some fixed-layout provider embeds reserve transparent space under the visible card.
-       Keep that internal space available inside the iframe, but crop the outer element so
-       selection and resize handles hug the visible card bottom. */
-    function embedVisualHeight(info, natH) {
+       Keep that internal space available, but draw the selection chrome at the visible
+       card bottom so the resize handles do not float below the rounded card. */
+    function embedSelectionTrim(info) {
       var p = info && info.platform;
-      var trim = 0;
-      if (p === 'pinterest') trim = 0;
-      if (p === 'instagram' && info.igType !== 'reel') trim = 24;
-      if (p === 'tiktok') trim = 18;
-      return Math.max(80, natH - trim);
+      if (p === 'pinterest') return 58;
+      if (p === 'instagram' && info.igType !== 'reel') return 24;
+      if (p === 'tiktok') return 18;
+      return 0;
     }
 
     /* A measured height arrived from the provider: store it as the natural height and refit. */
