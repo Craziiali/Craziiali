@@ -9961,6 +9961,8 @@
       } else {
         if (ring) ring.remove();
         removeHandles(el);
+        /* Embed deselected → re-lock its drag shield (and stop any playing video) */
+        if (d.type === 'embed') deactivateEmbed(el, d);
       }
     }
 
