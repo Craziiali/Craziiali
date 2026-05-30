@@ -5933,10 +5933,7 @@
      The iframe fills the whole card and shows the provider's real poster/thumbnail
      AND plays inline. A transparent shield keeps the card draggable until the user
      clicks "play"; corner overlays carry the badge + open + play/done controls. */
-  .mb-embed-card { position:absolute; inset:0; border-radius:8px; overflow:hidden; background:#0b0b0f; }
-  /* Light embeds (Pinterest/Instagram render on white) get a white base so the corner
-     gap behind their own rounded card blends in — no visible double edge. */
-  .mb-embed-card.mb-embed-light, .mb-embed-card.mb-embed-light .mb-embed-loading { background:#fff; }
+  .mb-embed-card { position:absolute; inset:0; border-radius:14px; overflow:hidden; background:transparent; }
   .mb-embed-iframe { position:absolute; inset:0; width:100%; height:100%; border:none; display:block; background:transparent; }
   /* Scaler for fixed-size embeds (Instagram/TikTok/Pinterest): iframe rendered at natural
      size, transform-scaled to fill the card. transform-origin top-left so it anchors cleanly. */
@@ -11661,9 +11658,6 @@
       var plat = d.platform || 'web';
       var ecard = document.createElement('div');
       ecard.className = 'mb-embed-card';
-      /* Pinterest & Instagram render on white — give the card a white base so its corners
-         blend with the embed's own rounded white card (avoids the dark double-edge). */
-      if (plat === 'pinterest' || plat === 'instagram') ecard.classList.add('mb-embed-light');
 
       /* Loading shimmer (sits behind the iframe until it paints) */
       var loading = document.createElement('div');
@@ -11671,9 +11665,7 @@
       loading.innerHTML = '<div class="mb-embed-loading-icon ' + embedBadgeClass(plat) + '">' + embedPlatformSvg(plat) + '</div>';
       ecard.appendChild(loading);
 
-      /* The native embed iframe — rendered exactly as the provider serves it, filling
-         the card. No scaling. The card auto-fits to the height the embed reports via
-         postMessage (see the message listener in initCanvas), so nothing is clipped. */
+      /* The native embed iframe — rendered exactly as the provider serves it. */
       if (d.embedUrl) {
         var iframe = document.createElement('iframe');
         iframe.className = 'mb-embed-iframe';
@@ -11683,7 +11675,31 @@
         iframe.allowFullscreen = true;
         iframe.setAttribute('scrolling','no');
         iframe.addEventListener('load', function(){ if(loading.parentNode) loading.parentNode.removeChild(loading); });
-        ecard.appendChild(iframe);
+
+        if (embedFills(plat)) {
+          /* YouTube/Vimeo are responsive — fill the card directly. */
+          ecard.appendChild(iframe);
+        } else {
+          /* Fixed-size embeds (Pinterest/Instagram/TikTok) render at a natural width and
+             ignore the iframe box. Render at that natural width, set the iframe's pixel
+             height to the real height the embed reports (postMessage), then uniformly
+             transform-scale the whole thing to fill the card. The card aspect is locked to
+             the embed's true ratio, so resizing scales it cleanly with no gap and no cutoff. */
+          var W = embedBaseSize(d).w;
+          iframe.style.width  = W + 'px';
+          iframe.style.height = Math.round((d.h && d.w) ? (d.h * W / d.w) : embedBaseSize(d).h) + 'px';
+          var scaler = document.createElement('div');
+          scaler.className = 'mb-embed-scaler';
+          scaler.appendChild(iframe);
+          ecard.appendChild(scaler);
+          ecard._embedW = W;
+          var applyScale = function(){
+            var cw = ecard.clientWidth || (d.w || W);
+            scaler.style.transform = 'scale(' + (cw / W) + ')';
+          };
+          applyScale();
+          if (window.ResizeObserver) { var ro = new ResizeObserver(applyScale); ro.observe(ecard); ecard._embedRO = ro; }
+        }
       }
 
       /* Drag shield (transparent) — keeps the card draggable. A click (not a drag)
@@ -11753,11 +11769,21 @@
           var d = _elements[id]; if (!d || d.type !== 'embed' || d.userSized) continue;
           var ifr = el.querySelector('.mb-embed-iframe');
           if (!ifr || ifr.contentWindow !== e.source) continue;
-          var newH = Math.round(hgt);
-          if (Math.abs((d.h||0) - newH) < 3) return;
-          d.h = newH; d.aspect = (d.w||1) / newH;
-          el.style.height = newH + 'px';
-          scheduleElUpdate(id, { h:newH, aspect:d.aspect });
+          var ecard = el.querySelector('.mb-embed-card');
+          var W = (ecard && ecard._embedW) || embedBaseSize(d).w;
+          var realH = Math.round(hgt);
+          /* Set the iframe's pixel height to the real embed height so it's fully contained */
+          ifr.style.height = realH + 'px';
+          /* Lock the card to the embed's true ratio and fit its height to the current width */
+          var cw = d.w || W;
+          var newCardH = Math.round(cw * realH / W);
+          if (Math.abs((d.h||0) - newCardH) < 3) return;
+          d.h = newCardH; d.aspect = W / realH;
+          el.style.height = newCardH + 'px';
+          /* Re-apply the uniform scale now that height changed */
+          var scaler = ecard && ecard.querySelector('.mb-embed-scaler');
+          if (scaler) scaler.style.transform = 'scale(' + (cw / W) + ')';
+          scheduleElUpdate(id, { h:newCardH, aspect:d.aspect });
           return;
         }
       });
