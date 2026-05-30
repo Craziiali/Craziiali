@@ -1292,7 +1292,7 @@
           /* Auth resolved as public — land on planner and show the mandatory
              sign-in gate.  showView handles any stale-home collapse via the
              normal view transition.                                           */
-          if (window.showView) window.showView('planner');
+          if (!window._hasExplicitRoute && window.showView) window.showView('planner');
           /* Show mandatory sign-in overlay (only if not already visible — the
              view IIFE may have pre-opened it for fresh visitors)             */
           setTimeout(function(){
@@ -7163,7 +7163,7 @@
        Generalised so adding a view never means touching the transition logic. */
     var OVERLAYS   = { home: viewHome, planner: viewPlanner, notes: viewNotes, moodboards: viewMoodboards, moodboardCanvas: viewMoodboardCanvas };
     var ENTER_CLS  = { home: 'home-entering', planner: 'planner-entering', notes: 'notes-entering', moodboards: 'mb-entering', moodboardCanvas: 'mb-canvas-entering' };
-    var ROUTE_PATHS = { home:'home', planner:'planner', notes:'notes', moodboards:'moodboard', moodboardCanvas:'moodboard' };
+    var ROUTE_PATHS = { invoice:'invoice', home:'home', planner:'planner', notes:'notes', moodboards:'moodboard', moodboardCanvas:'moodboard' };
 
     /* Cancellable transition timer — prevents stale callbacks from
        re-hiding an overlay that a subsequent navigation just revealed */
@@ -7178,6 +7178,7 @@
     function routeViewFromPath(){
       var parts = (window.location.pathname || '').replace(/\/+$/,'').split('/');
       var leaf = (parts.pop() || '').toLowerCase();
+      if (leaf === 'invoice') return 'invoice';
       if (leaf === 'home') return 'home';
       if (leaf === 'planner') return 'planner';
       if (leaf === 'note' || leaf === 'notes') return 'notes';
@@ -7324,13 +7325,22 @@
       var _savedView = null;
       try { _savedView = localStorage.getItem('cz_view'); } catch(e){}
       var _routeView = routeViewFromPath();
-      var _startView = (_routeView && OVERLAYS[_routeView]) ? _routeView : ((_savedView && OVERLAYS[_savedView]) ? _savedView : 'home');
+      var _startView = _routeView || ((_savedView && (OVERLAYS[_savedView] || _savedView === 'invoice')) ? _savedView : 'home');
       var _adminBoardId = (_startView === 'moodboardCanvas') ? routeBoardId() : '';
       if (_adminBoardId) window._pendingStartupBoard = _adminBoardId;
       else if (_startView === 'moodboardCanvas') _startView = 'moodboards';
       document.body.dataset.view = _startView;
       current = _startView;
-      OVERLAYS[_startView].classList.remove('v-hidden', 'v-gone');
+      if (OVERLAYS[_startView]) {
+        OVERLAYS[_startView].classList.remove('v-hidden', 'v-gone');
+      } else if (_startView === 'invoice') {
+        var _startInv = document.querySelector('main.invoice');
+        if (_startInv) {
+          _startInv.classList.remove('invoice-entering');
+          void _startInv.offsetWidth;
+          _startInv.classList.add('invoice-entering');
+        }
+      }
       updateRoute(_startView, true);
     } else if (_optimisticRole === 'viewer') {
       /* Viewer: show planner immediately (no auth overlay needed — firebase
@@ -7343,13 +7353,13 @@
       /* No stored auth → show planner + open the mandatory sign-in overlay
          immediately so there's no delay waiting for firebase to resolve.   */
       var _publicRouteView = routeViewFromPath();
-      var _publicStartView = (_publicRouteView && OVERLAYS[_publicRouteView]) ? _publicRouteView : 'planner';
+      var _publicStartView = (_publicRouteView && (OVERLAYS[_publicRouteView] || _publicRouteView === 'invoice')) ? _publicRouteView : 'planner';
       var _publicBoardId = (_publicStartView === 'moodboardCanvas') ? routeBoardId() : '';
       if (_publicBoardId) window._pendingStartupBoard = _publicBoardId;
       else if (_publicStartView === 'moodboardCanvas') _publicStartView = 'moodboards';
       document.body.dataset.view = _publicStartView;
       current = _publicStartView;
-      OVERLAYS[_publicStartView].classList.remove('v-hidden', 'v-gone');
+      if (OVERLAYS[_publicStartView]) OVERLAYS[_publicStartView].classList.remove('v-hidden', 'v-gone');
       updateRoute(_publicStartView, true);
       /* _showAuthOverlay is defined in the auth IIFE which ran before this */
       if (window._showAuthOverlay) window._showAuthOverlay();
