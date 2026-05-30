@@ -5933,8 +5933,11 @@
      The iframe fills the whole card and shows the provider's real poster/thumbnail
      AND plays inline. A transparent shield keeps the card draggable until the user
      clicks "play"; corner overlays carry the badge + open + play/done controls. */
-  .mb-embed-card { position:absolute; inset:0; border-radius:7px; overflow:hidden; background:#0b0b0f; }
-  .mb-embed-iframe { position:absolute; inset:0; width:100%; height:100%; border:none; display:block; background:#0b0b0f; }
+  .mb-embed-card { position:absolute; inset:0; border-radius:8px; overflow:hidden; background:#0b0b0f; }
+  /* Light embeds (Pinterest/Instagram render on white) get a white base so the corner
+     gap behind their own rounded card blends in — no visible double edge. */
+  .mb-embed-card.mb-embed-light, .mb-embed-card.mb-embed-light .mb-embed-loading { background:#fff; }
+  .mb-embed-iframe { position:absolute; inset:0; width:100%; height:100%; border:none; display:block; background:transparent; }
   /* Scaler for fixed-size embeds (Instagram/TikTok/Pinterest): iframe rendered at natural
      size, transform-scaled to fill the card. transform-origin top-left so it anchors cleanly. */
   .mb-embed-scaler { position:absolute; top:0; left:0; transform-origin:top left; }
@@ -5946,8 +5949,9 @@
   .mb-embed-loading { position:absolute; inset:0; z-index:1; display:flex; align-items:center; justify-content:center; background:linear-gradient(90deg,#0d0d12 25%,#1a1a22 50%,#0d0d12 75%); background-size:400% 100%; animation:mbShimmer 1.9s ease-in-out infinite; }
   .mb-embed-loading-icon { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; opacity:.6; }
   .mb-embed-loading-icon svg { width:24px; height:24px; }
-  /* Center play overlay (poster mode only) */
-  .mb-embed-play { position:absolute; inset:0; z-index:4; display:flex; align-items:center; justify-content:center; pointer-events:none; transition:opacity .2s; }
+  /* Center play overlay (poster mode only) — appears on hover so it doesn't cover the preview */
+  .mb-embed-play { position:absolute; inset:0; z-index:4; display:flex; align-items:center; justify-content:center; pointer-events:none; opacity:0; transition:opacity .2s; }
+  .mb-embed-card:hover .mb-embed-play { opacity:1; }
   .mb-embed-card.mb-embed-live .mb-embed-play { opacity:0; pointer-events:none; }
   .mb-embed-play-btn { width:52px; height:52px; border-radius:50%; background:rgba(0,0,0,.5); border:1.5px solid rgba(255,255,255,.8); display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); transition:transform .18s,background .18s; }
   .mb-embed-shield:hover + .mb-embed-play .mb-embed-play-btn { transform:scale(1.08); background:rgba(0,0,0,.68); }
@@ -5960,7 +5964,9 @@
   .mb-embed-badge-pt  { background:rgba(20,8,10,.7);   color:#e96b6b; }
   .mb-embed-badge-xx  { background:rgba(13,13,17,.7);  color:rgba(243,243,239,.6); }
   .mb-embed-badge svg { width:10px; height:10px; }
-  .mb-embed-corner-btns { position:absolute; top:7px; right:7px; z-index:6; display:flex; gap:5px; }
+  /* Corner buttons appear on hover (and stay in live mode so Done is reachable) */
+  .mb-embed-corner-btns { position:absolute; top:7px; right:7px; z-index:6; display:flex; gap:5px; opacity:0; transition:opacity .2s; }
+  .mb-embed-card:hover .mb-embed-corner-btns, .mb-embed-card.mb-embed-live .mb-embed-corner-btns { opacity:1; }
   .mb-embed-cbtn { width:26px; height:26px; border-radius:50%; background:rgba(0,0,0,.6); border:1px solid rgba(243,243,239,.14); color:rgba(243,243,239,.82); cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); transition:background .15s,color .15s; text-decoration:none; }
   .mb-embed-cbtn:hover { background:rgba(30,30,38,.85); color:#fff; }
   .mb-embed-cbtn svg { width:11px; height:11px; }
@@ -11652,6 +11658,9 @@
       var plat = d.platform || 'web';
       var ecard = document.createElement('div');
       ecard.className = 'mb-embed-card';
+      /* Pinterest & Instagram render on white — give the card a white base so its corners
+         blend with the embed's own rounded white card (avoids the dark double-edge). */
+      if (plat === 'pinterest' || plat === 'instagram') ecard.classList.add('mb-embed-light');
 
       /* Loading shimmer (sits behind the iframe until it paints) */
       var loading = document.createElement('div');
@@ -11721,12 +11730,6 @@
         })(id);
       }
 
-      /* Platform badge (top-left) */
-      var badge = document.createElement('div');
-      badge.className = 'mb-embed-badge ' + embedBadgeClass(plat);
-      badge.innerHTML = embedPlatformSvg(plat) + '<span>' + embedPlatformLabel(plat) + '</span>';
-      ecard.appendChild(badge);
-
       /* Corner buttons (top-right): Open + Done */
       var cbtns = document.createElement('div');
       cbtns.className = 'mb-embed-corner-btns';
@@ -11753,11 +11756,6 @@
 
       el.title = d.title || d.url || '';
       el.appendChild(ecard);
-      if (!el.querySelector('.mb-img-frame')) {
-        var eframe = document.createElement('div');
-        eframe.className = 'mb-img-frame';
-        el.appendChild(eframe);
-      }
     }
 
     /* Enter live/play mode: reload iframe with autoplay, drop the shield */
@@ -11816,8 +11814,8 @@
          vertical for Reels/TikTok). Keep a sensible on-screen footprint (~440px max edge). */
       var ar = embedDefaultAspect(info);   /* width / height */
       var w, h;
-      if (ar >= 1) { w = 420; h = Math.round(w / ar); }
-      else         { h = 440; w = Math.round(h * ar); }
+      if (ar >= 1) { w = 440; h = Math.round(w / ar); }
+      else         { h = 520; w = Math.round(h * ar); }
       var id = genId();
       var d = {
         type:'embed', url:info.url, platform:info.platform,
