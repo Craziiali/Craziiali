@@ -9978,6 +9978,11 @@
 
     /* ── Element rendering ──────────────────────────────── */
     function renderEl(id, d) {
+      /* Recover an orphaned DOM node (in canvas but not in _elDoms) to avoid duplicates. */
+      if (!_elDoms[id] && canvas) {
+        var _orphan = canvas.querySelector('.mb-el[data-id="' + id + '"]');
+        if (_orphan) { _orphan.remove(); }
+      }
       var isNew = !_elDoms[id];
       var el = _elDoms[id] || document.createElement('div');
       /* While this element is actively being dragged or resized, don't let a remote/render pass
@@ -11819,6 +11824,9 @@
     function openBoard(boardId) {
       if (!boardId) { if (window._clearAppLoader) window._clearAppLoader(); return; }
       _boardId = boardId;
+      /* Remove any existing .mb-el nodes from canvas before resetting _elDoms so they
+         don't become orphaned duplicates when the new board's elements are rendered. */
+      if (canvas) { var _oldEls = Array.from(canvas.querySelectorAll('.mb-el')); _oldEls.forEach(function(n){ n.remove(); }); }
       _elements = {}; _elDoms = {}; _selected = []; _undoStack=[]; _redoStack=[];
       _zoom=1; _panX=0; _panY=0;
       try { localStorage.setItem('cz_board', boardId); } catch(e){}
