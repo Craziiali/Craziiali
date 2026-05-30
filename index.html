@@ -11748,43 +11748,68 @@
        so the embed shows exactly as the provider renders it, with nothing clipped and no
        scaling/manipulation. Width is left at the embed's natural width. Stops once the user
        manually resizes the card (d.userSized). */
+    /* Recursively dig a height value out of any postMessage payload, whatever the
+       provider nests it under (details.height, value.height, height, etc.). */
+    function findMsgHeight(o, depth) {
+      if (o == null || depth > 5) return 0;
+      if (typeof o === 'string') {
+        var s = o.trim();
+        if (s.charAt(0) === '{' || s.charAt(0) === '[') { try { return findMsgHeight(JSON.parse(s), depth+1); } catch(_){ return 0; } }
+        return 0;
+      }
+      if (typeof o !== 'object') return 0;
+      for (var k in o) {
+        if (/height/i.test(k)) {
+          var v = parseFloat(o[k]);
+          if (v > 60 && v < 8000) return v;
+        }
+      }
+      for (var k2 in o) {
+        if (o[k2] && typeof o[k2] === 'object') { var r = findMsgHeight(o[k2], depth+1); if (r) return r; }
+      }
+      return 0;
+    }
+
+    /* Apply a measured height to a single embed element. Returns true if applied. */
+    function applyEmbedHeight(id, realH) {
+      var el = _elDoms[id]; if (!el) return false;
+      var d = _elements[id]; if (!d || d.type !== 'embed' || d.userSized) return false;
+      var ifr = el.querySelector('.mb-embed-iframe'); if (!ifr) return false;
+      var ecard = el.querySelector('.mb-embed-card');
+      var W = (ecard && ecard._embedW) || embedBaseSize(d).w;
+      ifr.style.height = realH + 'px';
+      var cw = d.w || W;
+      var newCardH = Math.round(cw * realH / W);
+      if (Math.abs((d.h||0) - newCardH) < 3) return true;
+      d.h = newCardH; d.aspect = W / realH;
+      el.style.height = newCardH + 'px';
+      var scaler = ecard && ecard.querySelector('.mb-embed-scaler');
+      if (scaler) scaler.style.transform = 'scale(' + (cw / W) + ')';
+      scheduleElUpdate(id, { h:newCardH, aspect:d.aspect });
+      return true;
+    }
+
     var _embedAutosizeBound = false;
     function bindEmbedAutosize() {
       if (_embedAutosizeBound) return;
       _embedAutosizeBound = true;
       window.addEventListener('message', function(e){
-        var data = e.data, hgt = null;
-        try {
-          if (typeof data === 'string' && data.indexOf('height') >= 0) {
-            var j = JSON.parse(data);
-            hgt = (j && j.details && j.details.height) || (j && j.height) || null;
-          } else if (data && typeof data === 'object') {
-            hgt = (data.details && data.details.height) || data.height || null;
-          }
-        } catch(_){}
-        hgt = parseFloat(hgt);
-        if (!hgt || hgt < 60) return;
+        var realH = Math.round(findMsgHeight(e.data, 0));
+        if (!realH || realH < 60) return;
+        var srcHost = ''; try { srcHost = e.origin ? new URL(e.origin).host : ''; } catch(_){}
+        /* Pass 1: exact source window match (Instagram, TikTok post from their top frame) */
         for (var id in _elDoms) {
+          var d = _elements[id]; if (!d || d.type !== 'embed') continue;
           var el = _elDoms[id]; if (!el) continue;
-          var d = _elements[id]; if (!d || d.type !== 'embed' || d.userSized) continue;
           var ifr = el.querySelector('.mb-embed-iframe');
-          if (!ifr || ifr.contentWindow !== e.source) continue;
-          var ecard = el.querySelector('.mb-embed-card');
-          var W = (ecard && ecard._embedW) || embedBaseSize(d).w;
-          var realH = Math.round(hgt);
-          /* Set the iframe's pixel height to the real embed height so it's fully contained */
-          ifr.style.height = realH + 'px';
-          /* Lock the card to the embed's true ratio and fit its height to the current width */
-          var cw = d.w || W;
-          var newCardH = Math.round(cw * realH / W);
-          if (Math.abs((d.h||0) - newCardH) < 3) return;
-          d.h = newCardH; d.aspect = W / realH;
-          el.style.height = newCardH + 'px';
-          /* Re-apply the uniform scale now that height changed */
-          var scaler = ecard && ecard.querySelector('.mb-embed-scaler');
-          if (scaler) scaler.style.transform = 'scale(' + (cw / W) + ')';
-          scheduleElUpdate(id, { h:newCardH, aspect:d.aspect });
-          return;
+          if (ifr && ifr.contentWindow === e.source) { applyEmbedHeight(id, realH); return; }
+        }
+        /* Pass 2: origin match (Pinterest posts its resize from a nested grandchild
+           iframe, so e.source never equals our iframe — match by host instead). */
+        if (!srcHost) return;
+        for (var id2 in _elDoms) {
+          var d2 = _elements[id2]; if (!d2 || d2.type !== 'embed' || d2.userSized) continue;
+          if (d2.embedUrl && d2.embedUrl.indexOf(srcHost) >= 0) { if (applyEmbedHeight(id2, realH)) return; }
         }
       });
     }
