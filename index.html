@@ -11686,19 +11686,17 @@
              transform-scale the whole thing to fill the card. The card aspect is locked to
              the embed's true ratio, so resizing scales it cleanly with no gap and no cutoff. */
           var W = embedBaseSize(d).w;
+          var natH = Math.round((d.h && d.w) ? (d.h * W / d.w) : embedBaseSize(d).h);
           iframe.style.width  = W + 'px';
-          iframe.style.height = Math.round((d.h && d.w) ? (d.h * W / d.w) : embedBaseSize(d).h) + 'px';
+          iframe.style.height = natH + 'px';
           var scaler = document.createElement('div');
           scaler.className = 'mb-embed-scaler';
           scaler.appendChild(iframe);
           ecard.appendChild(scaler);
           ecard._embedW = W;
-          var applyScale = function(){
-            var cw = ecard.clientWidth || (d.w || W);
-            scaler.style.transform = 'scale(' + (cw / W) + ')';
-          };
-          applyScale();
-          if (window.ResizeObserver) { var ro = new ResizeObserver(applyScale); ro.observe(ecard); ecard._embedRO = ro; }
+          ecard._embedNatH = natH;
+          fitEmbedCard(el, id);
+          if (window.ResizeObserver) { var ro = new ResizeObserver(function(){ fitEmbedCard(el, id); }); ro.observe(ecard); ecard._embedRO = ro; }
         }
       }
 
@@ -11770,22 +11768,37 @@
       return 0;
     }
 
-    /* Apply a measured height to a single embed element. Returns true if applied. */
+    /* Single source of truth for a scaled embed's geometry: scale the iframe to the card
+       width and set the ELEMENT height to exactly the scaled iframe height. This guarantees
+       the selection box bottom always sits flush with the embed — no dark gap, at any size. */
+    function fitEmbedCard(el, id) {
+      if (!el) return;
+      var ecard = el.querySelector('.mb-embed-card'); if (!ecard) return;
+      var scaler = ecard.querySelector('.mb-embed-scaler'); if (!scaler) return;
+      var W = ecard._embedW, natH = ecard._embedNatH;
+      if (!W || !natH) return;
+      var dd = _elements[id];
+      var cw = ecard.clientWidth || (dd && dd.w) || W;
+      var sc = cw / W;
+      scaler.style.transform = 'scale(' + sc + ')';
+      var fitH = Math.round(natH * sc);
+      if (dd) {
+        dd.aspect = W / natH;
+        if (Math.abs((dd.h||0) - fitH) > 1) { dd.h = fitH; el.style.height = fitH + 'px'; }
+      }
+    }
+
+    /* A measured height arrived from the provider: store it as the natural height and refit. */
     function applyEmbedHeight(id, realH) {
       var el = _elDoms[id]; if (!el) return false;
       var d = _elements[id]; if (!d || d.type !== 'embed' || d.userSized) return false;
-      var ifr = el.querySelector('.mb-embed-iframe'); if (!ifr) return false;
-      var ecard = el.querySelector('.mb-embed-card');
-      var W = (ecard && ecard._embedW) || embedBaseSize(d).w;
+      var ecard = el.querySelector('.mb-embed-card'); if (!ecard) return false;
+      var ifr = ecard.querySelector('.mb-embed-iframe'); if (!ifr) return false;
+      if (Math.abs((ecard._embedNatH||0) - realH) < 2) return true;
       ifr.style.height = realH + 'px';
-      var cw = d.w || W;
-      var newCardH = Math.round(cw * realH / W);
-      if (Math.abs((d.h||0) - newCardH) < 3) return true;
-      d.h = newCardH; d.aspect = W / realH;
-      el.style.height = newCardH + 'px';
-      var scaler = ecard && ecard.querySelector('.mb-embed-scaler');
-      if (scaler) scaler.style.transform = 'scale(' + (cw / W) + ')';
-      scheduleElUpdate(id, { h:newCardH, aspect:d.aspect });
+      ecard._embedNatH = realH;
+      fitEmbedCard(el, id);
+      scheduleElUpdate(id, { h:d.h, aspect:d.aspect });
       return true;
     }
 
