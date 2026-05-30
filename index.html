@@ -5917,7 +5917,7 @@
   .mb-canvas-entering .mb-topbar { animation:focusIn .45s cubic-bezier(.16,1,.3,1) both; animation-delay:40ms; }
   .mb-canvas-entering .mb-toolbar { animation:mbToolbarFocusIn .45s cubic-bezier(.16,1,.3,1) both; animation-delay:100ms; }
   /* ── Floating video controls bar ───────────────────────────── */
-  #mbVideoBar { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(64px); display:flex; align-items:center; gap:0; padding:0 6px; height:44px; background:rgba(13,13,17,.94); border:1px solid rgba(243,243,239,.11); border-radius:22px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); box-shadow:0 8px 32px rgba(0,0,0,.65),0 2px 8px rgba(0,0,0,.4); z-index:4000; opacity:0; pointer-events:none; transition:opacity .28s cubic-bezier(.16,1,.3,1),transform .28s cubic-bezier(.16,1,.3,1); user-select:none; }
+  #mbVideoBar { position:fixed; top:0; left:0; transform:translateX(-50%) translateY(-8px); display:flex; align-items:center; gap:0; padding:0 6px; height:44px; background:rgba(13,13,17,.94); border:1px solid rgba(243,243,239,.11); border-radius:22px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); box-shadow:0 8px 32px rgba(0,0,0,.65),0 2px 8px rgba(0,0,0,.4); z-index:4000; opacity:0; pointer-events:none; transition:opacity .22s cubic-bezier(.16,1,.3,1),transform .22s cubic-bezier(.16,1,.3,1); user-select:none; }
   #mbVideoBar.show { opacity:1; pointer-events:all; transform:translateX(-50%) translateY(0); }
   .mb-vbar-btn { width:34px; height:34px; border:none; background:none; cursor:pointer; color:rgba(243,243,239,.65); border-radius:50%; display:flex; align-items:center; justify-content:center; transition:color .15s,background .15s; flex-shrink:0; }
   .mb-vbar-btn:hover { color:#f3f3ef; background:rgba(243,243,239,.08); }
@@ -10019,8 +10019,6 @@
         renderAll(); updatePropbar();
       });
 
-      /* Wire up floating video bar for video elements */
-      if (window._mbVBarAttach) window._mbVBarAttach(el);
     }
 
     /* ── Drag handler ───────────────────────────────────── */
@@ -10535,7 +10533,7 @@
     /* ── Properties bar ─────────────────────────────────── */
     function updatePropbar() {
       if (!propbar) return;
-      if (!_selected.length || !canEdit()) { propbar.classList.remove('show'); propbar.innerHTML=''; return; }
+      if (!_selected.length || !canEdit()) { propbar.classList.remove('show'); propbar.innerHTML=''; positionVideoBar(); return; }
       var types = _selected.map(function(id){ return (_elements[id]||{}).type; });
       var html = '';
       /* Stroke color picker */
@@ -10632,6 +10630,7 @@
       if (dupBtn) dupBtn.addEventListener('click', duplicateSelected);
 
       positionPropbar();
+      positionVideoBar();
     }
 
     /* Union of the selected elements' on-screen rects (viewport coords). */
@@ -10669,6 +10668,29 @@
       propbar.classList.toggle('below', below);
       propbar.style.left = Math.round(cx) + 'px';
       propbar.style.top  = Math.round(below ? (box.bottom - opr.top + gap) : aboveTop) + 'px';
+      positionVideoBar();
+    }
+
+    /* Position the floating video controls bar below the selected video element. */
+    function positionVideoBar() {
+      var bar = document.getElementById('mbVideoBar');
+      if (!bar) return;
+      /* Only show when a single video element is selected */
+      if (_selected.length !== 1) { bar.classList.remove('show'); if (window._mbVBarDetach) window._mbVBarDetach(); return; }
+      var selId = _selected[0];
+      var d = _elements[selId];
+      if (!d || d.type !== 'video') { bar.classList.remove('show'); if (window._mbVBarDetach) window._mbVBarDetach(); return; }
+      var dom = _elDoms[selId];
+      if (!dom) return;
+      var vid = dom.querySelector('video');
+      if (!vid) return;
+      var r   = dom.getBoundingClientRect();
+      var cx  = Math.round((r.left + r.right) / 2);
+      var top = Math.round(r.bottom + 10);
+      bar.style.left = cx + 'px';
+      bar.style.top  = top + 'px';
+      bar.classList.add('show');
+      if (window._mbVBarConnect) window._mbVBarConnect(vid);
     }
 
     /* ── Duplicate ──────────────────────────────────────── */
@@ -11854,22 +11876,10 @@
         document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
       });
 
-      /* Keep bar alive while hovering the bar itself */
-      bar.addEventListener('mouseenter', function(){ clearTimeout(_hideTimer); _hideTimer=null; });
-      bar.addEventListener('mouseleave', function(){ _hideTimer=setTimeout(detach, 700); });
-
-      /* Expose so renderEl can wire up video elements */
-      window._mbVBarAttach = function(el){
-        var vid = el.querySelector('video');
-        if (!vid) return;
-        el.addEventListener('mouseenter', function(){
-          clearTimeout(_hideTimer); _hideTimer=null;
-          attach(vid);
-        });
-        el.addEventListener('mouseleave', function(){
-          _hideTimer = setTimeout(detach, 700);
-        });
-      };
+      /* Called by positionVideoBar() when a video element is selected */
+      window._mbVBarConnect = function(vid){ attach(vid); };
+      /* Called when selection clears or changes to non-video */
+      window._mbVBarDetach  = function(){ detach(); };
     })();
 
   })(); /* end Mood Board IIFE */
