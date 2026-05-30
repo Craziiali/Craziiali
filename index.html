@@ -7178,7 +7178,12 @@
       if (leaf === 'home') return 'home';
       if (leaf === 'planner') return 'planner';
       if (leaf === 'note' || leaf === 'notes') return 'notes';
-      if (leaf === 'moodboard' || leaf === 'moodboards') return 'moodboards';
+      if (leaf === 'moodboard' || leaf === 'moodboards') {
+        var params = new URLSearchParams(window.location.search || '');
+        var storedBoard = null;
+        try { storedBoard = localStorage.getItem('cz_board'); } catch(e) {}
+        return (params.get('board') || storedBoard) ? 'moodboardCanvas' : 'moodboards';
+      }
       return null;
     }
     function routeUrlFor(name){
@@ -7306,8 +7311,6 @@
       try { _savedView = localStorage.getItem('cz_view'); } catch(e){}
       var _routeView = routeViewFromPath();
       var _startView = (_routeView && OVERLAYS[_routeView]) ? _routeView : ((_savedView && OVERLAYS[_savedView]) ? _savedView : 'home');
-      /* moodboardCanvas needs Firebase — land on gallery, we'll reopen the board below */
-      if (_startView === 'moodboardCanvas') _startView = 'moodboards';
       document.body.dataset.view = _startView;
       current = _startView;
       OVERLAYS[_startView].classList.remove('v-hidden', 'v-gone');
@@ -7322,9 +7325,12 @@
     } else {
       /* No stored auth → show planner + open the mandatory sign-in overlay
          immediately so there's no delay waiting for firebase to resolve.   */
-      document.body.dataset.view = 'planner';
-      current = 'planner';
-      updateRoute('planner', true);
+      var _publicRouteView = routeViewFromPath();
+      var _publicStartView = (_publicRouteView && OVERLAYS[_publicRouteView]) ? _publicRouteView : 'planner';
+      document.body.dataset.view = _publicStartView;
+      current = _publicStartView;
+      OVERLAYS[_publicStartView].classList.remove('v-hidden', 'v-gone');
+      updateRoute(_publicStartView, true);
       /* _showAuthOverlay is defined in the auth IIFE which ran before this */
       if (window._showAuthOverlay) window._showAuthOverlay();
     }
