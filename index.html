@@ -5781,7 +5781,7 @@
   .mb-bg-dots { background-image:radial-gradient(circle,rgba(243,243,239,.16) 1px,transparent 1px); background-size:24px 24px; }
   .mb-el { position:absolute; box-sizing:border-box; user-select:none; -webkit-user-select:none; cursor:move; transform-origin:0 0; }
   .mb-soft-enter { opacity:0 !important; }
-  .mb-soft-enter.mb-soft-enter-on { opacity:var(--mb-enter-opacity,1) !important; transition:opacity 1.8s cubic-bezier(.16,1,.3,1); }
+  .mb-soft-enter.mb-soft-enter-on { opacity:var(--mb-enter-opacity,1) !important; transition:opacity 2.4s cubic-bezier(.16,1,.3,1); }
   .mb-el.locked { cursor:not-allowed; }
   .mb-sticky { border-radius:14px; padding:14px 14px 30px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,.4),0 2px 8px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.18),0 0 0 1px rgba(0,0,0,.08); min-width:140px; min-height:100px; transition:box-shadow .2s,transform .15s; }
   .mb-el:hover .mb-sticky { box-shadow:0 16px 48px rgba(0,0,0,.5),0 4px 14px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2),0 0 0 1px rgba(0,0,0,.1); transform:translateY(-1px); }
@@ -5944,16 +5944,20 @@
      AND plays inline. A transparent shield keeps the card draggable until the user
      clicks "play"; corner overlays carry the badge + open + play/done controls. */
   .mb-embed-card { position:absolute; inset:0; border-radius:14px; overflow:hidden; background:transparent; }
-  .mb-embed-iframe { position:absolute; inset:0; width:100%; height:100%; border:none; display:block; background:transparent; }
+  .mb-embed-iframe { position:absolute; inset:0; width:100%; height:100%; border:none; display:block; background:transparent; opacity:0; transition:opacity 2.4s cubic-bezier(.16,1,.3,1); will-change:opacity; }
   /* Scaler for fixed-size embeds (Instagram/TikTok/Pinterest): iframe rendered at natural
      size, transform-scaled to fill the card. transform-origin top-left so it anchors cleanly. */
-  .mb-embed-scaler { position:absolute; top:0; left:0; transform-origin:top left; }
+  .mb-embed-scaler { position:absolute; top:0; left:0; transform-origin:top left; opacity:0; transition:opacity 2.4s cubic-bezier(.16,1,.3,1); will-change:opacity; }
   .mb-embed-scaler .mb-embed-iframe { position:static; inset:auto; }
+  .mb-embed-card.mb-embed-loaded > .mb-embed-iframe,
+  .mb-embed-card.mb-embed-loaded > .mb-embed-scaler { opacity:1; }
+  .mb-embed-card.mb-embed-loaded .mb-embed-scaler .mb-embed-iframe { opacity:1; }
   /* Drag shield: catches pointer events so the card can be dragged. Removed in live mode. */
   .mb-embed-shield { position:absolute; inset:0; z-index:3; cursor:move; background:transparent; }
   .mb-embed-card.mb-embed-live .mb-embed-shield { display:none; }
   /* Loading shimmer behind the iframe until it paints */
-  .mb-embed-loading { position:absolute; inset:0; z-index:1; display:flex; align-items:center; justify-content:center; background:linear-gradient(90deg,#0d0d12 25%,#1a1a22 50%,#0d0d12 75%); background-size:400% 100%; animation:mbShimmer 1.9s ease-in-out infinite; }
+  .mb-embed-loading { position:absolute; inset:0; z-index:1; display:flex; align-items:center; justify-content:center; background:linear-gradient(90deg,#0d0d12 25%,#1a1a22 50%,#0d0d12 75%); background-size:400% 100%; animation:mbShimmer 1.9s ease-in-out infinite; opacity:1; transition:opacity 1.8s cubic-bezier(.16,1,.3,1); will-change:opacity; }
+  .mb-embed-loading.mb-embed-loading-out { opacity:0; }
   .mb-embed-loading-icon { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; opacity:.6; }
   .mb-embed-loading-icon svg { width:24px; height:24px; }
   /* Center play overlay (poster mode only) — appears on hover so it doesn't cover the preview */
@@ -7320,7 +7324,12 @@
       if (!_startupRevealAnimated) {
         _startupRevealAnimated = true;
         requestAnimationFrame(function(){
-          requestAnimationFrame(function(){ triggerEntrance(current); });
+          requestAnimationFrame(function(){
+            triggerEntrance(current);
+            if (current === 'moodboardCanvas') {
+              if (window._revealMoodboardReloadElements) window._revealMoodboardReloadElements();
+            }
+          });
         });
       }
     };
@@ -9642,6 +9651,7 @@
     var _elements = {};   /* { elementId: data } live from RTDB */
     var _elDoms   = {};   /* { elementId: domElement } */
     var _selected = [];   /* array of selected elementIds */
+    var _revealOnNextRender = false;
     var _tool     = 'select';
     var _zoom     = 1;
     var _panX     = 0, _panY = 0;
@@ -9881,18 +9891,35 @@
       void media.offsetHeight;
     }
 
-    function softRevealElement(el, targetOpacity) {
-      if (!el || el.dataset.softRevealed === '1') return;
+    function softRevealElement(el, targetOpacity, force) {
+      if (!el || (!force && el.dataset.softRevealed === '1')) return;
       el.dataset.softRevealed = '1';
+      if (el._softRevealTimer) clearTimeout(el._softRevealTimer);
+      el.classList.remove('mb-soft-enter-on');
       el.style.setProperty('--mb-enter-opacity', targetOpacity != null ? targetOpacity : 1);
       el.classList.add('mb-soft-enter');
       requestAnimationFrame(function(){
         requestAnimationFrame(function(){
           el.classList.add('mb-soft-enter-on');
-          setTimeout(function(){
+          el._softRevealTimer = setTimeout(function(){
+            el._softRevealTimer = null;
             el.classList.remove('mb-soft-enter', 'mb-soft-enter-on');
             el.style.removeProperty('--mb-enter-opacity');
-          }, 1900);
+          }, 2500);
+        });
+      });
+    }
+
+    function revealEmbedCard(ecard, loading) {
+      if (!ecard || ecard.dataset.embedRevealed === '1') return;
+      ecard.dataset.embedRevealed = '1';
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){
+          ecard.classList.add('mb-embed-loaded');
+          if (loading) {
+            loading.classList.add('mb-embed-loading-out');
+            setTimeout(function(){ if (loading.parentNode) loading.parentNode.removeChild(loading); }, 1900);
+          }
         });
       });
     }
@@ -10275,7 +10302,31 @@
         if (d.type === 'path' || d.type === 'arrow') renderSvgEl(id, d);
         else renderEl(id, d);
       });
+      if (_revealOnNextRender) setTimeout(revealRenderedMoodboardElements, 80);
     }
+
+    function revealRenderedMoodboardElements() {
+      var ids = Object.keys(_elements);
+      if (!ids.length) { _revealOnNextRender = true; return; }
+      _revealOnNextRender = false;
+      ids.forEach(function(id){
+        var d = _elements[id];
+        var el = _elDoms[id];
+        if (el) softRevealElement(el, d && d.opacity != null ? d.opacity : 1, true);
+      });
+      if (svgLayer) {
+        svgLayer.querySelectorAll('.mb-path-el').forEach(function(el){
+          softRevealElement(el, 1, true);
+        });
+      }
+    }
+
+    window._revealMoodboardReloadElements = function(){
+      _revealOnNextRender = true;
+      revealRenderedMoodboardElements();
+      setTimeout(revealRenderedMoodboardElements, 80);
+      setTimeout(revealRenderedMoodboardElements, 420);
+    };
 
     /* ── Element listeners (drag, select) ───────────────── */
     function attachElListeners(el, id) {
@@ -11895,12 +11946,12 @@
       if (d.embedUrl) {
         var iframe = document.createElement('iframe');
         iframe.className = 'mb-embed-iframe';
-        iframe.src = d.embedUrl;
         iframe.loading = 'lazy';
         iframe.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write';
         iframe.allowFullscreen = true;
         iframe.setAttribute('scrolling','no');
-        iframe.addEventListener('load', function(){ if(loading.parentNode) loading.parentNode.removeChild(loading); });
+        iframe.addEventListener('load', function(){ revealEmbedCard(ecard, loading); });
+        iframe.src = d.embedUrl;
 
         if (embedFills(plat)) {
           /* YouTube/Vimeo are responsive — fill the card directly. */
