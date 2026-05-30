@@ -5935,6 +5935,10 @@
      clicks "play"; corner overlays carry the badge + open + play/done controls. */
   .mb-embed-card { position:absolute; inset:0; border-radius:7px; overflow:hidden; background:#0b0b0f; }
   .mb-embed-iframe { position:absolute; inset:0; width:100%; height:100%; border:none; display:block; background:#0b0b0f; }
+  /* Scaler for fixed-size embeds (Instagram/TikTok/Pinterest): iframe rendered at natural
+     size, transform-scaled to fill the card. transform-origin top-left so it anchors cleanly. */
+  .mb-embed-scaler { position:absolute; top:0; left:0; transform-origin:top left; }
+  .mb-embed-scaler .mb-embed-iframe { position:static; inset:auto; }
   /* Drag shield: catches pointer events so the card can be dragged. Removed in live mode. */
   .mb-embed-shield { position:absolute; inset:0; z-index:3; cursor:move; background:transparent; }
   .mb-embed-card.mb-embed-live .mb-embed-shield { display:none; }
@@ -10483,6 +10487,9 @@
           /* Stop any <video> and release its blob so it doesn't keep decoding/playing after delete. */
           var v = dom.querySelector('video');
           if (v) { try { v.pause(); v.removeAttribute('src'); v.load(); } catch(_){} }
+          /* Disconnect embed ResizeObserver + stop iframe playback */
+          var ec = dom.querySelector('.mb-embed-card');
+          if (ec) { if (ec._embedRO) { try { ec._embedRO.disconnect(); } catch(_){} } var ifr=ec.querySelector('iframe'); if(ifr){ try{ ifr.src='about:blank'; }catch(_){} } }
           dom.remove();
           delete _elDoms[id];
         }
@@ -11639,8 +11646,9 @@
        the card stays draggable. Clicking play removes the shield and reloads the
        iframe with autoplay so it plays inline on the board. */
     function buildEmbedCard(el, id, d) {
-      /* Clear any prior card */
-      var old = el.querySelector('.mb-embed-card'); if (old) old.remove();
+      /* Clear any prior card (and its ResizeObserver) */
+      var old = el.querySelector('.mb-embed-card');
+      if (old) { if (old._embedRO) { try { old._embedRO.disconnect(); } catch(_){} } old.remove(); }
       var plat = d.platform || 'web';
       var ecard = document.createElement('div');
       ecard.className = 'mb-embed-card';
@@ -11661,7 +11669,32 @@
         iframe.allowFullscreen = true;
         iframe.setAttribute('scrolling','no');
         iframe.addEventListener('load', function(){ if(loading.parentNode) loading.parentNode.removeChild(loading); });
-        ecard.appendChild(iframe);
+
+        if (embedFills(plat)) {
+          /* Responsive embed: fills the card directly */
+          ecard.appendChild(iframe);
+        } else {
+          /* Fixed-size embed: render at its natural size and CSS-scale to fill the card.
+             A ResizeObserver keeps the scale synced as the card is resized/zoomed. */
+          var base = embedBaseSize(d);
+          iframe.style.width  = base.w + 'px';
+          iframe.style.height = base.h + 'px';
+          var scaler = document.createElement('div');
+          scaler.className = 'mb-embed-scaler';
+          scaler.appendChild(iframe);
+          ecard.appendChild(scaler);
+          var applyScale = function(){
+            var cw = ecard.clientWidth || (d.w || base.w);
+            var s = cw / base.w;
+            scaler.style.transform = 'scale(' + s + ')';
+          };
+          applyScale();
+          if (window.ResizeObserver) {
+            var ro = new ResizeObserver(applyScale);
+            ro.observe(ecard);
+            ecard._embedRO = ro;
+          }
+        }
       }
 
       /* Drag shield (transparent) — keeps the card draggable in poster mode.
@@ -11750,14 +11783,27 @@
       ecard.classList.remove('mb-embed-live');
     }
 
+    /* YouTube/Vimeo embeds are responsive (fill the iframe). Instagram/TikTok/Pinterest
+       render at a FIXED internal size and ignore the iframe dimensions, so they must be
+       CSS-transform-scaled to fill the card. */
+    function embedFills(plat) { return plat === 'youtube' || plat === 'vimeo'; }
+
+    /* Natural render size (px) of a fixed-layout embed. The card aspect is locked to this
+       ratio and the iframe is scaled by (cardWidth / baseWidth) so it always fills exactly. */
+    function embedBaseSize(info) {
+      var p = info.platform;
+      if (p === 'tiktok')    return { w:325, h:730 };
+      if (p === 'pinterest') return { w:345, h:620 };
+      if (p === 'instagram') return info.igType === 'reel' ? { w:340, h:600 } : { w:360, h:470 };
+      return { w:340, h:560 };
+    }
+
     /* Default aspect ratio (w/h) for a freshly pasted embed, by platform/type */
     function embedDefaultAspect(info) {
       if (info.platform === 'youtube') return /\/shorts\//.test(info.url||'') ? 9/16 : 16/9;
       if (info.platform === 'vimeo')   return 16/9;
-      if (info.platform === 'tiktok')  return 0.52;       /* tall, includes chrome */
-      if (info.platform === 'instagram') return info.igType === 'reel' ? 0.62 : 0.85;
-      if (info.platform === 'pinterest') return 0.66;     /* ~2:3 portrait */
-      return 16/9;
+      var b = embedBaseSize(info);
+      return b.w / b.h;
     }
 
     /* ── Create embed element from pasted URL ────────────── */
