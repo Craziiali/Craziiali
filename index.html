@@ -5772,8 +5772,6 @@
      re-rasterizes crisply at the current scale. */
   .mb-canvas { position:absolute; top:0; left:0; width:0; height:0; transform-origin:0 0; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
   .mb-bg-dots { background-image:radial-gradient(circle,rgba(243,243,239,.16) 1px,transparent 1px); background-size:24px 24px; }
-  .mb-bg-grid { background-image:linear-gradient(rgba(243,243,239,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(243,243,239,.06) 1px,transparent 1px); background-size:40px 40px; }
-  .mb-bg-lines { background-image:linear-gradient(rgba(243,243,239,.06) 1px,transparent 1px); background-size:40px 40px; }
   .mb-el { position:absolute; box-sizing:border-box; user-select:none; -webkit-user-select:none; cursor:move; transform-origin:0 0; }
   .mb-el.locked { cursor:not-allowed; }
   .mb-sticky { border-radius:14px; padding:14px 14px 30px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,.4),0 2px 8px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.18),0 0 0 1px rgba(0,0,0,.08); min-width:140px; min-height:100px; transition:box-shadow .2s,transform .15s; }
@@ -5817,7 +5815,7 @@
   .mb-tool-ghost-img { width:84px; height:62px; border:2px dashed rgba(126,140,247,.65); background:rgba(126,140,247,.1); display:flex; align-items:center; justify-content:center; color:#a0aaff; box-shadow:0 12px 30px rgba(0,0,0,.4); }
   .mb-tool-ghost-img svg { width:24px; height:24px; }
   body.mb-tool-dragging, body.mb-tool-dragging * { cursor:grabbing !important; }
-  .mb-svg-layer { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+  .mb-svg-layer { position:absolute; top:0; left:0; pointer-events:none; overflow:visible; }
   .mb-path-el { pointer-events:stroke; cursor:pointer; }
   .mb-path-el.selected-path { filter:drop-shadow(0 0 4px rgba(126,140,247,.8)); }
   /* ── Remote cursor: glass circle (matches planner style) ── */
@@ -6140,7 +6138,7 @@
       <!-- Infinite canvas world -->
       <div class="mb-canvas" id="mbCanvas">
         <!-- SVG layer for paths and arrows -->
-        <svg class="mb-svg-layer" id="mbSvgLayer" xmlns="http://www.w3.org/2000/svg"></svg>
+        <svg class="mb-svg-layer" id="mbSvgLayer" xmlns="http://www.w3.org/2000/svg" width="20000" height="20000"></svg>
         <!-- DOM elements (stickies, text, images, shapes) injected by JS -->
       </div>
       <!-- Rubber-band selection box -->
@@ -10709,7 +10707,8 @@
     /* ── Tool selection ──────────────────────────────────── */
     function setTool(t) {
       _tool = t;
-      if (stage) stage.className = 'mb-stage mb-bg-' + ((_boardMeta&&_boardMeta.bg)||'dots') + ' tool-' + t;
+      var _bg = ((_boardMeta&&_boardMeta.bg)||'dots'); if (_bg !== 'dots' && _bg !== 'grid') _bg = 'dots';
+      if (stage) stage.className = 'mb-stage mb-bg-' + _bg + ' tool-' + t;
       if (toolbar) toolbar.querySelectorAll('.mb-tool-btn').forEach(function(btn){
         btn.classList.toggle('active', btn.dataset.tool === t);
       });
@@ -11409,7 +11408,8 @@
       var meta = (_boards[boardId]&&_boards[boardId].meta)||{};
       _boardMeta = meta;
       if (boardNameInput) { boardNameInput.value = meta.name||'Untitled'; boardNameInput.readOnly = !isAdmin(); autosizeBoardName(); }
-      if (stage) stage.className = 'mb-stage mb-bg-' + (meta.bg||'dots') + ' tool-select';
+      var _mbg = (meta.bg||'dots'); if (_mbg !== 'dots' && _mbg !== 'grid') _mbg = 'dots';
+      if (stage) stage.className = 'mb-stage mb-bg-' + _mbg + ' tool-select';
       if (propbar) { propbar.innerHTML=''; propbar.classList.remove('show'); }
       /* Live-subscribe to meta (needed when opening via share link — _boards cache is empty) */
       if (_unsubMeta) { _unsubMeta(); _unsubMeta=null; }
@@ -11417,7 +11417,8 @@
         if (!m) return;
         _boardMeta = m;
         if (boardNameInput && document.activeElement !== boardNameInput) { boardNameInput.value = m.name||'Untitled'; autosizeBoardName(); }
-        if (stage) stage.className = 'mb-stage mb-bg-' + (m.bg||'dots') + ' tool-select';
+        var _lbg = (m.bg||'dots'); if (_lbg !== 'dots' && _lbg !== 'grid') _lbg = 'dots';
+        if (stage) stage.className = 'mb-stage mb-bg-' + _lbg + ' tool-select';
       });
       applyTransform();
       /* Check if current user is editor */
@@ -11464,7 +11465,7 @@
       Object.keys(_cursorEls).forEach(function(uid){ _cursorEls[uid].remove(); });
       _cursorEls = {}; _allCursorData = {};
       _boardId=null; _elements={}; _elDoms={}; _selected=[];
-      if (canvas) canvas.innerHTML='<svg class="mb-svg-layer" id="mbSvgLayer" xmlns="http://www.w3.org/2000/svg"></svg>';
+      if (canvas) canvas.innerHTML='<svg class="mb-svg-layer" id="mbSvgLayer" xmlns="http://www.w3.org/2000/svg" width="20000" height="20000"></svg>';
       svgLayer = document.getElementById('mbSvgLayer');
       if (propbar) { propbar.innerHTML=''; propbar.classList.remove('show'); }
       window.showView('moodboards');
@@ -11546,7 +11547,7 @@
           if (e.key==='p'||e.key==='P') { if(canEdit())setTool('pen'); return; }
           if (e.key==='i'||e.key==='I') { if(canEdit())setTool('image'); return; }
           if (e.key==='Delete'||e.key==='Backspace') { deleteSelected(); return; }
-          if (e.key===' ') { _spaceDown=true; if(stage)stage.style.cursor='grab'; e.preventDefault(); return; }
+          if (e.key===' ') { _spaceDown=true; if(stage)stage.style.cursor='grab'; if(toolbar)toolbar.querySelectorAll('.mb-tool-btn').forEach(function(b){b.classList.toggle('active',b.dataset.tool==='hand');}); e.preventDefault(); return; }
           if (e.key==='Escape') { _selected=[]; renderAll(); updatePropbar(); setTool('select'); return; }
           if (e.key==='a' && (e.ctrlKey||e.metaKey)) { e.preventDefault(); _selected=Object.keys(_elements); renderAll(); updatePropbar(); return; }
         }
@@ -11560,7 +11561,7 @@
         if ((e.ctrlKey||e.metaKey) && e.key==='1') { e.preventDefault(); if(stage){ var r=stage.getBoundingClientRect(); _zoom=1; _panX=r.width/2; _panY=r.height/2; applyTransform(); } return; }
       });
       document.addEventListener('keyup', function(e){
-        if (e.key===' ') { _spaceDown=false; if(stage)stage.style.cursor=''; }
+        if (e.key===' ') { _spaceDown=false; if(stage)stage.style.cursor=''; if(toolbar)toolbar.querySelectorAll('.mb-tool-btn').forEach(function(b){b.classList.toggle('active',b.dataset.tool===_tool);}); }
       });
     }
 
