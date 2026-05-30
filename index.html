@@ -10554,8 +10554,9 @@
       if (!_resize) return;
       var d = _elements[_resize.id];
       if (d) {
-        pushUndo({ type:'resize', id:_resize.id, before:_resize.origEl, after:{x:d.x,y:d.y,w:d.w,h:d.h} });
-        commitElUpdate(_resize.id, { x:d.x, y:d.y, w:d.w, h:d.h });
+        /* Once the user manually resizes an embed, stop auto-fitting it to provider height */
+        if (d.type === 'embed') { d.userSized = true; pushUndo({ type:'resize', id:_resize.id, before:_resize.origEl, after:{x:d.x,y:d.y,w:d.w,h:d.h} }); commitElUpdate(_resize.id, { x:d.x, y:d.y, w:d.w, h:d.h, userSized:true }); }
+        else { pushUndo({ type:'resize', id:_resize.id, before:_resize.origEl, after:{x:d.x,y:d.y,w:d.w,h:d.h} }); commitElUpdate(_resize.id, { x:d.x, y:d.y, w:d.w, h:d.h }); }
       }
       _resize = null;
     }
@@ -11670,7 +11671,9 @@
       loading.innerHTML = '<div class="mb-embed-loading-icon ' + embedBadgeClass(plat) + '">' + embedPlatformSvg(plat) + '</div>';
       ecard.appendChild(loading);
 
-      /* The poster iframe (no autoplay) — shows the real thumbnail and is click-to-play */
+      /* The native embed iframe — rendered exactly as the provider serves it, filling
+         the card. No scaling. The card auto-fits to the height the embed reports via
+         postMessage (see the message listener in initCanvas), so nothing is clipped. */
       if (d.embedUrl) {
         var iframe = document.createElement('iframe');
         iframe.className = 'mb-embed-iframe';
@@ -11680,32 +11683,7 @@
         iframe.allowFullscreen = true;
         iframe.setAttribute('scrolling','no');
         iframe.addEventListener('load', function(){ if(loading.parentNode) loading.parentNode.removeChild(loading); });
-
-        if (embedFills(plat)) {
-          /* Responsive embed: fills the card directly */
-          ecard.appendChild(iframe);
-        } else {
-          /* Fixed-size embed: render at its natural size and CSS-scale to fill the card.
-             A ResizeObserver keeps the scale synced as the card is resized/zoomed. */
-          var base = embedBaseSize(d);
-          iframe.style.width  = base.w + 'px';
-          iframe.style.height = base.h + 'px';
-          var scaler = document.createElement('div');
-          scaler.className = 'mb-embed-scaler';
-          scaler.appendChild(iframe);
-          ecard.appendChild(scaler);
-          var applyScale = function(){
-            var cw = ecard.clientWidth || (d.w || base.w);
-            var s = cw / base.w;
-            scaler.style.transform = 'scale(' + s + ')';
-          };
-          applyScale();
-          if (window.ResizeObserver) {
-            var ro = new ResizeObserver(applyScale);
-            ro.observe(ecard);
-            ecard._embedRO = ro;
-          }
-        }
+        ecard.appendChild(iframe);
       }
 
       /* Drag shield (transparent) — keeps the card draggable. A click (not a drag)
@@ -11749,6 +11727,42 @@
       ecard.classList.remove('mb-embed-live');
     }
 
+    /* Native auto-height: Instagram, Pinterest, and TikTok embeds postMessage their real
+       rendered height to the parent. We listen for it and set the card height to match —
+       so the embed shows exactly as the provider renders it, with nothing clipped and no
+       scaling/manipulation. Width is left at the embed's natural width. Stops once the user
+       manually resizes the card (d.userSized). */
+    var _embedAutosizeBound = false;
+    function bindEmbedAutosize() {
+      if (_embedAutosizeBound) return;
+      _embedAutosizeBound = true;
+      window.addEventListener('message', function(e){
+        var data = e.data, hgt = null;
+        try {
+          if (typeof data === 'string' && data.indexOf('height') >= 0) {
+            var j = JSON.parse(data);
+            hgt = (j && j.details && j.details.height) || (j && j.height) || null;
+          } else if (data && typeof data === 'object') {
+            hgt = (data.details && data.details.height) || data.height || null;
+          }
+        } catch(_){}
+        hgt = parseFloat(hgt);
+        if (!hgt || hgt < 60) return;
+        for (var id in _elDoms) {
+          var el = _elDoms[id]; if (!el) continue;
+          var d = _elements[id]; if (!d || d.type !== 'embed' || d.userSized) continue;
+          var ifr = el.querySelector('.mb-embed-iframe');
+          if (!ifr || ifr.contentWindow !== e.source) continue;
+          var newH = Math.round(hgt);
+          if (Math.abs((d.h||0) - newH) < 3) return;
+          d.h = newH; d.aspect = (d.w||1) / newH;
+          el.style.height = newH + 'px';
+          scheduleElUpdate(id, { h:newH, aspect:d.aspect });
+          return;
+        }
+      });
+    }
+
     /* YouTube/Vimeo embeds are responsive (fill the iframe). Instagram/TikTok/Pinterest
        render at a FIXED internal size and ignore the iframe dimensions, so they must be
        CSS-transform-scaled to fill the card. */
@@ -11780,18 +11794,22 @@
       var r = stage.getBoundingClientRect();
       var cx = (r.width/2 - _panX) / _zoom;
       var cy = (r.height/2 - _panY) / _zoom;
-      /* Size the card to the true video aspect ratio (horizontal for YouTube,
-         vertical for Reels/TikTok). Keep a sensible on-screen footprint (~440px max edge). */
-      var ar = embedDefaultAspect(info);   /* width / height */
+      /* Initial size. YouTube/Vimeo are responsive 16:9. Fixed embeds start at the
+         provider's natural width; their real height auto-fits via postMessage. */
       var w, h;
-      if (ar >= 1) { w = 440; h = Math.round(w / ar); }
-      else         { h = 520; w = Math.round(h * ar); }
+      if (embedFills(info.platform)) {
+        var ar = embedDefaultAspect(info);
+        w = 440; h = Math.round(w / ar);
+      } else {
+        var base = embedBaseSize(info);
+        w = base.w; h = base.h;
+      }
       var id = genId();
       var d = {
         type:'embed', url:info.url, platform:info.platform,
         embedId:info.id||'', embedUrl:embedIframeUrl(info)||'',
         igType:info.igType||'', title:'', author:'',
-        x:Math.round(cx-w/2), y:Math.round(cy-h/2), w:w, h:h, aspect:ar,
+        x:Math.round(cx-w/2), y:Math.round(cy-h/2), w:w, h:h, aspect:w/h,
         z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now()
       };
       _elements[id] = d;
@@ -11970,6 +11988,7 @@
       requestEditBtn  = document.getElementById('mbRequestEditBtn');
       dropOverlay     = document.getElementById('mbDropOverlay');
 
+      bindEmbedAutosize();
       stage.addEventListener('mousedown', onStageMouseDown);
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup',   onMouseUp);
