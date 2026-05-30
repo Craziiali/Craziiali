@@ -5916,6 +5916,21 @@
   }
   .mb-canvas-entering .mb-topbar { animation:focusIn .45s cubic-bezier(.16,1,.3,1) both; animation-delay:40ms; }
   .mb-canvas-entering .mb-toolbar { animation:mbToolbarFocusIn .45s cubic-bezier(.16,1,.3,1) both; animation-delay:100ms; }
+  /* ── Floating video controls bar ───────────────────────────── */
+  #mbVideoBar { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(64px); display:flex; align-items:center; gap:0; padding:0 6px; height:44px; background:rgba(13,13,17,.94); border:1px solid rgba(243,243,239,.11); border-radius:22px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); box-shadow:0 8px 32px rgba(0,0,0,.65),0 2px 8px rgba(0,0,0,.4); z-index:4000; opacity:0; pointer-events:none; transition:opacity .28s cubic-bezier(.16,1,.3,1),transform .28s cubic-bezier(.16,1,.3,1); user-select:none; }
+  #mbVideoBar.show { opacity:1; pointer-events:all; transform:translateX(-50%) translateY(0); }
+  .mb-vbar-btn { width:34px; height:34px; border:none; background:none; cursor:pointer; color:rgba(243,243,239,.65); border-radius:50%; display:flex; align-items:center; justify-content:center; transition:color .15s,background .15s; flex-shrink:0; }
+  .mb-vbar-btn:hover { color:#f3f3ef; background:rgba(243,243,239,.08); }
+  .mb-vbar-btn svg { width:14px; height:14px; }
+  .mb-vbar-time { font-family:var(--font-en-mono,monospace); font-size:9px; letter-spacing:.06em; color:rgba(243,243,239,.4); white-space:nowrap; padding:0 8px 0 2px; flex-shrink:0; }
+  .mb-vbar-sep { width:1px; height:16px; background:rgba(243,243,239,.1); flex-shrink:0; margin:0 4px; }
+  .mb-vbar-track { position:relative; width:160px; height:3px; background:rgba(243,243,239,.14); border-radius:2px; cursor:pointer; flex-shrink:0; margin:0 4px; transition:height .15s; }
+  .mb-vbar-track:hover { height:5px; margin-top:-1px; }
+  .mb-vbar-fill { position:absolute; left:0; top:0; height:100%; background:rgba(243,243,239,.6); border-radius:2px; pointer-events:none; }
+  .mb-vbar-thumb { position:absolute; top:50%; transform:translate(50%,-50%); width:10px; height:10px; background:#f3f3ef; border-radius:50%; box-shadow:0 1px 4px rgba(0,0,0,.5); pointer-events:none; opacity:0; transition:opacity .15s; right:0; }
+  .mb-vbar-track:hover .mb-vbar-thumb { opacity:1; }
+  .mb-vbar-vol { position:relative; width:52px; height:3px; background:rgba(243,243,239,.14); border-radius:2px; cursor:pointer; flex-shrink:0; margin:0 6px 0 2px; }
+  .mb-vbar-vol-fill { position:absolute; left:0; top:0; height:100%; background:rgba(243,243,239,.4); border-radius:2px; pointer-events:none; }
   .home-entering .tool-card:nth-child(4) { animation:focusIn .70s cubic-bezier(.16,1,.3,1) both; animation-delay:640ms; }
   /* Selection ring drawn on top of selected .mb-el */
   /* Selection ring counter-scales with zoom (var --mbz set on .mb-canvas) so it stays a
@@ -6105,6 +6120,25 @@
 
     <!-- Properties bar (shown when selection has style options) -->
     <div class="mb-propbar" id="mbPropbar"></div>
+
+    <!-- Floating video controls bar -->
+    <div id="mbVideoBar">
+      <button class="mb-vbar-btn" id="mbVbarPlay" type="button" title="Play / Pause">
+        <svg viewBox="0 0 18 18" fill="currentColor"><path d="M5 3.5l10 5.5-10 5.5z"/></svg>
+      </button>
+      <span class="mb-vbar-time" id="mbVbarTime">0:00 / 0:00</span>
+      <div class="mb-vbar-track" id="mbVbarTrack">
+        <div class="mb-vbar-fill" id="mbVbarFill" style="width:0%"></div>
+        <div class="mb-vbar-thumb" id="mbVbarThumb" style="right:100%"></div>
+      </div>
+      <div class="mb-vbar-sep"></div>
+      <button class="mb-vbar-btn" id="mbVbarMute" type="button" title="Mute / Unmute">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 6.5h2.5L9 3.5v11L5.5 11.5H3z"/><path d="M11.5 7a3 3 0 0 1 0 4"/><path d="M13 5.5a5.5 5.5 0 0 1 0 7"/></svg>
+      </button>
+      <div class="mb-vbar-vol" id="mbVbarVol">
+        <div class="mb-vbar-vol-fill" id="mbVbarVolFill" style="width:100%"></div>
+      </div>
+    </div>
 
     <!-- Canvas stage -->
     <div class="mb-stage mb-bg-dots" id="mbStage">
@@ -7194,10 +7228,15 @@
     } catch(e) {}
 
     if (_optimisticRole === 'admin') {
-      /* Admin: show home immediately */
-      document.body.dataset.view = 'home';
-      current = 'home';
-      viewHome.classList.remove('v-hidden', 'v-gone');
+      /* Admin: restore last view instead of always landing on home */
+      var _savedView = null;
+      try { _savedView = localStorage.getItem('cz_view'); } catch(e){}
+      var _startView = (_savedView && OVERLAYS[_savedView]) ? _savedView : 'home';
+      /* moodboardCanvas needs Firebase — land on gallery, we'll reopen the board below */
+      if (_startView === 'moodboardCanvas') _startView = 'moodboards';
+      document.body.dataset.view = _startView;
+      current = _startView;
+      OVERLAYS[_startView].classList.remove('v-hidden', 'v-gone');
     } else if (_optimisticRole === 'viewer') {
       /* Viewer: show planner immediately (no auth overlay needed — firebase
          will confirm, and applyRole handles stale-hint cleanup)            */
@@ -8905,14 +8944,20 @@
           e.preventDefault(); return;
         }
 
-        /* 4. Step back to home (admin only — viewers stay on planner) */
-        if(window._appRole === 'admin'){
-          var view = window._getCurrentView ? window._getCurrentView() : null;
-          if(view && view !== 'home'){
-            var ae=document.activeElement; if(ae&&ae.blur)ae.blur();
+        /* 4. Step back one level at a time */
+        var _escView = window._getCurrentView ? window._getCurrentView() : null;
+        if(_escView){
+          var ae=document.activeElement; if(ae&&ae.blur)ae.blur();
+          if(_escView === 'moodboardCanvas'){
+            /* Canvas → gallery */
+            if(window._closeBoard) window._closeBoard();
+          } else if(_escView === 'moodboards'){
+            /* Gallery → home */
             if(window.showView) window.showView('home');
+          } else if(_escView !== 'home' && _escView !== 'planner'){
+            /* Any other view → home (admin) or planner (viewer) */
+            if(window.showView) window.showView(window._appRole === 'admin' ? 'home' : 'planner');
           }
-          e.preventDefault(); return;
         }
         e.preventDefault(); return;
       }
@@ -9697,10 +9742,11 @@
           vid.draggable = false;
           vid.addEventListener('loadedmetadata', function(){ healMediaAspect(id, vid.videoWidth, vid.videoHeight); });
           vid.addEventListener('canplay', function(){
-            requestAnimationFrame(function(){ requestAnimationFrame(function(){
+            requestAnimationFrame(function(){
+              void vid.offsetHeight;
               vid.classList.add('mb-loaded');
               setTimeout(function(){ if(vskel.parentNode) vskel.parentNode.removeChild(vskel); }, 1500);
-            }); });
+            });
           });
           el.appendChild(vid);
           if (!el.querySelector('.mb-img-frame')) {
@@ -9720,10 +9766,11 @@
             img.draggable = false;
             img.addEventListener('load', function(){
               healMediaAspect(id, img.naturalWidth, img.naturalHeight);
-              requestAnimationFrame(function(){ requestAnimationFrame(function(){
+              requestAnimationFrame(function(){
+                void img.offsetHeight;
                 img.classList.add('mb-loaded');
                 setTimeout(function(){ if(iskel.parentNode) iskel.parentNode.removeChild(iskel); }, 1500);
-              }); });
+              });
             });
             el.appendChild(img);
             /* Polished frame overlay */
@@ -9971,6 +10018,9 @@
         }
         renderAll(); updatePropbar();
       });
+
+      /* Wire up floating video bar for video elements */
+      if (window._mbVBarAttach) window._mbVBarAttach(el);
     }
 
     /* ── Drag handler ───────────────────────────────────── */
@@ -11254,9 +11304,20 @@
     /* Separate function — only called when admin role is confirmed */
     function startGalleryWatch() {
       if (_unsubBoards || !window.fb || !window.fb.boards) return;
+      var _autoReopenDone = false;
       _unsubBoards = window.fb.boards.watchAll(function(data){
         _boards = data || {};
         renderGallery();
+        /* On first load, if we refreshed while inside a board, reopen it */
+        if (!_autoReopenDone) {
+          _autoReopenDone = true;
+          var _pendingBoard = null;
+          try { _pendingBoard = localStorage.getItem('cz_board'); } catch(e){}
+          if (_pendingBoard && _boards[_pendingBoard]) {
+            try { localStorage.removeItem('cz_board'); } catch(e){}
+            openBoard(_pendingBoard);
+          }
+        }
       });
     }
 
@@ -11325,6 +11386,7 @@
       _boardId = boardId;
       _elements = {}; _elDoms = {}; _selected = []; _undoStack=[]; _redoStack=[];
       _zoom=1; _panX=0; _panY=0;
+      try { localStorage.setItem('cz_board', boardId); } catch(e){}
       window.showView('moodboardCanvas');
       /* Load board meta (from cache if available, then subscribe for live updates) */
       var meta = (_boards[boardId]&&_boards[boardId].meta)||{};
@@ -11374,6 +11436,7 @@
     }
 
     function closeBoard() {
+      try { localStorage.removeItem('cz_board'); } catch(e){}
       if (_boardId && _myUid && window.fb && window.fb.boards) {
         window.fb.boards.cursors.remove(_boardId, _myUid);
       }
@@ -11389,6 +11452,7 @@
       if (propbar) { propbar.innerHTML=''; propbar.classList.remove('show'); }
       window.showView('moodboards');
     }
+    window._closeBoard = closeBoard;
 
     function showOrHideReadonlyBanner() {
       if (!readonlyBanner) return;
@@ -11681,6 +11745,132 @@
 
     document.addEventListener('cz-role', function(e){ onRole(e.detail.role); });
     if (window._appRole) onRole(window._appRole);
+
+    /* ── Floating video controls bar ───────────────────────────── */
+    (function(){
+      var bar      = document.getElementById('mbVideoBar');
+      var playBtn  = document.getElementById('mbVbarPlay');
+      var timeEl   = document.getElementById('mbVbarTime');
+      var trackEl  = document.getElementById('mbVbarTrack');
+      var fillEl   = document.getElementById('mbVbarFill');
+      var thumbEl  = document.getElementById('mbVbarThumb');
+      var muteBtn  = document.getElementById('mbVbarMute');
+      var volEl    = document.getElementById('mbVbarVol');
+      var volFill  = document.getElementById('mbVbarVolFill');
+      if (!bar) return;
+
+      var _vid = null, _rafId = null, _hideTimer = null, _lastVol = 1;
+
+      function fmt(s){ s=Math.floor(s||0); return Math.floor(s/60)+':'+(s%60<10?'0':'')+s%60; }
+
+      function updateBar(){
+        if (!_vid) return;
+        var pct = _vid.duration ? _vid.currentTime/_vid.duration*100 : 0;
+        fillEl.style.width  = pct + '%';
+        thumbEl.style.right = (100-pct) + '%';
+        timeEl.textContent  = fmt(_vid.currentTime) + ' / ' + fmt(_vid.duration);
+        var vol = _vid.muted ? 0 : _vid.volume;
+        volFill.style.width = (vol*100) + '%';
+      }
+
+      function updatePlayIcon(){
+        if (!_vid) return;
+        playBtn.innerHTML = _vid.paused
+          ? '<svg viewBox="0 0 18 18" fill="currentColor"><path d="M5 3.5l10 5.5-10 5.5z"/></svg>'
+          : '<svg viewBox="0 0 18 18" fill="currentColor"><rect x="4" y="3" width="3.5" height="12" rx="1"/><rect x="10.5" y="3" width="3.5" height="12" rx="1"/></svg>';
+      }
+
+      function updateMuteIcon(){
+        if (!_vid) return;
+        muteBtn.innerHTML = (_vid.muted || _vid.volume===0)
+          ? '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 6.5h2.5L9 3.5v11L5.5 11.5H3z"/><path d="M13 7l3 4M16 7l-3 4"/></svg>'
+          : '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 6.5h2.5L9 3.5v11L5.5 11.5H3z"/><path d="M11.5 7a3 3 0 0 1 0 4"/><path d="M13 5.5a5.5 5.5 0 0 1 0 7"/></svg>';
+      }
+
+      function tick(){ updateBar(); if(_vid&&!_vid.paused) _rafId=requestAnimationFrame(tick); }
+      function onPlay(){  _rafId=requestAnimationFrame(tick); updatePlayIcon(); }
+      function onPause(){ cancelAnimationFrame(_rafId); updatePlayIcon(); }
+      function onVol(){   updateBar(); updateMuteIcon(); }
+
+      function attach(vid){
+        if (_vid===vid) return;
+        detach();
+        _vid = vid;
+        _vid.addEventListener('play', onPlay);
+        _vid.addEventListener('pause', onPause);
+        _vid.addEventListener('volumechange', onVol);
+        updateBar(); updatePlayIcon(); updateMuteIcon();
+        bar.classList.add('show');
+        if (!_vid.paused) _rafId=requestAnimationFrame(tick);
+      }
+
+      function detach(){
+        cancelAnimationFrame(_rafId); _rafId=null;
+        if (_vid){
+          _vid.removeEventListener('play', onPlay);
+          _vid.removeEventListener('pause', onPause);
+          _vid.removeEventListener('volumechange', onVol);
+          _vid=null;
+        }
+        bar.classList.remove('show');
+      }
+
+      /* Play / Pause */
+      playBtn.addEventListener('click', function(){
+        if (!_vid) return;
+        _vid.paused ? _vid.play().catch(function(){}) : _vid.pause();
+      });
+
+      /* Mute */
+      muteBtn.addEventListener('click', function(){
+        if (!_vid) return;
+        if (_vid.muted){ _vid.muted=false; _vid.volume=_lastVol||1; }
+        else { _lastVol=_vid.volume; _vid.muted=true; }
+      });
+
+      /* Seek */
+      function seekAt(e){
+        if (!_vid||!_vid.duration) return;
+        var r=trackEl.getBoundingClientRect();
+        _vid.currentTime = Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*_vid.duration;
+        updateBar();
+      }
+      trackEl.addEventListener('mousedown', function(e){
+        seekAt(e);
+        function mv(e){ seekAt(e); } function up(){ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); }
+        document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+      });
+
+      /* Volume */
+      function volAt(e){
+        if (!_vid) return;
+        var r=volEl.getBoundingClientRect();
+        var v=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+        _vid.volume=v; _vid.muted=v===0; _lastVol=v||1;
+      }
+      volEl.addEventListener('mousedown', function(e){
+        volAt(e);
+        function mv(e){ volAt(e); } function up(){ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); }
+        document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+      });
+
+      /* Keep bar alive while hovering the bar itself */
+      bar.addEventListener('mouseenter', function(){ clearTimeout(_hideTimer); _hideTimer=null; });
+      bar.addEventListener('mouseleave', function(){ _hideTimer=setTimeout(detach, 700); });
+
+      /* Expose so renderEl can wire up video elements */
+      window._mbVBarAttach = function(el){
+        var vid = el.querySelector('video');
+        if (!vid) return;
+        el.addEventListener('mouseenter', function(){
+          clearTimeout(_hideTimer); _hideTimer=null;
+          attach(vid);
+        });
+        el.addEventListener('mouseleave', function(){
+          _hideTimer = setTimeout(detach, 700);
+        });
+      };
+    })();
 
   })(); /* end Mood Board IIFE */
 
