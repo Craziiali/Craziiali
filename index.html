@@ -5791,13 +5791,14 @@
   .mb-shape-svg { width:100%; height:100%; overflow:visible; pointer-events:none; }
   /* Box is sized to the media's true aspect ratio (see fitMediaSize in JS), so object-fit:cover
      fills it edge-to-edge with no letterbox gap — the frame and selection ring then hug the image. */
-  .mb-img { width:100%; height:100%; object-fit:cover; display:block; border-radius:7px; pointer-events:none; user-select:none; -webkit-user-drag:none; opacity:0; transition:opacity 1.4s cubic-bezier(.4,0,.2,1); }
+  .mb-img { position:relative; z-index:1; width:100%; height:100%; object-fit:cover; display:block; border-radius:7px; pointer-events:none; user-select:none; -webkit-user-drag:none; opacity:0; transition:opacity 2.4s cubic-bezier(.16,1,.3,1); will-change:opacity; }
   .mb-img.mb-loaded { opacity:1; }
   /* Skeleton shimmer shown while image/video loads */
-  .mb-skeleton { position:absolute; inset:0; border-radius:7px; z-index:1; pointer-events:none; background:linear-gradient(90deg,#0d0d12 25%,#1e1e28 50%,#0d0d12 75%); background-size:400% 100%; animation:mbShimmer 1.9s ease-in-out infinite; }
+  .mb-skeleton { position:absolute; inset:0; border-radius:7px; z-index:2; pointer-events:none; opacity:1; background:linear-gradient(90deg,#0d0d12 25%,#1e1e28 50%,#0d0d12 75%); background-size:400% 100%; animation:mbShimmer 1.9s ease-in-out infinite; transition:opacity 1.8s cubic-bezier(.16,1,.3,1); will-change:opacity; }
+  .mb-skeleton.mb-skeleton-out { opacity:0; }
   @keyframes mbShimmer { 0%{background-position:100% 0} 100%{background-position:-100% 0} }
   /* Polished frame overlay on image elements. Inset hairline counter-scales so it stays crisp at zoom. */
-  .mb-img-frame { position:absolute; inset:0; border-radius:7px; box-shadow:inset 0 0 0 calc(1px / var(--mbz,1)) rgba(255,255,255,.12), 0 8px 28px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.3); pointer-events:none; z-index:2; background:transparent; }
+  .mb-img-frame { position:absolute; inset:0; border-radius:7px; box-shadow:inset 0 0 0 calc(1px / var(--mbz,1)) rgba(255,255,255,.12), 0 8px 28px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.3); pointer-events:none; z-index:3; background:transparent; }
   .mb-img-placeholder { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:rgba(243,243,239,.04); border:1px dashed rgba(243,243,239,.15); border-radius:4px; color:var(--ink-soft); opacity:.4; font-family:var(--font-en-mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
   .mb-img-placeholder svg { width:24px; height:24px; }
   /* Resize handles counter-scale with zoom so they stay a constant ~9px on screen. */
@@ -9840,6 +9841,85 @@
       applyTransform();
     }
 
+    function getDirectChildWithClass(parent, className) {
+      if (!parent) return null;
+      for (var i = 0; i < parent.children.length; i++) {
+        if (parent.children[i].classList && parent.children[i].classList.contains(className)) return parent.children[i];
+      }
+      return null;
+    }
+
+    function ensureMediaSkeleton(el) {
+      var skel = getDirectChildWithClass(el, 'mb-skeleton');
+      if (!skel) {
+        skel = document.createElement('div');
+        skel.className = 'mb-skeleton';
+        el.insertBefore(skel, el.firstChild || null);
+      }
+      skel.classList.remove('mb-skeleton-out');
+      return skel;
+    }
+
+    function revealMediaAfterSkeleton(media, skel) {
+      if (!media) return;
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){
+          media.classList.add('mb-loaded');
+          if (skel) {
+            skel.classList.add('mb-skeleton-out');
+            setTimeout(function(){ if (skel.parentNode) skel.parentNode.removeChild(skel); }, 1900);
+          }
+        });
+      });
+    }
+
+    function resetMediaReveal(media) {
+      if (!media) return;
+      media.classList.remove('mb-loaded');
+      void media.offsetHeight;
+    }
+
+    function armImageReveal(id, el, img, url) {
+      var skel = ensureMediaSkeleton(el);
+      var done = false;
+      resetMediaReveal(img);
+      function reveal() {
+        if (done) return;
+        done = true;
+        img.removeEventListener('load', reveal);
+        healMediaAspect(id, img.naturalWidth, img.naturalHeight);
+        revealMediaAfterSkeleton(img, skel);
+      }
+      img.addEventListener('load', reveal);
+      img.dataset.mediaUrl = url || '';
+      img.src = url || '';
+      if (img.complete && img.naturalWidth) setTimeout(reveal, 0);
+    }
+
+    function armVideoReveal(id, el, vid, url) {
+      var skel = ensureMediaSkeleton(el);
+      var revealed = false;
+      resetMediaReveal(vid);
+      function metadata() {
+        if (vid.videoWidth && vid.videoHeight) healMediaAspect(id, vid.videoWidth, vid.videoHeight);
+      }
+      function reveal() {
+        if (revealed) return;
+        revealed = true;
+        vid.removeEventListener('loadedmetadata', metadata);
+        vid.removeEventListener('canplay', reveal);
+        metadata();
+        revealMediaAfterSkeleton(vid, skel);
+      }
+      vid.addEventListener('loadedmetadata', metadata);
+      vid.addEventListener('canplay', reveal);
+      vid.dataset.mediaUrl = url || '';
+      vid.src = url || '';
+      vid.load();
+      vid.play().catch(function(){});
+      if (vid.readyState >= 3) setTimeout(reveal, 0);
+    }
+
     /* ── Element rendering ──────────────────────────────── */
     function renderEl(id, d) {
       var isNew = !_elDoms[id];
@@ -9939,23 +10019,15 @@
           el.appendChild(vskel);
           var vid = document.createElement('video');
           vid.className = 'mb-img';
-          vid.src = d.url || '';
           vid.autoplay = true; vid.loop = true; vid.muted = true; vid.playsInline = true;
           vid.draggable = false;
-          vid.addEventListener('loadedmetadata', function(){ healMediaAspect(id, vid.videoWidth, vid.videoHeight); });
-          vid.addEventListener('canplay', function(){
-            requestAnimationFrame(function(){
-              void vid.offsetHeight;
-              vid.classList.add('mb-loaded');
-              setTimeout(function(){ if(vskel.parentNode) vskel.parentNode.removeChild(vskel); }, 1500);
-            });
-          });
           el.appendChild(vid);
           if (!el.querySelector('.mb-img-frame')) {
             var vframe = document.createElement('div');
             vframe.className = 'mb-img-frame';
             el.appendChild(vframe);
           }
+          armVideoReveal(id, el, vid, d.url || '');
         } else if (d.type === 'image') {
           el.className = 'mb-el';
           if (d.url) {
@@ -9964,16 +10036,7 @@
             el.appendChild(iskel);
             var img = document.createElement('img');
             img.className = 'mb-img';
-            img.src = d.url;
             img.draggable = false;
-            img.addEventListener('load', function(){
-              healMediaAspect(id, img.naturalWidth, img.naturalHeight);
-              requestAnimationFrame(function(){
-                void img.offsetHeight;
-                img.classList.add('mb-loaded');
-                setTimeout(function(){ if(iskel.parentNode) iskel.parentNode.removeChild(iskel); }, 1500);
-              });
-            });
             el.appendChild(img);
             /* Polished frame overlay */
             if (!el.querySelector('.mb-img-frame')) {
@@ -9981,6 +10044,7 @@
               frame.className = 'mb-img-frame';
               el.appendChild(frame);
             }
+            armImageReveal(id, el, img, d.url);
           } else {
             var ph = document.createElement('div');
             ph.className = 'mb-img-placeholder';
@@ -10047,10 +10111,10 @@
           }
         } else if (d.type === 'video') {
           var vid2 = el.querySelector('video');
-          if (vid2 && d.url && vid2.src !== d.url) { vid2.src = d.url; vid2.play().catch(function(){}); }
+          if (vid2 && d.url && vid2.dataset.mediaUrl !== d.url) armVideoReveal(id, el, vid2, d.url);
         } else if (d.type === 'image') {
           var img2 = el.querySelector('img');
-          if (img2 && d.url && img2.src !== d.url) img2.src = d.url;
+          if (img2 && d.url && img2.dataset.mediaUrl !== d.url) armImageReveal(id, el, img2, d.url);
         } else if (d.type === 'embed') {
           /* If the embed card hasn't been built yet (or url changed), rebuild it */
           if (!el.querySelector('.mb-embed-card')) buildEmbedCard(el, id, d);
