@@ -9657,6 +9657,11 @@
     var _zoom     = 1;
     var _panX     = 0, _panY = 0;
     var _undoStack= [], _redoStack = [];
+    /* Tracks the "before" state for slider / select propbar interactions that span
+       multiple input events (e.g. dragging the stroke-width thumb). Cleared after
+       each committed undo entry so rebuilding the propbar doesn't lose context. */
+    var _swUndoBefore = null;  /* { strokeWidth:n, ids:[] } */
+    var _fsUndoBefore = null;  /* { fontSize:n,     ids:[] } */
     var _unsubElements = null, _unsubCursors = null, _unsubMeta = null;
     var _cursorEls = {};  /* { uid: domElement } */
     var _allCursorData = {}; /* { uid: {cx,cy,name,color,ts} } — cache for zoom/pan reposition */
@@ -10056,6 +10061,13 @@
             scheduleElUpdate(id, { content: ta.value });
           });
           ta.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+          /* Undo tracking: snapshot on focus, push undo entry on blur if text changed */
+          var _taSnap = '';
+          ta.addEventListener('focus', function(){ _taSnap = ta.value; });
+          ta.addEventListener('blur', function(){
+            if (ta.value !== _taSnap)
+              pushUndo({ type:'patch', items:[{ id:id, before:{content:_taSnap}, after:{content:ta.value} }] });
+          });
           el.appendChild(ta);
         } else if (d.type === 'text') {
           el.className = 'mb-el';
@@ -10072,6 +10084,13 @@
             scheduleElUpdate(id, { content: tb.innerHTML });
           });
           tb.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+          /* Undo tracking: snapshot on focus, push undo entry on blur if HTML changed */
+          var _tbSnap = '';
+          tb.addEventListener('focus', function(){ _tbSnap = tb.innerHTML; });
+          tb.addEventListener('blur', function(){
+            if (tb.innerHTML !== _tbSnap)
+              pushUndo({ type:'patch', items:[{ id:id, before:{content:_tbSnap}, after:{content:tb.innerHTML} }] });
+          });
           el.appendChild(tb);
         } else if (d.type === 'video') {
           el.className = 'mb-el';
@@ -10890,7 +10909,7 @@
     }
 
     /* ── Undo / Redo ─────────────────────────────────────── */
-    function pushUndo(action) { _undoStack.push(action); _redoStack=[]; if(_undoStack.length>80)_undoStack.shift(); }
+    function pushUndo(action) { _undoStack.push(action); _redoStack=[]; if(_undoStack.length>100)_undoStack.shift(); }
 
     function undo() {
       if (!canEdit() || !_undoStack.length) return;
@@ -10942,6 +10961,18 @@
         var dom2=_elDoms[a.id];
         if(dom2){dom2.style.left=pos2.x+'px';dom2.style.top=pos2.y+'px';dom2.style.width=pos2.w+'px';dom2.style.height=pos2.h+'px';}
         commitElUpdate(a.id, pos2);
+      } else if (a.type === 'patch') {
+        /* General property patch (text content, colors, styles, etc.).
+           Supports both single-element { id, before, after } and
+           multi-element { items: [{id, before, after}] } formats. */
+        var patchItems = a.items || [{ id: a.id, before: a.before, after: a.after }];
+        patchItems.forEach(function(it){
+          var patchData = isRedo ? it.after : it.before;
+          if (_elements[it.id]) {
+            Object.assign(_elements[it.id], patchData);
+            commitElUpdate(it.id, patchData);
+          }
+        });
       }
       _selected = []; renderAll(); updatePropbar(); scheduleThumbUpdate();
     }
@@ -11006,40 +11037,121 @@
       propbar.innerHTML = html;
       propbar.classList.add('show');
 
+      /* ── Propbar event helpers ────────────────────────────────────────────
+         _propSnap(keys)  → builds [{id, before:{keys…}}] for selected elements.
+         _propCommit(items, patch) → sets after values, pushes undo if anything changed,
+                                     calls scheduleElUpdate for each affected element.     */
+      function _propSnap(keys) {
+        return _selected.filter(function(id){ return !!_elements[id]; }).map(function(id){
+          var b = {}; keys.forEach(function(k){ b[k] = _elements[id][k]; });
+          return { id:id, before:b, after:{} };
+        });
+      }
+      function _propCommit(items, patch) {
+        items.forEach(function(it){
+          Object.assign(it.after, patch);
+          if (_elements[it.id]) scheduleElUpdate(it.id, patch);
+        });
+        var changed = items.filter(function(it){
+          return Object.keys(it.before).some(function(k){ return it.before[k] !== it.after[k]; });
+        });
+        if (changed.length) pushUndo({ type:'patch', items:changed });
+      }
+
       /* Bind propbar events */
       propbar.querySelectorAll('[data-strokecolor]').forEach(function(btn){
-        btn.addEventListener('click', function(){ _propStrokeColor = btn.dataset.strokecolor; _selected.forEach(function(id){ if(_elements[id])scheduleElUpdate(id,{stroke:_propStrokeColor}); }); updatePropbar(); });
+        btn.addEventListener('click', function(){
+          var c = btn.dataset.strokecolor;
+          var snap = _propSnap(['stroke']);
+          _propStrokeColor = c;
+          _propCommit(snap, {stroke:c});
+          updatePropbar();
+        });
       });
       propbar.querySelectorAll('[data-stickycolor]').forEach(function(btn){
-        btn.addEventListener('click', function(){ _propStickyColor = btn.dataset.stickycolor; _selected.forEach(function(id){ if(_elements[id]&&_elements[id].type==='sticky')scheduleElUpdate(id,{color:_propStickyColor}); }); updatePropbar(); });
+        btn.addEventListener('click', function(){
+          var c = btn.dataset.stickycolor;
+          var snap = _propSnap(['color']).filter(function(it){ return _elements[it.id]&&_elements[it.id].type==='sticky'; });
+          _propStickyColor = c;
+          _propCommit(snap, {color:c});
+          updatePropbar();
+        });
       });
       propbar.querySelectorAll('[data-textprop]').forEach(function(btn){
         btn.addEventListener('click', function(){
           var prop = btn.dataset.textprop;
-          _selected.forEach(function(id){ if(_elements[id]&&_elements[id].type==='text'){ var cur=_elements[id][prop]; scheduleElUpdate(id,{[prop]:!cur}); } });
+          var snap = _propSnap([prop]).filter(function(it){ return _elements[it.id]&&_elements[it.id].type==='text'; });
+          snap.forEach(function(it){ it.after[prop] = !_elements[it.id][prop]; if(_elements[it.id])scheduleElUpdate(it.id,{[prop]:it.after[prop]}); });
+          var changed = snap.filter(function(it){ return it.before[prop] !== it.after[prop]; });
+          if (changed.length) pushUndo({ type:'patch', items:changed });
           updatePropbar();
         });
       });
       propbar.querySelectorAll('[data-textcolor]').forEach(function(btn){
-        btn.addEventListener('click', function(){ _selected.forEach(function(id){ if(_elements[id]&&_elements[id].type==='text')scheduleElUpdate(id,{color:btn.dataset.textcolor}); }); updatePropbar(); });
+        btn.addEventListener('click', function(){
+          var c = btn.dataset.textcolor;
+          var snap = _propSnap(['color']).filter(function(it){ return _elements[it.id]&&_elements[it.id].type==='text'; });
+          _propCommit(snap, {color:c});
+          updatePropbar();
+        });
       });
       propbar.querySelectorAll('[data-fill]').forEach(function(btn){
         btn.addEventListener('click', function(){
           var f = decodeURIComponent(btn.dataset.fill);
+          var snap = _propSnap(['fill']);
           _propFill = f;
-          _selected.forEach(function(id){ if(_elements[id])scheduleElUpdate(id,{fill:f}); });
+          _propCommit(snap, {fill:f});
           updatePropbar();
         });
       });
       var swEl = propbar.querySelector('#mbStrokeWidth');
-      if (swEl) swEl.addEventListener('input', function(){ _propStrokeWidth=parseInt(swEl.value); _selected.forEach(function(id){ if(_elements[id])scheduleElUpdate(id,{strokeWidth:_propStrokeWidth}); }); });
+      if (swEl) {
+        /* Capture the before-value when the user first grabs the thumb */
+        swEl.addEventListener('mousedown', function(){
+          _swUndoBefore = { strokeWidth: _propStrokeWidth, ids: _selected.slice() };
+        });
+        swEl.addEventListener('input', function(){
+          _propStrokeWidth = parseInt(swEl.value);
+          _selected.forEach(function(id){ if(_elements[id])scheduleElUpdate(id,{strokeWidth:_propStrokeWidth}); });
+        });
+        /* Push one undo entry when the drag ends (change fires on mouse-up) */
+        swEl.addEventListener('change', function(){
+          var after = parseInt(swEl.value);
+          if (_swUndoBefore && _swUndoBefore.strokeWidth !== after) {
+            var items = _swUndoBefore.ids.filter(function(id){ return !!_elements[id]; }).map(function(id){
+              return { id:id, before:{strokeWidth:_swUndoBefore.strokeWidth}, after:{strokeWidth:after} };
+            });
+            if (items.length) pushUndo({ type:'patch', items:items });
+          }
+          _swUndoBefore = null;
+        });
+      }
       var fsEl = propbar.querySelector('#mbFontSize');
-      if (fsEl) fsEl.addEventListener('change', function(){ _propFontSize=parseInt(fsEl.value); _selected.forEach(function(id){ if(_elements[id]&&_elements[id].type==='text')scheduleElUpdate(id,{fontSize:_propFontSize}); }); });
+      if (fsEl) {
+        fsEl.addEventListener('mousedown', function(){
+          _fsUndoBefore = { fontSize: _propFontSize, ids: _selected.slice() };
+        });
+        fsEl.addEventListener('change', function(){
+          var after = parseInt(fsEl.value);
+          _propFontSize = after;
+          _selected.forEach(function(id){ if(_elements[id]&&_elements[id].type==='text')scheduleElUpdate(id,{fontSize:after}); });
+          if (_fsUndoBefore && _fsUndoBefore.fontSize !== after) {
+            var items = _fsUndoBefore.ids.filter(function(id){ return _elements[id]&&_elements[id].type==='text'; }).map(function(id){
+              return { id:id, before:{fontSize:_fsUndoBefore.fontSize}, after:{fontSize:after} };
+            });
+            if (items.length) pushUndo({ type:'patch', items:items });
+          }
+          _fsUndoBefore = null;
+        });
+      }
       var delBtn = propbar.querySelector('[data-act="delete"]');
       if (delBtn) delBtn.addEventListener('click', deleteSelected);
       var lockBtn = propbar.querySelector('[data-act="lock"]');
       if (lockBtn) lockBtn.addEventListener('click', function(){
-        _selected.forEach(function(id){ if(_elements[id]){ var l=!_elements[id].locked; scheduleElUpdate(id,{locked:l}); } });
+        var snap = _propSnap(['locked']);
+        snap.forEach(function(it){ var l = !_elements[it.id].locked; it.after.locked = l; scheduleElUpdate(it.id,{locked:l}); });
+        var changed = snap.filter(function(it){ return it.before.locked !== it.after.locked; });
+        if (changed.length) pushUndo({ type:'patch', items:changed });
         updatePropbar();
       });
       var dupBtn = propbar.querySelector('[data-act="duplicate"]');
@@ -12276,8 +12388,10 @@
           if (e.key==='a' && (e.ctrlKey||e.metaKey)) { e.preventDefault(); _selected=Object.keys(_elements); renderAll(); updatePropbar(); return; }
         }
 
-        if ((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key==='z') { e.preventDefault(); undo(); return; }
-        if ((e.ctrlKey||e.metaKey) && (e.shiftKey&&e.key==='z'||e.key==='y')) { e.preventDefault(); redo(); return; }
+        /* Don't intercept Ctrl+Z / Ctrl+Shift+Z when the cursor is inside a text
+           input — let the browser handle native text undo/redo there. */
+        if ((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key==='z') { if(inInput)return; e.preventDefault(); undo(); return; }
+        if ((e.ctrlKey||e.metaKey) && (e.shiftKey&&e.key==='z'||e.key==='y')) { if(inInput)return; e.preventDefault(); redo(); return; }
         if ((e.ctrlKey||e.metaKey) && e.key==='d') { e.preventDefault(); duplicateSelected(); return; }
         if ((e.ctrlKey||e.metaKey) && e.key==='=') { e.preventDefault(); setZoom(_zoom*1.2); return; }
         if ((e.ctrlKey||e.metaKey) && e.key==='-') { e.preventDefault(); setZoom(_zoom/1.2); return; }
