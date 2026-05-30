@@ -11627,23 +11627,29 @@
       _zoom=1; _panX=0; _panY=0;
       try { localStorage.setItem('cz_board', boardId); } catch(e){}
       window.showView('moodboardCanvas');
-      if (window._pendingStartupBoard === boardId) window._pendingStartupBoard = '';
+      var startupOpening = (window._pendingStartupBoard === boardId);
+      if (startupOpening) window._pendingStartupBoard = '';
       /* Load board meta (from cache if available, then subscribe for live updates) */
       var meta = (_boards[boardId]&&_boards[boardId].meta)||{};
       _boardMeta = meta;
       if (boardNameInput) { boardNameInput.value = meta.name||'Untitled'; boardNameInput.readOnly = !isAdmin(); autosizeBoardName(); }
-      if (window._clearAppLoader) window._clearAppLoader();
+      if (!startupOpening || meta.name) {
+        if (window._clearAppLoader) window._clearAppLoader();
+      } else {
+        setTimeout(function(){ if (window._clearAppLoader) window._clearAppLoader(); }, 4500);
+      }
       var _mbg = (meta.bg||'dots'); if (_mbg !== 'dots' && _mbg !== 'grid') _mbg = 'dots';
       if (stage) stage.className = 'mb-stage mb-bg-' + _mbg + ' tool-select';
       if (propbar) { propbar.innerHTML=''; propbar.classList.remove('show'); }
       /* Live-subscribe to meta (needed when opening via share link — _boards cache is empty) */
       if (_unsubMeta) { _unsubMeta(); _unsubMeta=null; }
       _unsubMeta = window.fb.boards.watchOne(boardId, function(m){
-        if (!m) return;
+        if (!m) { if (window._clearAppLoader) window._clearAppLoader(); return; }
         _boardMeta = m;
         if (boardNameInput && document.activeElement !== boardNameInput) { boardNameInput.value = m.name||'Untitled'; autosizeBoardName(); }
         var _lbg = (m.bg||'dots'); if (_lbg !== 'dots' && _lbg !== 'grid') _lbg = 'dots';
         if (stage) stage.className = 'mb-stage mb-bg-' + _lbg + ' tool-select';
+        if (window._clearAppLoader) window._clearAppLoader();
       });
       applyTransform();
       /* Check if current user is editor */
