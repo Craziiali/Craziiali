@@ -9567,8 +9567,8 @@
       if (yt) return { platform:'youtube', id:yt[1], url:str };
       var vm = str.match(/vimeo\.com\/(?:video\/)?(\d+)/);
       if (vm) return { platform:'vimeo', id:vm[1], url:str };
-      var ig = str.match(/instagram\.com\/(?:([a-z]+)\/)?(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/);
-      if (ig) { var igType = /reel/.test(str) ? 'reel' : (/\/tv\//.test(str) ? 'tv' : 'p'); return { platform:'instagram', id:ig[2], igType:igType, url:str }; }
+      var ig = parseInstagramUrl(str);
+      if (ig) return { platform:'instagram', id:ig.id, igType:ig.type, url:str };
       var pin = str.match(/pinterest\.[a-z.]+\/pin\/(\d+)/);
       if (pin) return { platform:'pinterest', id:pin[1], url:str };
       if (/pin\.it\//.test(str)) return { platform:'pinterest', id:null, url:str };
@@ -9588,6 +9588,32 @@
     function embedThumbnailUrl(info) {
       if (info.platform==='youtube') return 'https://img.youtube.com/vi/'+info.id+'/hqdefault.jpg';
       return null;
+    }
+    function parseInstagramUrl(str) {
+      try {
+        var u = new URL(str);
+        if (!/(^|\.)instagram\.com$/i.test(u.hostname)) return null;
+        var parts = u.pathname.split('/').filter(Boolean);
+        var idx = parts.findIndex(function(part){ return /^(p|reel|reels|tv)$/i.test(part); });
+        if (idx < 0 || !parts[idx + 1]) return null;
+        var rawType = parts[idx].toLowerCase();
+        return { type: rawType === 'reels' ? 'reel' : rawType, id: parts[idx + 1] };
+      } catch(e) {
+        var m = String(str||'').match(/instagram\.com\/(?:[^\/?#]+\/)*(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i);
+        if (!m) return null;
+        return { type: m[1].toLowerCase() === 'reels' ? 'reel' : m[1].toLowerCase(), id: m[2] };
+      }
+    }
+    function normalizeInstagramEmbed(info) {
+      if (!info || info.platform !== 'instagram') return {};
+      var parsed = parseInstagramUrl(info.url || '');
+      if (!parsed) return {};
+      var patch = {};
+      if (info.igType !== parsed.type) patch.igType = parsed.type;
+      if ((info.embedId || info.id || '') !== parsed.id) patch.embedId = parsed.id;
+      var normalizedUrl = embedIframeUrl({ platform:'instagram', id:parsed.id, igType:parsed.type });
+      if (info.embedUrl !== normalizedUrl) patch.embedUrl = normalizedUrl;
+      return patch;
     }
     function embedPlatformLabel(p) { return {youtube:'YouTube',vimeo:'Vimeo',instagram:'Instagram',pinterest:'Pinterest',tiktok:'TikTok',web:'Link'}[p]||'Link'; }
     function embedBadgeClass(p)    { return {youtube:'mb-embed-badge-yt',vimeo:'mb-embed-badge-vm',instagram:'mb-embed-badge-ig',pinterest:'mb-embed-badge-pt',tiktok:'mb-embed-badge-xx'}[p]||'mb-embed-badge-xx'; }
@@ -11652,6 +11678,18 @@
        the card stays draggable. Clicking play removes the shield and reloads the
        iframe with autoplay so it plays inline on the board. */
     function buildEmbedCard(el, id, d) {
+      var normalizedPatch = normalizeInstagramEmbed(d);
+      if (Object.keys(normalizedPatch).length) {
+        Object.assign(d, normalizedPatch);
+        if (_elements[id]) Object.assign(_elements[id], normalizedPatch);
+        if (canEdit() && !d._igNormalizeQueued) {
+          d._igNormalizeQueued = true;
+          setTimeout(function(){
+            if (_elements[id]) delete _elements[id]._igNormalizeQueued;
+            if (_elements[id]) commitElUpdate(id, normalizedPatch);
+          }, 0);
+        }
+      }
       /* Clear any prior card (and its ResizeObserver) */
       var old = el.querySelector('.mb-embed-card');
       if (old) { if (old._embedRO) { try { old._embedRO.disconnect(); } catch(_){} } old.remove(); }
