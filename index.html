@@ -1254,7 +1254,10 @@
         if (isLoggedIn && !wasLoggedIn) {
           /* Just signed in — route by role */
           setTimeout(function(){
-            if (role === 'admin') {
+            if (window._hasExplicitRoute) {
+              /* A clean URL like /moodboard or /notes already chose the first view.
+                 Do not bounce admins back to Home after Firebase restores auth. */
+            } else if (role === 'admin') {
               /* Admin lands on home */
               if (window._showHome) window._showHome();
             } else {
@@ -7186,6 +7189,12 @@
       }
       return null;
     }
+    function routeBoardId(){
+      var params = new URLSearchParams(window.location.search || '');
+      var storedBoard = null;
+      try { storedBoard = localStorage.getItem('cz_board'); } catch(e) {}
+      return params.get('board') || storedBoard || '';
+    }
     function routeUrlFor(name){
       var route = ROUTE_PATHS[name] || ROUTE_PATHS.home;
       var base = routeBasePath();
@@ -7293,6 +7302,11 @@
     }
     window.showView = showView;
     window._getCurrentView = function(){ return current; };
+    window._hasExplicitRoute = !!routeViewFromPath();
+    window._clearAppLoader = function(){
+      var l = document.getElementById('appLoader');
+      if (l) l.remove();
+    };
 
     /* ── Starting view ──────────────────────────────────────────── */
     /* Route optimistically before firebase resolves so there's no flash.
@@ -7311,6 +7325,9 @@
       try { _savedView = localStorage.getItem('cz_view'); } catch(e){}
       var _routeView = routeViewFromPath();
       var _startView = (_routeView && OVERLAYS[_routeView]) ? _routeView : ((_savedView && OVERLAYS[_savedView]) ? _savedView : 'home');
+      var _adminBoardId = (_startView === 'moodboardCanvas') ? routeBoardId() : '';
+      if (_adminBoardId) window._pendingStartupBoard = _adminBoardId;
+      else if (_startView === 'moodboardCanvas') _startView = 'moodboards';
       document.body.dataset.view = _startView;
       current = _startView;
       OVERLAYS[_startView].classList.remove('v-hidden', 'v-gone');
@@ -7327,6 +7344,9 @@
          immediately so there's no delay waiting for firebase to resolve.   */
       var _publicRouteView = routeViewFromPath();
       var _publicStartView = (_publicRouteView && OVERLAYS[_publicRouteView]) ? _publicRouteView : 'planner';
+      var _publicBoardId = (_publicStartView === 'moodboardCanvas') ? routeBoardId() : '';
+      if (_publicBoardId) window._pendingStartupBoard = _publicBoardId;
+      else if (_publicStartView === 'moodboardCanvas') _publicStartView = 'moodboards';
       document.body.dataset.view = _publicStartView;
       current = _publicStartView;
       OVERLAYS[_publicStartView].classList.remove('v-hidden', 'v-gone');
@@ -7334,8 +7354,9 @@
       /* _showAuthOverlay is defined in the auth IIFE which ran before this */
       if (window._showAuthOverlay) window._showAuthOverlay();
     }
-    /* Remove the full-page loader now that the correct view is set up */
-    (function(){ var l = document.getElementById('appLoader'); if (l) l.remove(); })();
+    /* Remove the loader only after an exact board route has opened, otherwise an empty
+       canvas can flash before Firebase restores the board meta/elements. */
+    if (!window._pendingStartupBoard) window._clearAppLoader();
 
     window._showHome = function() {
       updateRoute('home', false);
@@ -11600,15 +11621,18 @@
 
     /* ── Open / Close board ───────────────────────────────── */
     function openBoard(boardId) {
+      if (!boardId) { if (window._clearAppLoader) window._clearAppLoader(); return; }
       _boardId = boardId;
       _elements = {}; _elDoms = {}; _selected = []; _undoStack=[]; _redoStack=[];
       _zoom=1; _panX=0; _panY=0;
       try { localStorage.setItem('cz_board', boardId); } catch(e){}
       window.showView('moodboardCanvas');
+      if (window._pendingStartupBoard === boardId) window._pendingStartupBoard = '';
       /* Load board meta (from cache if available, then subscribe for live updates) */
       var meta = (_boards[boardId]&&_boards[boardId].meta)||{};
       _boardMeta = meta;
       if (boardNameInput) { boardNameInput.value = meta.name||'Untitled'; boardNameInput.readOnly = !isAdmin(); autosizeBoardName(); }
+      if (window._clearAppLoader) window._clearAppLoader();
       var _mbg = (meta.bg||'dots'); if (_mbg !== 'dots' && _mbg !== 'grid') _mbg = 'dots';
       if (stage) stage.className = 'mb-stage mb-bg-' + _mbg + ' tool-select';
       if (propbar) { propbar.innerHTML=''; propbar.classList.remove('show'); }
@@ -12243,12 +12267,14 @@
         }
       }
 
-      /* Handle shared board link (?board=xxx) */
+      /* Handle exact board routes: shared board links use ?board=xxx; private refreshes
+         restore the last open board from localStorage via window._pendingStartupBoard. */
       var urlParams = new URLSearchParams(window.location.search);
       var sharedBoardId = urlParams.get('board');
-      if (sharedBoardId && _boardId !== sharedBoardId) {
+      var startupBoardId = sharedBoardId || window._pendingStartupBoard || '';
+      if (startupBoardId && _boardId !== startupBoardId) {
         /* Anyone can view a shared board */
-        setTimeout(function(){ openBoard(sharedBoardId); }, 200);
+        setTimeout(function(){ openBoard(startupBoardId); }, 0);
       }
     }
 
