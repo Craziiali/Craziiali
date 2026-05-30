@@ -7156,13 +7156,46 @@
        Generalised so adding a view never means touching the transition logic. */
     var OVERLAYS   = { home: viewHome, planner: viewPlanner, notes: viewNotes, moodboards: viewMoodboards, moodboardCanvas: viewMoodboardCanvas };
     var ENTER_CLS  = { home: 'home-entering', planner: 'planner-entering', notes: 'notes-entering', moodboards: 'mb-entering', moodboardCanvas: 'mb-canvas-entering' };
+    var ROUTE_PATHS = { home:'home', planner:'planner', notes:'notes', moodboards:'moodboard', moodboardCanvas:'moodboard' };
 
     /* Cancellable transition timer — prevents stale callbacks from
        re-hiding an overlay that a subsequent navigation just revealed */
     var _viewTimer = null;
+    var _routeNav = false;
+
+    function routeBasePath(){
+      var p = window.location.pathname || '/';
+      p = p.replace(/\/index\.html$/i, '/');
+      return p.replace(/\/(?:home|planner|notes?|moodboards?|invoice)\/?$/i, '/').replace(/\/$/, '');
+    }
+    function routeViewFromPath(){
+      var parts = (window.location.pathname || '').replace(/\/+$/,'').split('/');
+      var leaf = (parts.pop() || '').toLowerCase();
+      if (leaf === 'home') return 'home';
+      if (leaf === 'planner') return 'planner';
+      if (leaf === 'note' || leaf === 'notes') return 'notes';
+      if (leaf === 'moodboard' || leaf === 'moodboards') return 'moodboards';
+      return null;
+    }
+    function routeUrlFor(name){
+      var route = ROUTE_PATHS[name] || ROUTE_PATHS.home;
+      var base = routeBasePath();
+      var q = ((name === 'moodboards' || name === 'moodboardCanvas') && window.location.search) ? window.location.search : '';
+      return (base || '') + '/' + route + q;
+    }
+    function updateRoute(name, replace){
+      if (_routeNav || !ROUTE_PATHS[name] || !window.history) return;
+      var url = routeUrlFor(name);
+      if ((window.location.pathname + window.location.search) === url && !window.location.hash) return;
+      try {
+        var method = replace ? 'replaceState' : 'pushState';
+        window.history[method]({ view:name }, '', url);
+      } catch(e) {}
+    }
 
     function showView(name){
-      if(name === current) return;
+      if(name === current){ updateRoute(name, false); return; }
+      updateRoute(name, false);
 
       /* Cancel any in-flight cleanup so a rapid second navigation can
          never be undone by the first navigation's deferred hide */
@@ -7267,23 +7300,27 @@
       /* Admin: restore last view instead of always landing on home */
       var _savedView = null;
       try { _savedView = localStorage.getItem('cz_view'); } catch(e){}
-      var _startView = (_savedView && OVERLAYS[_savedView]) ? _savedView : 'home';
+      var _routeView = routeViewFromPath();
+      var _startView = (_routeView && OVERLAYS[_routeView]) ? _routeView : ((_savedView && OVERLAYS[_savedView]) ? _savedView : 'home');
       /* moodboardCanvas needs Firebase — land on gallery, we'll reopen the board below */
       if (_startView === 'moodboardCanvas') _startView = 'moodboards';
       document.body.dataset.view = _startView;
       current = _startView;
       OVERLAYS[_startView].classList.remove('v-hidden', 'v-gone');
+      updateRoute(_startView, true);
     } else if (_optimisticRole === 'viewer') {
       /* Viewer: show planner immediately (no auth overlay needed — firebase
          will confirm, and applyRole handles stale-hint cleanup)            */
       document.body.dataset.view = 'planner';
       current = 'planner';
       if (viewPlanner) viewPlanner.classList.remove('v-hidden', 'v-gone');
+      updateRoute('planner', true);
     } else {
       /* No stored auth → show planner + open the mandatory sign-in overlay
          immediately so there's no delay waiting for firebase to resolve.   */
       document.body.dataset.view = 'planner';
       current = 'planner';
+      updateRoute('planner', true);
       /* _showAuthOverlay is defined in the auth IIFE which ran before this */
       if (window._showAuthOverlay) window._showAuthOverlay();
     }
@@ -7291,6 +7328,7 @@
     (function(){ var l = document.getElementById('appLoader'); if (l) l.remove(); })();
 
     window._showHome = function() {
+      updateRoute('home', false);
       if (!viewHome.classList.contains('v-gone')) return; /* already visible */
       document.body.dataset.view = 'home';
       current = 'home';
@@ -7309,6 +7347,7 @@
        When hideOverlay removes that class, the planner disappears. Using
        _showPlanner explicitly removes v-gone so the planner persists.           */
     window._showPlanner = function() {
+      updateRoute('planner', false);
       document.body.dataset.view = 'planner';
       current = 'planner';
       if (!viewPlanner.classList.contains('v-gone')) return; /* already real-visible */
@@ -7346,6 +7385,13 @@
     document.getElementById('notesBrandHome').addEventListener('click',   function(){ showView('home'); });
     var iwm = document.getElementById('invoiceWordmark');
     if(iwm) iwm.addEventListener('click', function(){ if(window._appRole==='admin') showView('home'); });
+    window.addEventListener('popstate', function(){
+      var routed = routeViewFromPath();
+      if (!routed || routed === current || !OVERLAYS[routed]) return;
+      _routeNav = true;
+      showView(routed);
+      _routeNav = false;
+    });
 
     /* ══ SHOOT PLANNER ══════════════════════════════════════════════ */
     var projects     = [];
