@@ -11706,19 +11706,13 @@
         }
       }
 
-      /* Drag shield (transparent) — keeps the card draggable in poster mode.
-         mousedown bubbles to the element (so the canvas drag system runs); a mouseup
-         without movement counts as a click and enters play mode. */
+      /* Drag shield (transparent) — keeps the card draggable. A click (not a drag)
+         drops the shield so the native embed card is fully usable (its own play, Save,
+         scroll, etc.). Clicking away re-locks it (handled in renderEl on deselect). */
       var shield = document.createElement('div');
       shield.className = 'mb-embed-shield';
       ecard.appendChild(shield);
-
-      /* Center play button (poster mode) */
       if (d.embedUrl) {
-        var play = document.createElement('div');
-        play.className = 'mb-embed-play';
-        play.innerHTML = '<div class="mb-embed-play-btn"><svg viewBox="0 0 18 18" fill="currentColor"><path d="M5 3.5l10 5.5-10 5.5z"/></svg></div>';
-        ecard.appendChild(play);
         (function(cid){
           var dx0 = 0, dy0 = 0;
           shield.addEventListener('mousedown', function(ev){ dx0 = ev.clientX; dy0 = ev.clientY; });
@@ -11730,54 +11724,26 @@
         })(id);
       }
 
-      /* Corner buttons (top-right): Open + Done */
-      var cbtns = document.createElement('div');
-      cbtns.className = 'mb-embed-corner-btns';
-      if (d.url) {
-        var openBtn = document.createElement('a');
-        openBtn.className = 'mb-embed-cbtn mb-embed-cbtn-open';
-        openBtn.href = d.url; openBtn.target = '_blank'; openBtn.rel = 'noopener noreferrer';
-        openBtn.title = 'Open original';
-        openBtn.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2H2.5v7.5h7.5v-2M7 2h3v3M5 7l5-5"/></svg>';
-        openBtn.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
-        openBtn.addEventListener('click', function(ev){ ev.stopPropagation(); });
-        cbtns.appendChild(openBtn);
-      }
-      var doneBtn = document.createElement('button');
-      doneBtn.className = 'mb-embed-cbtn mb-embed-cbtn-done';
-      doneBtn.title = 'Stop & make draggable';
-      doneBtn.innerHTML = '<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1l8 8M9 1L1 9"/></svg>';
-      (function(cid){
-        doneBtn.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
-        doneBtn.addEventListener('click', function(ev){ ev.stopPropagation(); deactivateEmbed(_elDoms[cid], _elements[cid]); });
-      })(id);
-      cbtns.appendChild(doneBtn);
-      ecard.appendChild(cbtns);
-
       el.title = d.title || d.url || '';
       el.appendChild(ecard);
     }
 
-    /* Enter live/play mode: reload iframe with autoplay, drop the shield */
+    /* Make the native embed card interactive: just drop the drag shield so the
+       provider's own card (play button, Save, scroll) works directly. */
     function activateEmbed(el, d) {
       if (!el || !d || !d.embedUrl) return;
       var ecard = el.querySelector('.mb-embed-card');
       if (!ecard || ecard.classList.contains('mb-embed-live')) return;
-      var iframe = ecard.querySelector('.mb-embed-iframe');
-      if (iframe) {
-        var sep = d.embedUrl.indexOf('?') >= 0 ? '&' : '?';
-        iframe.src = d.embedUrl + sep + 'autoplay=1';
-      }
       ecard.classList.add('mb-embed-live');
     }
 
-    /* Back to poster mode: reload poster iframe (stops playback), restore shield */
+    /* Re-lock the card for dragging. Reload the poster URL so any playing video stops. */
     function deactivateEmbed(el, d) {
       if (!el || !d) return;
       var ecard = el.querySelector('.mb-embed-card');
-      if (!ecard) return;
+      if (!ecard || !ecard.classList.contains('mb-embed-live')) return;
       var iframe = ecard.querySelector('.mb-embed-iframe');
-      if (iframe && d.embedUrl) iframe.src = d.embedUrl;  /* reload without autoplay = stops video */
+      if (iframe && d.embedUrl && iframe.src !== d.embedUrl) iframe.src = d.embedUrl;
       ecard.classList.remove('mb-embed-live');
     }
 
