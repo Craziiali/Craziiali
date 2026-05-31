@@ -2700,8 +2700,14 @@
       direction: rtl;
     }
 
+    /* Disable the browser's NATIVE pull-to-refresh everywhere so it never draws
+       its own spinner on top of our custom .elastic-refresh-indicator (the
+       "two circles" bug). `none` (not `contain`) is what actually suppresses it. */
+    html, body { overscroll-behavior-y: none; }
+
     body {
       position: relative;
+      overscroll-behavior-y: none;
       background:
         radial-gradient(ellipse 100% 60% at 50% 0%, rgba(243,243,239,0.025), transparent 60%),
         radial-gradient(ellipse 80% 50% at 50% 100%, rgba(243,243,239,0.02), transparent 60%),
@@ -4458,7 +4464,7 @@
     pointer-events: auto;
     transition: opacity .55s cubic-bezier(.4,0,.2,1);
     overflow-y: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior: none;
     display: flex;
     flex-direction: column;
   }
@@ -4480,12 +4486,12 @@
   }
   #viewMoodboardCanvas::before { display: none; }
   #viewHome {
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
   }
   #viewMoodboards,
   #viewNotes {
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
   }
 
