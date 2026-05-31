@@ -5944,17 +5944,29 @@
      AND plays inline. A transparent shield keeps the card draggable until the user
      clicks "play"; corner overlays carry the badge + open + play/done controls. */
   .mb-embed-card { position:absolute; inset:0; border-radius:14px; overflow:hidden; background:transparent; }
-  .mb-embed-iframe { position:absolute; inset:0; width:100%; height:100%; border:none; display:block; background:transparent; opacity:0; transition:opacity 2.4s cubic-bezier(.16,1,.3,1); will-change:opacity; }
+  .mb-embed-iframe { position:absolute; inset:0; width:100%; height:100%; border:none; display:block; background:transparent; opacity:0; transition:opacity 2.4s cubic-bezier(.16,1,.3,1); will-change:opacity;
+    /* Block pointer events so the iframe can never hijack mousemove from the parent document.
+       Without this, hovering over the iframe area stops mousemove from firing on the parent,
+       freezing the custom glass cursor at the card border and revealing the OS hand cursor
+       from the iframe's own document (cross-origin iframes ignore the parent's cursor:none). */
+    pointer-events: none; }
   /* Scaler for fixed-size embeds (Instagram/TikTok/Pinterest): iframe rendered at natural
-     size, transform-scaled to fill the card. transform-origin top-left so it anchors cleanly. */
-  .mb-embed-scaler { position:absolute; top:0; left:0; transform-origin:top left; opacity:0; transition:opacity 2.4s cubic-bezier(.16,1,.3,1); will-change:opacity; }
+     size, transform-scaled to fill the card. transform-origin top-left so it anchors cleanly.
+     Also block pointer events on the scaler itself — the shield handles all interaction. */
+  .mb-embed-scaler { position:absolute; top:0; left:0; transform-origin:top left; opacity:0; transition:opacity 2.4s cubic-bezier(.16,1,.3,1); will-change:opacity; pointer-events:none; }
   .mb-embed-scaler .mb-embed-iframe { position:static; inset:auto; }
   .mb-embed-card.mb-embed-loaded > .mb-embed-iframe,
   .mb-embed-card.mb-embed-loaded > .mb-embed-scaler { opacity:1; }
   .mb-embed-card.mb-embed-loaded .mb-embed-scaler .mb-embed-iframe { opacity:1; }
-  /* Drag shield: catches pointer events so the card can be dragged. Removed in live mode. */
-  .mb-embed-shield { position:absolute; inset:0; z-index:3; cursor:move; background:transparent; }
+  /* Drag shield: catches pointer events so the card can be dragged. Removed in live mode.
+     Use a near-zero-opacity background instead of pure transparent so the div is a guaranteed
+     hit-target in all browsers (some Chromium builds skip hit-testing for truly-empty divs). */
+  .mb-embed-shield { position:absolute; inset:0; z-index:3; cursor:move; background:rgba(0,0,0,0.002); }
   .mb-embed-card.mb-embed-live .mb-embed-shield { display:none; }
+  /* In live mode the shield is gone — restore pointer events on the iframe so the user can
+     interact with the embed content normally. */
+  .mb-embed-card.mb-embed-live .mb-embed-iframe  { pointer-events: auto; }
+  .mb-embed-card.mb-embed-live .mb-embed-scaler  { pointer-events: auto; }
   /* Loading shimmer behind the iframe until it paints */
   .mb-embed-loading { position:absolute; inset:0; z-index:1; display:flex; align-items:center; justify-content:center; background:linear-gradient(90deg,#0d0d12 25%,#1a1a22 50%,#0d0d12 75%); background-size:400% 100%; animation:mbShimmer 1.9s ease-in-out infinite; opacity:1; transition:opacity 1.8s cubic-bezier(.16,1,.3,1); will-change:opacity; }
   .mb-embed-loading.mb-embed-loading-out { opacity:0; }
