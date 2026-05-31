@@ -21,6 +21,7 @@ import time
 import math
 import wave
 import struct
+import socket
 import threading
 from datetime import datetime, timedelta
 
@@ -227,11 +228,31 @@ def ring(title, when_label, shoot_dt, location, notes):
     return result["action"]
 
 
+# ── Single-instance guard ───────────────────────────────────────────────
+# Bind a fixed local port. If it's already taken, another copy of the agent
+# is running, so this one exits — preventing the alarm from popping up twice
+# (e.g. if autostart launches while a copy is already running).
+_lock_sock = None
+def already_running():
+    global _lock_sock
+    try:
+        _lock_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        _lock_sock.bind(("127.0.0.1", 50507))
+        _lock_sock.listen(1)
+        return False
+    except OSError:
+        return True
+
+
 # ── Main loop ───────────────────────────────────────────────────────────
 def main():
     print("=" * 56)
     print("  CRAZIIALI — Laptop Alarm Agent")
     print("=" * 56)
+
+    if already_running():
+        print("\n[i] Another copy of the alarm agent is already running. Exiting.\n")
+        return
 
     if not os.path.exists(KEY_PATH):
         print("\n[!] Missing serviceAccountKey.json in this folder.")
