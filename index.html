@@ -4479,6 +4479,13 @@
     -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
   }
   #viewMoodboardCanvas::before { display: none; }
+  #viewHome {
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    transform: translateY(var(--ptr-home-shift, 0px));
+    transition: transform .22s cubic-bezier(.16,1,.3,1);
+    will-change: transform;
+  }
 
   /* ═══════════════════════════════════════════════════════════════
      HOME PAGE
@@ -4491,9 +4498,6 @@
     justify-content: center;
     min-height: 100dvh;
     padding: 60px 24px;
-    transform: translateY(var(--ptr-home-shift, 0px));
-    transition: transform .22s cubic-bezier(.16,1,.3,1);
-    will-change: transform;
   }
   .home-eyebrow {
     font-family: var(--font-en-mono);
@@ -4981,7 +4985,7 @@
     border-radius: 50%;
     border: 1px solid rgba(243,243,239,.12);
     background: rgba(13,13,17,.9);
-    color: var(--accent-soft);
+    color: rgba(243,243,239,.84);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4998,8 +5002,8 @@
   html.ptr-home-native-lock body {
     overscroll-behavior-y: none;
   }
-  body.ptr-home-pulling .home-wrap,
-  body.ptr-home-refreshing .home-wrap {
+  body.ptr-home-pulling #viewHome,
+  body.ptr-home-refreshing #viewHome {
     transition: transform .05s linear;
   }
   body.ptr-home-pulling .pull-refresh-indicator {
@@ -5007,14 +5011,14 @@
     transform: translate(-50%, calc(-76px + var(--ptr-pull, 0px))) scale(calc(.86 + var(--ptr-scale, 0)));
   }
   body.ptr-home-ready .pull-refresh-indicator {
-    border-color: rgba(var(--accent-rgb),.42);
+    border-color: rgba(243,243,239,.34);
     color: #fff;
   }
   body.ptr-home-refreshing .pull-refresh-indicator {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
     color: #fff;
-    border-color: rgba(var(--accent-rgb),.45);
+    border-color: rgba(243,243,239,.38);
   }
   body.ptr-home-refreshing .pull-refresh-indicator svg { animation: ptrSpin .75s linear infinite; }
   @keyframes ptrSpin { to { transform: rotate(360deg); } }
