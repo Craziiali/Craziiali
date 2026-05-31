@@ -4482,9 +4482,6 @@
   #viewHome {
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
-    transform: translateY(var(--ptr-home-shift, 0px));
-    transition: transform .22s cubic-bezier(.16,1,.3,1);
-    will-change: transform;
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -4498,6 +4495,9 @@
     justify-content: center;
     min-height: 100dvh;
     padding: 60px 24px;
+    transform: translateY(var(--home-rubber-shift, 0px));
+    transition: transform .42s cubic-bezier(.16,1,.3,1);
+    will-change: transform;
   }
   .home-eyebrow {
     font-family: var(--font-en-mono);
@@ -4975,53 +4975,13 @@
   .home-entering .tool-card:nth-child(1){ animation: focusIn .70s cubic-bezier(.16,1,.3,1) both; animation-delay: 220ms; }
   .home-entering .tool-card:nth-child(2){ animation: focusIn .70s cubic-bezier(.16,1,.3,1) both; animation-delay: 360ms; }
   .home-entering .tool-card:nth-child(3){ animation: focusIn .70s cubic-bezier(.16,1,.3,1) both; animation-delay: 500ms; }
-  .pull-refresh-indicator {
-    position: fixed;
-    top: max(14px, env(safe-area-inset-top));
-    left: 50%;
-    z-index: 199998;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    border: 1px solid rgba(243,243,239,.12);
-    background: rgba(13,13,17,.9);
-    color: rgba(243,243,239,.84);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    opacity: 0;
-    transform: translate(-50%, -76px) scale(.86);
-    box-shadow: 0 14px 42px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.08);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    transition: opacity .16s ease, transform .16s cubic-bezier(.16,1,.3,1), border-color .16s, color .16s;
-  }
-  .pull-refresh-indicator svg { width: 19px; height: 19px; transform: rotate(var(--ptr-rot, 0deg)); transition: transform .12s linear; }
-  html.ptr-home-native-lock,
-  html.ptr-home-native-lock body {
+  html.home-rubber-lock,
+  html.home-rubber-lock body {
     overscroll-behavior-y: none;
   }
-  body.ptr-home-pulling #viewHome,
-  body.ptr-home-refreshing #viewHome {
+  body.home-rubbering .home-wrap {
     transition: none;
   }
-  body.ptr-home-pulling .pull-refresh-indicator {
-    opacity: 1;
-    transform: translate(-50%, calc(-76px + var(--ptr-pull, 0px))) scale(calc(.86 + var(--ptr-scale, 0)));
-  }
-  body.ptr-home-ready .pull-refresh-indicator {
-    border-color: rgba(243,243,239,.34);
-    color: #fff;
-  }
-  body.ptr-home-refreshing .pull-refresh-indicator {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-    color: #fff;
-    border-color: rgba(243,243,239,.38);
-  }
-  body.ptr-home-refreshing .pull-refresh-indicator svg { animation: ptrSpin .75s linear infinite; }
-  @keyframes ptrSpin { to { transform: rotate(360deg); } }
 
   /* Empty state */
   .planner-empty {
@@ -6391,13 +6351,6 @@
     position:fixed;inset:0;z-index:199999;
     background:#0b0b0c;pointer-events:none;
   "></div>
-  <div id="pullRefreshIndicator" class="pull-refresh-indicator" aria-hidden="true">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M16 8.2A6 6 0 1 0 14.1 14"/>
-      <path d="M16 3.6v4.6h-4.6"/>
-    </svg>
-  </div>
-
   <div class="halo" aria-hidden="true"></div>
   <div class="halo-core" aria-hidden="true"></div>
 
@@ -7664,7 +7617,7 @@
 
       var prev = current; current = name;
       document.body.dataset.view = name;
-      document.documentElement.classList.toggle('ptr-home-native-lock', name === 'home');
+      document.documentElement.classList.toggle('home-rubber-lock', name === 'home');
       localStorage.setItem('cz_view', name);
 
       /* Going to invoice: blur any focused field first, then fade overlay out */
@@ -7738,73 +7691,53 @@
     window._getCurrentView = function(){ return current; };
     window._hasExplicitRoute = !!routeViewFromPath();
 
-    function initHomePullRefresh(){
-      var indicator = document.getElementById('pullRefreshIndicator');
-      if (!indicator || !window.matchMedia || !window.matchMedia('(hover: none), (pointer: coarse), (max-width: 700px)').matches) return;
+    function initHomeRubberBand(){
+      if (!window.matchMedia || !window.matchMedia('(hover: none), (pointer: coarse), (max-width: 700px)').matches) return;
       var state = null;
-      var threshold = 74;
-      function syncNativePullLock(){
-        document.documentElement.classList.toggle('ptr-home-native-lock', current === 'home' && document.body.dataset.view === 'home');
+      function syncRubberLock(){
+        document.documentElement.classList.toggle('home-rubber-lock', current === 'home' && document.body.dataset.view === 'home');
       }
-      function resetPull(){
+      function resetRubber(){
         state = null;
-        document.body.classList.remove('ptr-home-pulling','ptr-home-ready','ptr-home-refreshing');
-        document.body.style.removeProperty('--ptr-pull');
-        document.body.style.removeProperty('--ptr-scale');
-        document.body.style.removeProperty('--ptr-rot');
-        document.body.style.setProperty('--ptr-home-shift', '0px');
-        setTimeout(function(){ if (!state) document.body.style.removeProperty('--ptr-home-shift'); }, 260);
+        document.body.classList.remove('home-rubbering');
+        document.body.style.setProperty('--home-rubber-shift', '0px');
+        setTimeout(function(){ if (!state) document.body.style.removeProperty('--home-rubber-shift'); }, 460);
       }
       var _origShowView = window.showView;
       window.showView = function(name){
         _origShowView(name);
-        if (name !== 'home') resetPull();
-        requestAnimationFrame(syncNativePullLock);
+        if (name !== 'home') resetRubber();
+        requestAnimationFrame(syncRubberLock);
       };
-      syncNativePullLock();
+      syncRubberLock();
       function canStart(e){
-        if (document.body.classList.contains('ptr-home-refreshing')) return false;
         if (current !== 'home' || document.body.dataset.view !== 'home') return false;
         if (!e.touches || e.touches.length !== 1) return false;
-        if (window.scrollY > 0 || document.documentElement.scrollTop > 0) return false;
+        if (window.scrollY > 0 || document.documentElement.scrollTop > 0 || viewHome.scrollTop > 0) return false;
         var t = e.target;
         if (t && t.closest && t.closest('input, textarea, select, [contenteditable="true"], .auth-user-bar, .czteam-panel, .czchat-win')) return false;
         return true;
       }
       document.addEventListener('touchstart', function(e){
         if (!canStart(e)) return;
-        state = { startY:e.touches[0].clientY, pull:0, ready:false };
+        state = { startY:e.touches[0].clientY };
       }, { passive:true });
       document.addEventListener('touchmove', function(e){
         if (!state || !e.touches || e.touches.length !== 1) return;
         var dy = e.touches[0].clientY - state.startY;
-        if (dy <= 0) { resetPull(); return; }
-        if (window.scrollY > 0 || document.documentElement.scrollTop > 0) { resetPull(); return; }
+        if (dy <= 0) { resetRubber(); return; }
+        if (window.scrollY > 0 || document.documentElement.scrollTop > 0 || viewHome.scrollTop > 0) { resetRubber(); return; }
         if (dy > 5) e.preventDefault();
-        var pull = Math.min(112, dy * 0.58);
-        state.pull = pull;
-        state.ready = pull >= threshold;
-        document.body.classList.add('ptr-home-pulling');
-        document.body.classList.toggle('ptr-home-ready', state.ready);
-        document.body.style.setProperty('--ptr-pull', pull + 'px');
-        document.body.style.setProperty('--ptr-scale', String(Math.min(.18, pull / 520)));
-        document.body.style.setProperty('--ptr-rot', Math.min(300, pull * 3.2) + 'deg');
-        document.body.style.setProperty('--ptr-home-shift', pull + 'px');
+        var pull = dy < 160 ? dy * .72 : 115 + Math.sqrt(dy - 160) * 7;
+        document.body.classList.add('home-rubbering');
+        document.body.style.setProperty('--home-rubber-shift', pull + 'px');
       }, { passive:false });
       document.addEventListener('touchend', function(){
-        if (!state) return;
-        if (state.ready) {
-          document.body.classList.remove('ptr-home-pulling','ptr-home-ready');
-          document.body.classList.add('ptr-home-refreshing');
-          document.body.style.setProperty('--ptr-home-shift', '34px');
-          setTimeout(function(){ window.location.reload(); }, 220);
-        } else {
-          resetPull();
-        }
+        if (state) resetRubber();
       }, { passive:true });
-      document.addEventListener('touchcancel', resetPull, { passive:true });
+      document.addEventListener('touchcancel', resetRubber, { passive:true });
     }
-    initHomePullRefresh();
+    initHomeRubberBand();
 
     var _startupRevealAnimated = false;
     window._clearAppLoader = function(){
@@ -7880,7 +7813,7 @@
       updateRoute('home', false);
       if (!viewHome.classList.contains('v-gone')) return; /* already visible */
       document.body.dataset.view = 'home';
-      document.documentElement.classList.add('ptr-home-native-lock');
+      document.documentElement.classList.add('home-rubber-lock');
       current = 'home';
       viewHome.classList.remove('v-hidden', 'v-gone');
       requestAnimationFrame(function(){
