@@ -11306,6 +11306,8 @@
           startY: e.clientY,
           origPos: origPos,
           active: false,
+          duplicateOnDrag: e.altKey,
+          createdItems: null,
           textTarget: e.target && e.target.classList && e.target.classList.contains('mb-sticky-text') ? e.target : null
         };
       });
@@ -11322,6 +11324,34 @@
         renderAll(); updatePropbar();
       });
 
+    }
+
+    function createAltDragCopies(origPos) {
+      var newIds = [];
+      var newOrig = [];
+      var created = [];
+      origPos.forEach(function(op){
+        var d = _elements[op.id];
+        if (!d || d.locked) return;
+        var nid = genId();
+        var nd = Object.assign({}, JSON.parse(JSON.stringify(d)), {
+          x: d.x,
+          y: d.y,
+          z: nextZ(),
+          createdBy: _myUid || '',
+          updatedAt: Date.now()
+        });
+        _elements[nid] = nd;
+        commitElSet(nid, nd);
+        newIds.push(nid);
+        newOrig.push({ id:nid, x:nd.x, y:nd.y });
+        created.push({ id:nid, data:JSON.parse(JSON.stringify(nd)) });
+      });
+      if (!newIds.length) return null;
+      _selected = newIds;
+      renderAll();
+      updatePropbar();
+      return { origPos:newOrig, createdItems:created };
     }
 
     /* ── Drag handler ───────────────────────────────────── */
@@ -11367,6 +11397,13 @@
           }
           _drag.active = true;
           if (_drag.textTarget && _drag.textTarget.blur) _drag.textTarget.blur();
+          if (_drag.duplicateOnDrag) {
+            var copyDrag = createAltDragCopies(_drag.origPos);
+            if (!copyDrag) { _drag = null; return; }
+            _drag.origPos = copyDrag.origPos;
+            _drag.createdItems = copyDrag.createdItems;
+            _drag.duplicateOnDrag = false;
+          }
         }
         e.preventDefault();
         _drag.origPos.forEach(function(op){
@@ -11446,7 +11483,13 @@
             updates.push({ id: op.id, x: nx, y: ny });
             commitElUpdate(op.id, { x: nx, y: ny });
           });
-          pushUndo({ type:'move', items: _drag.origPos.map(function(op,i){ return { id:op.id, before:{x:op.x,y:op.y}, after:{x:updates[i].x,y:updates[i].y}}; }) });
+          if (_drag.createdItems) {
+            pushUndo({ type:'createMany', items:_drag.createdItems.map(function(it){
+              return { id:it.id, data:JSON.parse(JSON.stringify(_elements[it.id] || it.data)) };
+            }) });
+          } else {
+            pushUndo({ type:'move', items: _drag.origPos.map(function(op,i){ return { id:op.id, before:{x:op.x,y:op.y}, after:{x:updates[i].x,y:updates[i].y}}; }) });
+          }
         }
         _drag = null;
         return;
@@ -12096,6 +12139,19 @@
           var se=svgLayer.querySelector('[data-id="'+a.id+'"]'); if(se)se.remove();
           if (window.fb&&window.fb.boards) window.fb.boards.elements.remove(_boardId, a.id);
         }
+      } else if (a.type === 'createMany') {
+        a.items.forEach(function(it){
+          if (isRedo) {
+            _elements[it.id] = JSON.parse(JSON.stringify(it.data));
+            commitElSet(it.id, it.data);
+          } else {
+            delete _elements[it.id];
+            if (_elDoms[it.id]) { _elDoms[it.id].remove(); delete _elDoms[it.id]; }
+            var seMany=svgLayer.querySelector('[data-id="'+it.id+'"]'); if(seMany)seMany.remove();
+            if (window.fb&&window.fb.boards) window.fb.boards.elements.remove(_boardId, it.id);
+          }
+        });
+        renderAll();
       } else if (a.type === 'delete') {
         a.items.forEach(function(it){
           if (isRedo) {
