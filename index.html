@@ -9730,6 +9730,12 @@
       if (info.platform==='tiktok')    return 'https://www.tiktok.com/embed/v2/'+info.id;
       return null;
     }
+    function embedAutoplayUrl(info) {
+      if (!info) return null;
+      if (info.platform === 'youtube' && info.id) return 'https://www.youtube.com/embed/' + info.id + '?rel=0&playsinline=1&autoplay=1';
+      if (info.platform === 'vimeo' && info.id) return 'https://player.vimeo.com/video/' + info.id + '?autoplay=1';
+      return null;
+    }
     function embedThumbnailUrl(info) {
       if (info.platform==='youtube') return 'https://img.youtube.com/vi/'+info.id+'/hqdefault.jpg';
       return null;
@@ -12229,6 +12235,10 @@
       if (!el || !d || !d.embedUrl) return;
       var ecard = el.querySelector('.mb-embed-card');
       if (!ecard || ecard.classList.contains('mb-embed-live')) return;
+      var autoplayUrl = embedAutoplayUrl(d);
+      if (!autoplayUrl) return;
+      var iframe = ecard.querySelector('.mb-embed-iframe');
+      if (iframe && iframe.src !== autoplayUrl) iframe.src = autoplayUrl;
       ecard.classList.add('mb-embed-live');
     }
 
