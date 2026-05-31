@@ -6298,7 +6298,7 @@
     .mb-gallery-actions { width:100%; gap:8px; justify-content:flex-end; }
     .mb-new-board-btn { font-size:8px; letter-spacing:.1em; padding:5px 11px; }
     .mb-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; }
-    .mb-toolbar { left:8px; right:8px; transform:none; border-radius:14px; overflow-x:auto; overflow-y:visible; justify-content:flex-start; bottom:max(16px,env(safe-area-inset-bottom)); padding:6px 8px; scrollbar-width:none; }
+    .mb-toolbar { position:fixed; left:50%; right:auto; width:calc(100vw - 16px); max-width:560px; transform:translateX(-50%); box-sizing:border-box; border-radius:14px; overflow-x:auto; overflow-y:visible; justify-content:flex-start; bottom:max(16px,env(safe-area-inset-bottom)); padding:6px 8px; scrollbar-width:none; }
     .mb-toolbar::-webkit-scrollbar { display:none; }
     .mb-tool-btn { width:34px; height:34px; border-radius:9px; flex:0 0 auto; }
     .mb-tool-sep { margin:0 3px; }
@@ -10168,6 +10168,7 @@
     var _touchGesture=null; /* mobile-only pan / pinch / drag gesture state */
     var _mobileFitDone=false;
     var _suppressMouseUntil=0; /* avoid synthetic mouse events after touch */
+    var _panInertiaRaf=null;
 
     /* Throttle: cursor broadcast */
     var _cursorTimer=null, _lastCx=-9999, _lastCy=-9999;
@@ -10237,6 +10238,35 @@
       updateZoomPct();
       positionAllCursors();
       positionPropbar();
+    }
+
+    function stopPanInertia() {
+      if (_panInertiaRaf) {
+        cancelAnimationFrame(_panInertiaRaf);
+        _panInertiaRaf = null;
+      }
+    }
+
+    function startPanInertia(vx, vy) {
+      stopPanInertia();
+      if (!isMobileCanvasMode()) return;
+      var last = performance.now();
+      function step(now) {
+        var dt = Math.min(32, now - last);
+        last = now;
+        _panX += vx * dt;
+        _panY += vy * dt;
+        applyTransform();
+        var decay = Math.pow(0.92, dt / 16.67);
+        vx *= decay;
+        vy *= decay;
+        if (Math.abs(vx) < 0.015 && Math.abs(vy) < 0.015) {
+          _panInertiaRaf = null;
+          return;
+        }
+        _panInertiaRaf = requestAnimationFrame(step);
+      }
+      if (Math.abs(vx) > 0.02 || Math.abs(vy) > 0.02) _panInertiaRaf = requestAnimationFrame(step);
     }
 
     function updateZoomPct() {
@@ -10825,6 +10855,14 @@
           e.stopPropagation(); e.preventDefault();
           startResize(id, h, e);
         });
+        hEl.addEventListener('touchstart', function(e){
+          if (!isMobileCanvasMode() || !e.touches || !e.touches.length) return;
+          e.stopPropagation(); e.preventDefault();
+          _suppressMouseUntil = Date.now() + 750;
+          stopPanInertia();
+          startResize(id, h, e.touches[0]);
+          _touchGesture = { type:'resize' };
+        }, { passive:false });
         el.appendChild(hEl);
       });
     }
@@ -11302,7 +11340,8 @@
       return !!(target && target.closest && target.closest('input, textarea, select, [contenteditable="true"], .mb-propbar, .mb-topbar, .mb-toolbar, .mb-tool-menu, .mb-embed-live'));
     }
     function beginTouchPan(t) {
-      _touchGesture = { type:'pan', startX:t.clientX, startY:t.clientY, panX:_panX, panY:_panY };
+      var now = performance.now();
+      _touchGesture = { type:'pan', startX:t.clientX, startY:t.clientY, lastX:t.clientX, lastY:t.clientY, lastT:now, vx:0, vy:0, panX:_panX, panY:_panY };
       if (stage) stage.classList.add('panning');
     }
     function selectTouchedElement(id) {
@@ -11369,6 +11408,7 @@
     }
     function onStageTouchStart(e) {
       if (!isMobileCanvasMode() || !stage || !canvas) return;
+      stopPanInertia();
       _suppressMouseUntil = Date.now() + 750;
       if (e.touches.length === 2) {
         e.preventDefault();
@@ -11418,6 +11458,13 @@
     function onStageTouchMove(e) {
       if (!isMobileCanvasMode() || !_touchGesture) return;
       _suppressMouseUntil = Date.now() + 750;
+      if (_touchGesture.type === 'resize' && _resize) {
+        if (e.touches.length !== 1) return;
+        e.preventDefault();
+        doResize(e.touches[0].clientX, e.touches[0].clientY);
+        positionPropbar();
+        return;
+      }
       if (_touchGesture.type === 'pinch') {
         if (e.touches.length < 2) return;
         e.preventDefault();
@@ -11431,10 +11478,15 @@
       }
       if (e.touches.length !== 1) return;
       var t = e.touches[0];
-      _touchGesture.lastX = t.clientX;
-      _touchGesture.lastY = t.clientY;
       if (_touchGesture.type === 'pan') {
         e.preventDefault();
+        var now = performance.now();
+        var dt = Math.max(8, now - (_touchGesture.lastT || now));
+        _touchGesture.vx = (t.clientX - (_touchGesture.lastX || t.clientX)) / dt;
+        _touchGesture.vy = (t.clientY - (_touchGesture.lastY || t.clientY)) / dt;
+        _touchGesture.lastX = t.clientX;
+        _touchGesture.lastY = t.clientY;
+        _touchGesture.lastT = now;
         _panX = _touchGesture.panX + (t.clientX - _touchGesture.startX);
         _panY = _touchGesture.panY + (t.clientY - _touchGesture.startY);
         applyTransform();
@@ -11449,6 +11501,8 @@
           if (dragPx < 5) return;
           _touchGesture.active = true;
         }
+        _touchGesture.lastX = t.clientX;
+        _touchGesture.lastY = t.clientY;
         _touchGesture.origPos.forEach(function(op){
           var dom = _elDoms[op.id];
           if (dom) { dom.style.left=(op.x+ddx)+'px'; dom.style.top=(op.y+ddy)+'px'; }
@@ -11480,8 +11534,16 @@
         return;
       }
       if (_touchGesture.type === 'pan') {
+        var vx = _touchGesture.vx || 0;
+        var vy = _touchGesture.vy || 0;
         _touchGesture = null;
         if (stage) stage.classList.remove('panning');
+        startPanInertia(vx, vy);
+        return;
+      }
+      if (_touchGesture.type === 'resize') {
+        if (_resize) finishResize();
+        _touchGesture = null;
         return;
       }
       if (_touchGesture.type === 'drag') {
