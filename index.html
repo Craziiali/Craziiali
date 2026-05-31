@@ -5762,8 +5762,9 @@
   .mb-collab-avatar { width:26px; height:26px; border-radius:50%; border:2px solid rgba(11,11,14,.95); font-family:var(--font-en-mono); font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; color:#0a0a0b; margin-left:-7px; flex-shrink:0; position:relative; transition:transform .15s; box-shadow:0 2px 6px rgba(0,0,0,.4); }
   .mb-collab-avatar:first-child { margin-left:0; }
   .mb-collab-avatar:hover { transform:translateY(-2px) scale(1.1); z-index:2; }
-  .mb-toolbar { position:absolute; bottom:24px; left:50%; transform:translateX(-50%); z-index:200; display:flex; flex-direction:row; align-items:center; gap:1px; background:rgba(13,13,17,.94); border:1px solid rgba(243,243,239,.13); border-radius:22px; padding:6px 10px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); pointer-events:all; box-shadow:0 12px 48px rgba(0,0,0,.6),0 2px 12px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.07); }
-  .mb-tool-btn { width:36px; height:36px; border-radius:10px; border:1px solid transparent; background:transparent; color:rgba(243,243,239,.45); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .12s,border-color .12s,color .12s; position:relative; }
+  .mb-toolbar { position:absolute; bottom:24px; left:50%; transform:translateX(-50%); z-index:200; display:flex; flex-direction:row; align-items:center; gap:2px; background:rgba(13,13,17,.94); border:1px solid rgba(243,243,239,.13); border-radius:22px; padding:6px 10px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); pointer-events:all; box-shadow:0 12px 48px rgba(0,0,0,.6),0 2px 12px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.07); }
+  .mb-tool-wrap { position:relative; display:flex; align-items:center; }
+  .mb-tool-btn { width:36px; height:36px; border-radius:10px; border:1px solid transparent; background:transparent; color:rgba(243,243,239,.45); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .12s,border-color .12s,color .12s,transform .14s; position:relative; }
   .mb-tool-btn:hover { background:rgba(243,243,239,.09); color:rgba(243,243,239,.9); }
   .mb-tool-btn:active { background:rgba(243,243,239,.06); transform:scale(.96); transition:transform .06s; }
   .mb-tool-btn.active { background:rgba(126,140,247,.18); border-color:rgba(126,140,247,.5); color:#b4bcff; box-shadow:0 0 0 1px rgba(126,140,247,.12), 0 2px 10px rgba(126,140,247,.22); }
@@ -5771,6 +5772,31 @@
   .mb-tool-btn:hover svg { transform:translateY(-2px) scale(1.1); }
   .mb-tool-btn:active svg { transform:translateY(0) scale(.9); transition-duration:.08s; }
   .mb-tool-sep { width:1px; height:20px; background:rgba(243,243,239,.1); margin:0 5px; flex-shrink:0; }
+  .mb-tool-art { position:relative; display:block; transition:transform .22s cubic-bezier(.34,1.56,.64,1),filter .22s; }
+  .mb-tool-btn:hover .mb-tool-art { transform:translateY(-4px) rotate(-3deg) scale(1.08); filter:drop-shadow(0 8px 12px rgba(0,0,0,.35)); }
+  .mb-tool-art-pen { width:18px; height:38px; margin-top:-8px; border-radius:9px 9px 4px 4px; background:linear-gradient(90deg,#eef0ed 0 48%,#c4c6c2 49% 54%,#fafafa 55%); box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 8px 18px rgba(0,0,0,.35); }
+  .mb-tool-art-pen::before { content:""; position:absolute; left:2px; right:2px; top:-10px; border-left:7px solid transparent; border-right:7px solid transparent; border-bottom:13px solid #15151a; filter:drop-shadow(0 1px 0 rgba(255,255,255,.25)); }
+  .mb-tool-art-pen::after { content:""; position:absolute; left:4px; right:4px; bottom:-8px; height:10px; background:linear-gradient(#b8b9b5,#f8f8f5); clip-path:polygon(0 0,100% 0,50% 100%); }
+  .mb-tool-art-sticky { width:30px; height:28px; border-radius:4px; background:linear-gradient(135deg,#cfeaff,#79bdff); transform:rotate(-4deg); box-shadow:-6px 5px 0 rgba(166,215,255,.75),-11px 9px 0 rgba(126,184,236,.42),0 10px 18px rgba(0,0,0,.28); }
+  .mb-tool-art-sticky::after { content:""; position:absolute; inset:0; border-radius:4px; background:linear-gradient(135deg,rgba(255,255,255,.5),transparent 54%); }
+  .mb-tool-art-shape { width:24px; height:24px; border:2px solid currentColor; border-radius:4px; }
+  .mb-tool-art-shape::after { content:""; position:absolute; width:19px; height:19px; right:-13px; bottom:-9px; border:2px solid currentColor; border-radius:50%; opacity:.85; background:rgba(13,13,17,.94); }
+  .mb-tool-menu { position:absolute; left:50%; bottom:calc(100% + 13px); transform:translateX(-50%) translateY(6px) scale(.98); display:flex; align-items:center; gap:8px; padding:9px 11px; border-radius:18px; border:1px solid rgba(243,243,239,.14); background:rgba(20,20,22,.98); box-shadow:0 20px 54px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.08); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .14s,transform .14s,visibility .14s; z-index:950; white-space:nowrap; }
+  .mb-tool-menu::after { content:""; position:absolute; left:50%; bottom:-5px; width:10px; height:10px; transform:translateX(-50%) rotate(45deg); background:rgba(20,20,22,.98); border-right:1px solid rgba(243,243,239,.14); border-bottom:1px solid rgba(243,243,239,.14); }
+  .mb-tool-wrap.open .mb-tool-menu { opacity:1; visibility:visible; pointer-events:all; transform:translateX(-50%) translateY(0) scale(1); }
+  .mb-tool-chip { width:32px; height:32px; border:1px solid transparent; border-radius:10px; background:rgba(243,243,239,.05); color:rgba(243,243,239,.72); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .12s,border-color .12s,color .12s,transform .12s; font-family:var(--font-en-mono); font-size:12px; }
+  .mb-tool-chip:hover { background:rgba(243,243,239,.1); color:#fff; transform:translateY(-2px); }
+  .mb-tool-chip.active { background:rgba(126,140,247,.2); border-color:rgba(126,140,247,.45); color:#fff; }
+  .mb-tool-chip svg { width:16px; height:16px; }
+  .mb-tool-swatch { width:24px; height:24px; border-radius:50%; border:2px solid rgba(243,243,239,.2); background:var(--sw); cursor:pointer; transition:transform .12s,border-color .12s,box-shadow .12s; }
+  .mb-tool-swatch:hover { transform:scale(1.08); border-color:rgba(243,243,239,.65); }
+  .mb-tool-swatch.active { border-color:#fff; box-shadow:0 0 0 2px rgba(126,140,247,.45); }
+  .mb-tool-range { width:92px; accent-color:#8f45ff; cursor:pointer; }
+  .mb-stamp-wheel { width:266px; height:266px; border-radius:50%; padding:0; background:radial-gradient(circle at 50% 50%,rgba(243,243,239,.16) 0 27%,rgba(243,243,239,.09) 28% 100%); border-color:rgba(243,243,239,.16); overflow:hidden; }
+  .mb-stamp-wheel::before { content:""; position:absolute; inset:36px; border-radius:50%; border:2px solid rgba(255,255,255,.5); opacity:.5; pointer-events:none; }
+  .mb-stamp-choice { position:absolute; left:50%; top:50%; width:46px; height:46px; margin:-23px 0 0 -23px; border:0; border-radius:16px; background:#fff; box-shadow:0 3px 0 rgba(0,0,0,.14),0 8px 18px rgba(0,0,0,.25); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transform:rotate(var(--a)) translateY(-92px) rotate(calc(var(--a) * -1)); transition:transform .14s,box-shadow .14s; }
+  .mb-stamp-choice:hover { transform:rotate(var(--a)) translateY(-98px) rotate(calc(var(--a) * -1)) scale(1.08); box-shadow:0 4px 0 rgba(0,0,0,.14),0 12px 26px rgba(0,0,0,.3); }
+  .mb-stamp-center { position:absolute; left:50%; top:50%; width:74px; height:74px; margin:-37px 0 0 -37px; border-radius:50%; background:rgba(255,255,255,.9); display:flex; align-items:center; justify-content:center; font-size:24px; box-shadow:inset 0 0 0 2px rgba(0,0,0,.04); pointer-events:none; }
   .mb-tool-btn[data-tip]::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); background:rgba(20,20,28,.98); color:rgba(243,243,239,.75); font-family:var(--font-en-mono); font-size:8.5px; letter-spacing:.08em; white-space:nowrap; padding:5px 10px; border-radius:6px; border:1px solid rgba(243,243,239,.12); pointer-events:none; opacity:0; transition:opacity .12s; z-index:999; box-shadow:0 4px 16px rgba(0,0,0,.5); }
   .mb-tool-btn[data-tip]:hover::after { opacity:1; }
   /* Contextual toolbar — JS anchors it directly above (or below) the selected element via inline left/top. */
@@ -5835,7 +5861,7 @@
   .mb-stage.tool-select { cursor:default; }
   .mb-stage.tool-hand { cursor:grab; }
   .mb-stage.tool-hand.panning { cursor:grabbing; }
-  .mb-stage.tool-pen,.mb-stage.tool-sticky,.mb-stage.tool-rect,.mb-stage.tool-circle,.mb-stage.tool-diamond,.mb-stage.tool-arrow { cursor:crosshair; }
+  .mb-stage.tool-pen,.mb-stage.tool-sticky,.mb-stage.tool-rect,.mb-stage.tool-circle,.mb-stage.tool-diamond,.mb-stage.tool-arrow,.mb-stage.tool-stamp,.mb-stage.tool-comment { cursor:crosshair; }
   .mb-stage.tool-text { cursor:text; }
   .mb-stage.tool-image { cursor:copy; }
   /* NOTE: no permanent will-change here — that pins a 1x raster that the GPU upscales (blurry until re-paint).
@@ -5855,6 +5881,12 @@
   .mb-sticky-text,.mb-textblock,.mb-board-name-input { cursor:text !important; }
   .mb-textblock { min-width:100px; min-height:30px; padding:4px 6px; border-radius:2px; outline:none; background:transparent; word-break:break-word; }
   .mb-textblock:focus { outline:2px solid rgba(126,140,247,.4); }
+  .mb-stamp-el { width:100%; height:100%; display:flex; align-items:center; justify-content:center; border-radius:20px; background:#fff; color:#141417; font-size:42px; line-height:1; filter:drop-shadow(0 4px 0 rgba(0,0,0,.18)) drop-shadow(0 12px 24px rgba(0,0,0,.3)); box-shadow:inset 0 0 0 3px rgba(255,255,255,.9),inset 0 -8px 14px rgba(0,0,0,.05); }
+  .mb-comment-el { position:relative; width:100%; height:100%; border-radius:20px; background:rgba(126,140,247,.95); color:#fff; box-shadow:0 14px 32px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.28); padding:12px; box-sizing:border-box; display:flex; flex-direction:column; gap:8px; }
+  .mb-comment-el::before { content:""; position:absolute; left:20px; bottom:-8px; width:18px; height:18px; background:rgba(126,140,247,.95); transform:rotate(45deg); border-radius:3px; }
+  .mb-comment-label { font-family:var(--font-en-mono); font-size:8px; letter-spacing:.12em; text-transform:uppercase; opacity:.68; }
+  .mb-comment-text { flex:1; min-height:40px; border:0; outline:0; resize:none; background:transparent; color:#fff; font-family:var(--font-en-body); font-size:13px; line-height:1.35; padding:0; position:relative; z-index:1; }
+  .mb-comment-text::placeholder { color:rgba(255,255,255,.58); }
   .mb-shape-svg { width:100%; height:100%; overflow:visible; pointer-events:none; }
   /* Box is sized to the media's true aspect ratio (see fitMediaSize in JS), so object-fit:cover
      fills it edge-to-edge with no letterbox gap — the frame and selection ring then hug the image. */
@@ -6214,32 +6246,71 @@
         <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.5V9m0-5.5a1 1 0 0 1 1 1V9m-1-5.5a1 1 0 0 0-1 1V9m4 0V6a1 1 0 0 0-2 0m2 3V6a1 1 0 0 1 2 0v4.5c0 2.5-1.8 4.5-4 4.5s-4-2-4-4.5V9"/></svg>
       </button>
       <div class="mb-tool-sep"></div>
-      <button class="mb-tool-btn" id="mbt-sticky" data-tool="sticky" data-tip="Sticky Note (S)" type="button">
-        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2"/><path d="M6 7h6M6 10h4"/></svg>
-      </button>
+      <span class="mb-tool-wrap">
+        <button class="mb-tool-btn" id="mbt-pen" data-tool="pen" data-tool-menu="pen" data-tip="Pen (P)" type="button"><span class="mb-tool-art mb-tool-art-pen"></span></button>
+        <span class="mb-tool-menu">
+          <button class="mb-tool-chip active" data-pen-mode="pen" title="Pen"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 15c2-1 4-5 6-7s3-2 4-1-1 2-3 4-6 4-7 4z"/></svg></button>
+          <button class="mb-tool-chip" data-pen-mode="highlight" title="Highlighter"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 12 11.5 4.5l2 2L6 14H4z"/><path d="M3 15h8"/></svg></button>
+          <input class="mb-tool-range" id="mbPenWidth" type="range" min="1" max="18" value="2" title="Stroke width">
+          <button class="mb-tool-swatch active" style="--sw:#f3f3ef" data-tool-stroke="#f3f3ef" title="White"></button>
+          <button class="mb-tool-swatch" style="--sw:#f04e2f" data-tool-stroke="#f04e2f" title="Red"></button>
+          <button class="mb-tool-swatch" style="--sw:#ffb04b" data-tool-stroke="#ffb04b" title="Orange"></button>
+          <button class="mb-tool-swatch" style="--sw:#ffd66e" data-tool-stroke="#ffd66e" title="Yellow"></button>
+          <button class="mb-tool-swatch" style="--sw:#6bd27c" data-tool-stroke="#6bd27c" title="Green"></button>
+          <button class="mb-tool-swatch" style="--sw:#4da3ff" data-tool-stroke="#4da3ff" title="Blue"></button>
+          <button class="mb-tool-swatch" style="--sw:#8f45ff" data-tool-stroke="#8f45ff" title="Purple"></button>
+        </span>
+      </span>
+      <span class="mb-tool-wrap">
+        <button class="mb-tool-btn" id="mbt-sticky" data-tool="sticky" data-tool-menu="sticky" data-tip="Sticky Note (S)" type="button"><span class="mb-tool-art mb-tool-art-sticky"></span></button>
+        <span class="mb-tool-menu">
+          <button class="mb-tool-swatch active" style="--sw:#ffd66e" data-stickycolor="#ffd66e" title="Yellow"></button>
+          <button class="mb-tool-swatch" style="--sw:#ff9a9a" data-stickycolor="#ff9a9a" title="Pink"></button>
+          <button class="mb-tool-swatch" style="--sw:#a8f0c6" data-stickycolor="#a8f0c6" title="Green"></button>
+          <button class="mb-tool-swatch" style="--sw:#93c5fd" data-stickycolor="#93c5fd" title="Blue"></button>
+          <button class="mb-tool-swatch" style="--sw:#d8b4fe" data-stickycolor="#d8b4fe" title="Lavender"></button>
+          <button class="mb-tool-swatch" style="--sw:#f0f0e8" data-stickycolor="#f0f0e8" title="White"></button>
+        </span>
+      </span>
       <button class="mb-tool-btn" id="mbt-text" data-tool="text" data-tip="Text (T)" type="button">
         <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 4h12M9 4v11M6 15h6"/></svg>
       </button>
       <div class="mb-tool-sep"></div>
-      <button class="mb-tool-btn" id="mbt-rect" data-tool="rect" data-tip="Rectangle (R)" type="button">
-        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="2.5" y="4" width="13" height="10" rx="1.5"/></svg>
-      </button>
-      <button class="mb-tool-btn" id="mbt-circle" data-tool="circle" data-tip="Circle (C)" type="button">
-        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="9" cy="9" r="6"/></svg>
-      </button>
-      <button class="mb-tool-btn" id="mbt-diamond" data-tool="diamond" data-tip="Diamond (D)" type="button">
-        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2 16 9 9 16 2 9z"/></svg>
-      </button>
-      <button class="mb-tool-btn" id="mbt-arrow" data-tool="arrow" data-tip="Arrow (A)" type="button">
-        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15 13 5M8 5h5v5"/></svg>
-      </button>
-      <div class="mb-tool-sep"></div>
-      <button class="mb-tool-btn" id="mbt-pen" data-tool="pen" data-tip="Pen (P)" type="button">
-        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15c2-1 4-5 6-7s3-2 4-1-1 2-3 4-6 4-7 4z"/><path d="M9 8 12 5l1.5 1.5L11 9"/></svg>
-      </button>
+      <span class="mb-tool-wrap">
+        <button class="mb-tool-btn" id="mbt-shape" data-tool="rect" data-tool-group="rect,circle,diamond,arrow" data-tool-menu="shape" data-tip="Shapes" type="button"><span class="mb-tool-art mb-tool-art-shape"></span></button>
+        <span class="mb-tool-menu">
+          <button class="mb-tool-chip active" data-shape-tool="rect" title="Rectangle"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="4" width="12" height="10" rx="1.5"/></svg></button>
+          <button class="mb-tool-chip" data-shape-tool="circle" title="Circle"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="9" cy="9" r="6"/></svg></button>
+          <button class="mb-tool-chip" data-shape-tool="diamond" title="Diamond"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9 2.5 15.5 9 9 15.5 2.5 9z"/></svg></button>
+          <button class="mb-tool-chip" data-shape-tool="arrow" title="Arrow"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 15 13 5M8 5h5v5"/></svg></button>
+          <button class="mb-tool-swatch" style="--sw:transparent" data-shape-fill="transparent" title="No fill"></button>
+          <button class="mb-tool-swatch" style="--sw:rgba(255,214,110,.7)" data-shape-fill="rgba(255,214,110,.18)" title="Gold fill"></button>
+          <button class="mb-tool-swatch" style="--sw:rgba(147,197,253,.75)" data-shape-fill="rgba(147,197,253,.18)" title="Blue fill"></button>
+          <button class="mb-tool-swatch" style="--sw:rgba(168,240,198,.75)" data-shape-fill="rgba(168,240,198,.18)" title="Green fill"></button>
+        </span>
+      </span>
       <div class="mb-tool-sep"></div>
       <button class="mb-tool-btn" id="mbt-image" data-tool="image" data-tip="Image (I)" type="button">
         <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3.5" width="14" height="11" rx="1.5"/><circle cx="6.5" cy="7.5" r="1.2"/><path d="M2 12l3.5-3.5 3 3 2.5-2.5L16 14"/></svg>
+      </button>
+      <span class="mb-tool-wrap">
+        <button class="mb-tool-btn" id="mbt-stamp" data-tool="stamp" data-tool-menu="stamp" data-tip="Stamp" type="button">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5a2 2 0 1 1 4 0v3l2.5 2.5v1.5h-9V9L7 6.5z"/><path d="M3.5 13.5h11M5 15.5h8"/></svg>
+        </button>
+        <span class="mb-tool-menu mb-stamp-wheel">
+          <span class="mb-stamp-center">stamp</span>
+          <button class="mb-stamp-choice" style="--a:0deg" data-stamp="star" title="Star">★</button>
+          <button class="mb-stamp-choice" style="--a:45deg" data-stamp="heart" title="Heart">♥</button>
+          <button class="mb-stamp-choice" style="--a:90deg" data-stamp="yes" title="Yes">✓</button>
+          <button class="mb-stamp-choice" style="--a:135deg" data-stamp="plus" title="+1">+1</button>
+          <button class="mb-stamp-choice" style="--a:180deg" data-stamp="question" title="Question">?</button>
+          <button class="mb-stamp-choice" style="--a:225deg" data-stamp="no" title="No">!</button>
+          <button class="mb-stamp-choice" style="--a:270deg" data-stamp="moon" title="Maybe">◐</button>
+          <button class="mb-stamp-choice" style="--a:315deg" data-stamp="fire" title="Hot">🔥</button>
+        </span>
+      </span>
+      <button class="mb-tool-btn" id="mbt-comment" data-tool="comment" data-tip="Comment" type="button">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H8l-4 3v-3a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>
       </button>
       <div class="mb-tool-sep"></div>
       <button class="mb-tool-btn" id="mbt-fun" data-tip="Timer · Music · Vote" type="button">
@@ -9717,6 +9788,16 @@
     var STROKE_COLORS = ['#f3f3ef','#ff9a9a','#93c5fd','#a8f0c6','#ffd66e','#d8b4fe','#fdba74','#0b0b0c'];
     var SHAPE_FILLS   = ['transparent','rgba(255,214,110,.18)','rgba(147,197,253,.18)','rgba(168,240,198,.18)','rgba(216,180,254,.18)','rgba(243,243,239,.08)'];
     var UID_COLORS    = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bdb','#ff922b','#66d9e8','#f783ac'];
+    var STAMP_LIBRARY = {
+      star:     { label:'Star',     mark:'★',  bg:'#ffffff', color:'#ffc83d' },
+      heart:    { label:'Heart',    mark:'♥',  bg:'#ffffff', color:'#ff6b6b' },
+      yes:      { label:'Yes',      mark:'✓',  bg:'#ffffff', color:'#2fbf71' },
+      plus:     { label:'+1',       mark:'+1', bg:'#ffffff', color:'#9a4dff' },
+      question: { label:'Question', mark:'?',  bg:'#ffffff', color:'#f04e2f' },
+      no:       { label:'Flag',     mark:'!',  bg:'#ffffff', color:'#4d7dff' },
+      moon:     { label:'Maybe',    mark:'◐',  bg:'#ffffff', color:'#ffd66e' },
+      fire:     { label:'Hot',      mark:'🔥', bg:'#ffffff', color:'#ff7a2f' }
+    };
     var TEXT_FACES = {
       simple:    { label:'Simple',    family:'var(--font-en-body)',    style:'normal' },
       bookish:   { label:'Bookish',   family:'var(--font-en-display)', style:'normal' },
@@ -9760,6 +9841,7 @@
     var _propStrokeWidth = 2;
     var _propFontSize    = 16;
     var _propStickyColor = '#ffd66e';
+    var _selectedStamp   = 'star';
 
     /* ── Embed / Link URL utilities ──────────────────────────── */
     function detectEmbedUrl(str) {
@@ -10224,6 +10306,35 @@
               pushUndo({ type:'patch', items:[{ id:id, before:{content:_tbSnap}, after:{content:tb.innerHTML} }] });
           });
           el.appendChild(tb);
+        } else if (d.type === 'stamp') {
+          el.className = 'mb-el';
+          var stampInfo = STAMP_LIBRARY[d.stamp || 'star'] || STAMP_LIBRARY.star;
+          var st = document.createElement('div');
+          st.className = 'mb-stamp-el';
+          st.style.background = d.bg || stampInfo.bg;
+          st.style.color = d.color || stampInfo.color;
+          st.textContent = d.mark || stampInfo.mark;
+          el.appendChild(st);
+        } else if (d.type === 'comment') {
+          el.className = 'mb-el';
+          var cm = document.createElement('div');
+          cm.className = 'mb-comment-el';
+          cm.innerHTML = '<div class="mb-comment-label">Comment</div>';
+          var ct = document.createElement('textarea');
+          ct.className = 'mb-comment-text';
+          ct.placeholder = 'Add a thought...';
+          ct.value = d.content || '';
+          ct.readOnly = !canEdit();
+          ct.addEventListener('input', function(){ scheduleElUpdate(id, { content: ct.value }); });
+          ct.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+          var _ctSnap = '';
+          ct.addEventListener('focus', function(){ _ctSnap = ct.value; });
+          ct.addEventListener('blur', function(){
+            if (ct.value !== _ctSnap)
+              pushUndo({ type:'patch', items:[{ id:id, before:{content:_ctSnap}, after:{content:ct.value} }] });
+          });
+          cm.appendChild(ct);
+          el.appendChild(cm);
         } else if (d.type === 'video') {
           el.className = 'mb-el';
           var vskel = document.createElement('div');
@@ -10336,6 +10447,17 @@
             tb2.style.textAlign = d.align||'left';
             if (document.activeElement !== tb2) tb2.innerHTML = d.content||'';
           }
+        } else if (d.type === 'stamp') {
+          var st2 = el.querySelector('.mb-stamp-el');
+          if (st2) {
+            var stampInfo2 = STAMP_LIBRARY[d.stamp || 'star'] || STAMP_LIBRARY.star;
+            st2.style.background = d.bg || stampInfo2.bg;
+            st2.style.color = d.color || stampInfo2.color;
+            st2.textContent = d.mark || stampInfo2.mark;
+          }
+        } else if (d.type === 'comment') {
+          var ct2 = el.querySelector('.mb-comment-text');
+          if (ct2 && document.activeElement !== ct2) ct2.value = d.content || '';
         } else if (d.type === 'video') {
           var vid2 = el.querySelector('video');
           if (vid2 && d.url && vid2.dataset.mediaUrl !== d.url) armVideoReveal(id, el, vid2, d.url);
@@ -10860,6 +10982,12 @@
       } else if (_tool === 'text') {
         addElement('text', pos2.x-60, pos2.y-18);
         setTool('select');
+      } else if (_tool === 'stamp') {
+        addElement('stamp', pos2.x-36, pos2.y-36, 72, 72);
+        setTool('select');
+      } else if (_tool === 'comment') {
+        addElement('comment', pos2.x-90, pos2.y-56, 180, 112);
+        setTool('select');
       } else if (_tool === 'pen') {
         /* Start drawing */
         var pathPrev = document.createElementNS('http://www.w3.org/2000/svg','path');
@@ -10932,14 +11060,16 @@
       var d = {
         type: type,
         x: Math.round(x), y: Math.round(y),
-        w: w || (type==='sticky'?200:type==='text'?180:type==='image'?240:160),
-        h: h || (type==='sticky'?160:type==='text'?50:type==='image'?180:120),
+        w: w || (type==='sticky'?200:type==='text'?180:type==='image'?240:type==='stamp'?72:type==='comment'?180:160),
+        h: h || (type==='sticky'?160:type==='text'?50:type==='image'?180:type==='stamp'?72:type==='comment'?112:120),
         z: nextZ(),
         createdBy: _myUid||'',
         updatedAt: Date.now()
       };
       if (type==='sticky') { d.color=_propStickyColor; d.content=''; d.fontSize=12; d.fontFace='technical'; d.textColor='rgba(10,10,11,.85)'; }
       else if (type==='text') { d.content=''; d.fontSize=_propFontSize; d.color='#f3f3ef'; d.fontFace='simple'; d.align='left'; }
+      else if (type==='stamp') { var si=STAMP_LIBRARY[_selectedStamp]||STAMP_LIBRARY.star; d.stamp=_selectedStamp; d.mark=si.mark; d.bg=si.bg; d.color=si.color; }
+      else if (type==='comment') { d.content=''; }
       else if (type==='rect'||type==='circle'||type==='diamond') { d.fill=_propFill; d.stroke=_propStrokeColor; d.strokeWidth=_propStrokeWidth; }
 
       _elements[id] = d;
@@ -10955,6 +11085,7 @@
         if (!dom) return;
         if (type==='sticky') { var ta=dom.querySelector('textarea'); if(ta)ta.focus(); }
         else if (type==='text') { var tb=dom.querySelector('[contenteditable]'); if(tb)tb.focus(); }
+        else if (type==='comment') { var ct=dom.querySelector('.mb-comment-text'); if(ct)ct.focus(); }
       }, 50);
 
       _selected = [id];
@@ -11569,7 +11700,8 @@
       var _bg = ((_boardMeta&&_boardMeta.bg)||'dots'); if (_bg !== 'dots' && _bg !== 'grid') _bg = 'dots';
       if (stage) stage.className = 'mb-stage mb-bg-' + _bg + ' tool-' + t;
       if (toolbar) toolbar.querySelectorAll('.mb-tool-btn').forEach(function(btn){
-        btn.classList.toggle('active', btn.dataset.tool === t);
+        var group = (btn.dataset.toolGroup || '').split(',').filter(Boolean);
+        btn.classList.toggle('active', btn.dataset.tool === t || group.indexOf(t) >= 0);
       });
       if (t !== 'select') { _selected=[]; renderAll(); updatePropbar(); }
     }
@@ -12352,7 +12484,7 @@
 
     function updateToolbarEnabled() {
       if (!toolbar) return;
-      var editTools = toolbar.querySelectorAll('[data-tool="sticky"],[data-tool="text"],[data-tool="rect"],[data-tool="circle"],[data-tool="diamond"],[data-tool="arrow"],[data-tool="pen"],[data-tool="image"]');
+      var editTools = toolbar.querySelectorAll('[data-tool="sticky"],[data-tool="text"],[data-tool="rect"],[data-tool="circle"],[data-tool="diamond"],[data-tool="arrow"],[data-tool="pen"],[data-tool="image"],[data-tool="stamp"],[data-tool="comment"]');
       editTools.forEach(function(btn){ btn.style.opacity=canEdit()?'1':'.3'; btn.style.pointerEvents=canEdit()?'all':'none'; });
       if (boardNameInput) { boardNameInput.readOnly = !isAdmin(); }
     }
@@ -12728,7 +12860,7 @@
         if ((e.ctrlKey||e.metaKey) && e.key==='1') { e.preventDefault(); if(stage){ var r=stage.getBoundingClientRect(); _zoom=1; _panX=r.width/2; _panY=r.height/2; applyTransform(); } return; }
       });
       document.addEventListener('keyup', function(e){
-        if (e.key===' ') { _spaceDown=false; if(stage)stage.style.cursor=''; if(toolbar)toolbar.querySelectorAll('.mb-tool-btn').forEach(function(b){b.classList.toggle('active',b.dataset.tool===_tool);}); }
+        if (e.key===' ') { _spaceDown=false; if(stage)stage.style.cursor=''; if(toolbar)toolbar.querySelectorAll('.mb-tool-btn').forEach(function(b){ var group=(b.dataset.toolGroup||'').split(',').filter(Boolean); b.classList.toggle('active',b.dataset.tool===_tool||group.indexOf(_tool)>=0); }); }
       });
       /* Paste URL → create embed card on canvas */
       document.addEventListener('paste', function(e){
@@ -12751,6 +12883,8 @@
     function defaultDims(tool) {
       if (tool === 'sticky') return { w:200, h:160 };
       if (tool === 'text')   return { w:180, h:50 };
+      if (tool === 'stamp')  return { w:72, h:72 };
+      if (tool === 'comment')return { w:180, h:112 };
       return { w:160, h:120 };
     }
 
@@ -12766,6 +12900,12 @@
       } else if (tool === 'image') {
         g.classList.add('mb-tool-ghost-img');
         g.innerHTML = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3.5" width="14" height="11" rx="1.5"/><circle cx="6.5" cy="7.5" r="1.2"/><path d="M2 12l3.5-3.5 3 3 2.5-2.5L16 14"/></svg>';
+      } else if (tool === 'stamp') {
+        g.classList.add('mb-tool-ghost-shape');
+        g.textContent = (STAMP_LIBRARY[_selectedStamp] || STAMP_LIBRARY.star).mark;
+      } else if (tool === 'comment') {
+        g.classList.add('mb-tool-ghost-sticky');
+        g.style.background = 'rgba(126,140,247,.9)';
       } else {
         g.classList.add('mb-tool-ghost-shape');
         if (tool === 'circle') g.classList.add('circle');
@@ -12775,7 +12915,7 @@
     }
 
     function initToolbarDrag() {
-      var DRAGGABLE = { sticky:1, text:1, rect:1, circle:1, diamond:1, image:1 };
+      var DRAGGABLE = { sticky:1, text:1, rect:1, circle:1, diamond:1, image:1, stamp:1, comment:1 };
       toolbar.querySelectorAll('.mb-tool-btn[data-tool]').forEach(function(btn){
         var tool = btn.dataset.tool;
         if (!DRAGGABLE[tool]) return;
@@ -12820,6 +12960,81 @@
       });
     }
 
+    function closeToolbarMenus(except) {
+      if (!toolbar) return;
+      toolbar.querySelectorAll('.mb-tool-wrap.open').forEach(function(wrap){
+        if (wrap !== except) wrap.classList.remove('open');
+      });
+    }
+
+    function toggleToolbarMenu(btn) {
+      var wrap = btn && btn.closest('.mb-tool-wrap');
+      if (!wrap) { closeToolbarMenus(); return; }
+      var wasOpen = wrap.classList.contains('open');
+      closeToolbarMenus(wrap);
+      wrap.classList.toggle('open', !wasOpen);
+    }
+
+    function initToolbarMenus() {
+      if (!toolbar) return;
+      toolbar.querySelectorAll('.mb-tool-menu').forEach(function(menu){
+        menu.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+        menu.addEventListener('click', function(e){ e.stopPropagation(); });
+      });
+      toolbar.querySelectorAll('[data-tool-stroke]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          _propStrokeColor = btn.dataset.toolStroke;
+          toolbar.querySelectorAll('[data-tool-stroke]').forEach(function(b){ b.classList.toggle('active', b === btn); });
+        });
+      });
+      var penWidth = document.getElementById('mbPenWidth');
+      if (penWidth) penWidth.addEventListener('input', function(){
+        _propStrokeWidth = parseInt(penWidth.value) || 2;
+      });
+      toolbar.querySelectorAll('[data-pen-mode]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          toolbar.querySelectorAll('[data-pen-mode]').forEach(function(b){ b.classList.toggle('active', b === btn); });
+          if (btn.dataset.penMode === 'highlight') {
+            _propStrokeColor = 'rgba(255,214,110,.48)';
+            _propStrokeWidth = 16;
+          } else {
+            _propStrokeColor = '#f3f3ef';
+            _propStrokeWidth = 2;
+          }
+          if (penWidth) penWidth.value = _propStrokeWidth;
+          toolbar.querySelectorAll('[data-tool-stroke]').forEach(function(b){ b.classList.remove('active'); });
+        });
+      });
+      toolbar.querySelectorAll('.mb-tool-menu [data-stickycolor]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          _propStickyColor = btn.dataset.stickycolor;
+          toolbar.querySelectorAll('.mb-tool-menu [data-stickycolor]').forEach(function(b){ b.classList.toggle('active', b === btn); });
+          setTool('sticky');
+        });
+      });
+      toolbar.querySelectorAll('[data-shape-tool]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          toolbar.querySelectorAll('[data-shape-tool]').forEach(function(b){ b.classList.toggle('active', b === btn); });
+          setTool(btn.dataset.shapeTool);
+        });
+      });
+      toolbar.querySelectorAll('[data-shape-fill]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          _propFill = btn.dataset.shapeFill;
+          toolbar.querySelectorAll('[data-shape-fill]').forEach(function(b){ b.classList.toggle('active', b === btn); });
+        });
+      });
+      toolbar.querySelectorAll('[data-stamp]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          _selectedStamp = btn.dataset.stamp;
+          setTool('stamp');
+        });
+      });
+      document.addEventListener('mousedown', function(e){
+        if (toolbar && !toolbar.contains(e.target)) closeToolbarMenus();
+      });
+    }
+
     /* ── Init canvas ─────────────────────────────────────── */
     function initCanvas() {
       stage     = document.getElementById('mbStage');
@@ -12850,8 +13065,11 @@
         btn.addEventListener('click', function(){
           if (_suppressToolClick) { _suppressToolClick = false; return; }
           setTool(btn.dataset.tool);
+          if (btn.dataset.toolMenu) toggleToolbarMenu(btn);
+          else closeToolbarMenus();
         });
       });
+      initToolbarMenus();
       initToolbarDrag();
 
       /* Fun panel button */
