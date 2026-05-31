@@ -50,7 +50,8 @@ WAV_PATH      = os.path.join(HERE, "alarm.wav")
 STATE_PATH    = os.path.join(HERE, "fired.json")
 DATABASE_URL  = "https://my-figma-a7909-default-rtdb.europe-west1.firebasedatabase.app"
 
-POLL_SECONDS  = 15           # how often we check the clock + refresh from Firebase
+CHECK_SECONDS   = 2          # how often we check the clock (local, free) -> alarm fires within ~2s
+REFRESH_SECONDS = 20         # how often we re-download alarms from Firebase (network)
 GRACE_MINUTES = 5            # only ring if we're within this many minutes AFTER the trigger
                              # (so booting up hours later doesn't ring for shoots already past)
 SNOOZE_MINUTES = 5           # snooze button delay
@@ -234,6 +235,8 @@ def main():
 
     # Snooze list: (fire_at_datetime, title, label, shoot_dt, location, notes)
     snoozes = []
+    data = {}
+    last_fetch = 0.0   # monotonic timestamp of the last Firebase fetch
 
     while True:
         now = datetime.now()
@@ -249,12 +252,15 @@ def main():
                 still.append(s)
         snoozes = still
 
-        # 2) Pull alarms from Firebase
-        try:
-            data = ref.get() or {}
-        except Exception as e:
-            print("[!] read error:", e)
-            data = {}
+        # 2) Re-download alarms from Firebase only every REFRESH_SECONDS (network is the
+        #    slow part). The clock check below still runs every CHECK_SECONDS, so an alarm
+        #    fires within ~2s of its time without hammering the database.
+        if time.monotonic() - last_fetch >= REFRESH_SECONDS:
+            try:
+                data = ref.get() or {}
+            except Exception as e:
+                print("[!] read error:", e)
+            last_fetch = time.monotonic()
 
         # 3) Check each alarm's two triggers
         for aid, rec in (data.items() if isinstance(data, dict) else []):
@@ -302,7 +308,7 @@ def main():
             state = pruned
             save_state(state)
 
-        time.sleep(POLL_SECONDS)
+        time.sleep(CHECK_SECONDS)
 
 
 if __name__ == "__main__":
