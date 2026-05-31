@@ -4586,10 +4586,10 @@
   .planner-bar-brand {
     font-family: var(--font-en-mono);
     font-size: 10px; letter-spacing: .22em; text-transform: uppercase;
-    color: var(--ink-soft); cursor: pointer;
-    transition: opacity .22s;
+    color: var(--ink-dim); cursor: pointer;
+    transition: color .22s;
   }
-  .planner-bar-brand:hover { opacity: .6; }
+  .planner-bar-brand:hover { color: var(--ink); }
   /* Hide back-to-home for viewers and public — they have no home page */
   body.role-viewer .planner-back-home,
   body.role-public .planner-back-home { display: none !important; }
@@ -4605,10 +4605,10 @@
   .planner-kicker {
     font-family: var(--font-en-mono);
     font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
-    color: var(--ink-soft); margin-bottom: 28px;
+    color: var(--ink-dim); margin-bottom: 28px;
     display: flex; align-items: center; gap: 12px;
   }
-  .planner-kicker-sep { opacity: .3; }
+  .planner-kicker-sep { opacity: .45; }
 
   /* Stats strip */
   .planner-stats {
@@ -4623,12 +4623,12 @@
     padding: 0 22px 0 0;
     font-family: var(--font-en-mono);
     font-size: 8.5px; letter-spacing: .13em; text-transform: uppercase;
-    color: var(--ink-soft);
+    color: var(--ink-dim);
   }
   .p-stat + .p-stat { padding-left: 22px; border-left: 1px solid var(--rule); }
   .p-stat-num {
     font-size: 15px; letter-spacing: 0; font-weight: 500;
-    color: var(--ink-dim);
+    color: var(--ink);
   }
 
   /* Content shell */
@@ -4644,14 +4644,14 @@
   .p-filter {
     font-family: var(--font-en-mono);
     font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase;
-    color: var(--ink-soft); opacity: .65;
+    color: var(--ink-dim);
     background: transparent; border: none; cursor: pointer;
     padding: 4px 18px 4px 0;
-    transition: color .22s, opacity .22s;
+    transition: color .22s;
   }
   .p-filter:first-child { padding-left: 0; }
-  .p-filter.active      { color: var(--ink); opacity: 1; }
-  .p-filter:hover:not(.active) { color: var(--ink-dim); opacity: 1; }
+  .p-filter.active      { color: var(--ink); }
+  .p-filter:hover:not(.active) { color: var(--ink); }
   .p-filter[data-filter="upcoming"].active  { color: rgba(80,150,255,.9); }
   .p-filter[data-filter="confirmed"].active { color: rgba(50,200,110,.9); }
   .p-filter[data-filter="done"].active      { color: rgba(155,110,235,.9); }
@@ -4662,14 +4662,14 @@
     display: inline-flex; align-items: center; gap: 6px;
     font-family: var(--font-en-mono); font-size: 8.5px;
     letter-spacing: .14em; text-transform: uppercase;
-    color: var(--ink-soft);
+    color: var(--ink-dim);
     background: transparent;
-    border: 1px solid var(--rule); border-radius: 100px;
+    border: 1px solid var(--rule-strong); border-radius: 100px;
     cursor: pointer; padding: 5px 14px;
     transition: color .22s, border-color .22s;
   }
-  .planner-new-btn:hover { color: var(--ink-dim); border-color: var(--rule-strong); }
-  .planner-new-btn svg   { width: 9px; height: 9px; opacity: .55; }
+  .planner-new-btn:hover { color: var(--ink); border-color: var(--ink-soft); }
+  .planner-new-btn svg   { width: 9px; height: 9px; opacity: .8; }
 
   /* Shoot rows */
   .shoot-list { display: flex; flex-direction: column; }
@@ -4702,7 +4702,7 @@
 
   .shoot-idx {
     font-family: var(--font-en-mono);
-    font-size: 9px; color: var(--ink-soft); opacity: .35;
+    font-size: 9px; color: var(--ink-soft); opacity: .8;
   }
 
   /* Name + client */
@@ -4713,7 +4713,7 @@
     background: transparent; border: none; outline: none; padding: 0; width: 100%;
     cursor: text;
   }
-  .shoot-name::placeholder      { color: rgba(243,243,239,.18); }
+  .shoot-name::placeholder      { color: rgba(243,243,239,.34); }
   .shoot-name.s-done            { text-decoration: line-through; opacity: .35; }
   .shoot-name.s-cancelled       { text-decoration: line-through; opacity: .22; }
 
@@ -4723,17 +4723,17 @@
     background: transparent; border: none; outline: none; padding: 0; width: 100%;
     cursor: text;
   }
-  .shoot-client::placeholder { color: rgba(243,243,239,.12); }
+  .shoot-client::placeholder { color: rgba(243,243,239,.26); }
 
   /* Date, time, location — always-visible inline columns */
   .shoot-date, .shoot-time, .shoot-loc {
     font-family: var(--font-en-mono);
-    font-size: 9.5px; letter-spacing: .03em; color: rgba(243,243,239,.78);
+    font-size: 9.5px; letter-spacing: .03em; color: rgba(243,243,239,.9);
     background: transparent; border: none; outline: none; padding: 0; width: 100%;
     min-width: 0;
   }
   .shoot-date::placeholder, .shoot-time::placeholder,
-  .shoot-loc::placeholder { color: rgba(243,243,239,.14); }
+  .shoot-loc::placeholder { color: rgba(243,243,239,.28); }
 
   /* Date/time — text cursor; scroll-wheel still adjusts values */
   .shoot-date, .shoot-time {
@@ -4798,29 +4798,29 @@
   .shoot-prio[data-p="low"]    { color: #52a870; }   /* muted green  */
   .shoot-prio:hover { opacity: .75; }
 
-  /* Delete */
+  /* Delete — recessive but always visible; turns red on hover */
   .shoot-del {
     background: transparent; border: none; cursor: pointer;
-    color: var(--ink-soft); opacity: 0; padding: 4px;
-    transition: opacity .2s;
+    color: var(--ink-dim); opacity: 1; padding: 4px;
+    transition: color .2s, transform .14s;
     display: flex; align-items: center; justify-content: center;
   }
-  .shoot-row:hover .shoot-del { opacity: .3; }
-  .shoot-del:hover             { opacity: 1 !important; }
-  .shoot-del svg               { width: 9px; height: 9px; display: block; }
+  .shoot-del:hover  { color: #e36b6b; transform: translateY(-1px); }
+  .shoot-del:active { transform: translateY(0); }
+  .shoot-del svg    { width: 10px; height: 10px; display: block; }
 
   /* Description — inline in the bar, between name and date columns */
   .shoot-desc {
     font-family: var(--font-en-body);
-    font-size: 10.5px; font-weight: 300; color: var(--ink-soft);
+    font-size: 10.5px; font-weight: 300; color: var(--ink-dim);
     background: transparent; border: none; outline: none;
     padding: 0; width: 20px; max-width: 100%;  /* JS sets exact content width */
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     cursor: text;
-    opacity: .45;
+    opacity: 1;
   }
-  .shoot-desc::placeholder { color: rgba(243,243,239,.10); }
-  .shoot-desc:focus        { opacity: .8; }
+  .shoot-desc::placeholder { color: rgba(243,243,239,.22); }
+  .shoot-desc:focus        { color: var(--ink); }
 
   /* Status selector expand */
   .shoot-expand {
@@ -4834,18 +4834,19 @@
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   }
   .shoot-status-sel { display: flex; gap: 6px; flex-wrap: wrap; }
-  /* Add-to-Calendar — icon-only in the main row, same hover-reveal pattern as .shoot-del */
+  /* Add-to-Calendar — icon-only in the main row. Always visible (indigo accent) so
+     the action is discoverable; brightens to full accent on hover. */
   .shoot-cal {
     background: transparent; border: none; cursor: pointer;
-    color: var(--ink-soft); opacity: 0; padding: 4px;
+    color: rgba(150,165,255,.7); opacity: 1; padding: 4px;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    transition: opacity .2s, color .18s;
+    transition: color .18s, transform .14s;
   }
-  .shoot-row:hover .shoot-cal            { opacity: .3; }
-  .shoot-cal:hover                       { opacity: 1 !important; color: rgba(126,140,247,.85); }
-  .shoot-cal svg                         { width: 13px; height: 13px; display: block; }
+  .shoot-cal:hover                       { color: rgba(170,182,255,1); transform: translateY(-1px); }
+  .shoot-cal:active                      { transform: translateY(0); }
+  .shoot-cal svg                         { width: 14px; height: 14px; display: block; }
   /* Success flash: turns green for ~2 s then reverts */
-  .shoot-cal.cal-flash                   { color: rgba(50,200,110,.85); opacity: 1 !important; }
+  .shoot-cal.cal-flash                   { color: rgba(80,210,130,1); }
   .pl-cal-toast {
     position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(12px);
     background: rgba(13,13,17,.96); border: 1px solid rgba(243,243,239,.14); border-radius: 12px;
@@ -4858,15 +4859,15 @@
   .ss-btn {
     font-family: var(--font-en-mono);
     font-size: 7.5px; letter-spacing: .12em; text-transform: uppercase;
-    border-radius: 100px; border: 1px solid rgba(243,243,239,.18);
-    padding: 3px 10px; background: transparent; color: var(--ink-soft);
+    border-radius: 100px; border: 1px solid rgba(243,243,239,.22);
+    padding: 3px 10px; background: transparent; color: var(--ink-dim);
     cursor: pointer; transition: border-color .22s, color .22s, background .22s;
   }
   .ss-btn.active {
     border-color: rgba(243,243,239,.5);
     color: var(--ink); background: rgba(243,243,239,.06);
   }
-  .ss-btn:hover:not(.active) { border-color: rgba(243,243,239,.32); color: var(--ink-dim); }
+  .ss-btn:hover:not(.active) { border-color: rgba(243,243,239,.4); color: var(--ink); }
   .ss-btn[data-s="upcoming"].active  { border-color:rgba(80,150,255,.55);  color:rgba(80,150,255,.92);  background:rgba(80,150,255,.07); }
   .ss-btn[data-s="confirmed"].active { border-color:rgba(50,200,110,.55);  color:rgba(50,200,110,.92);  background:rgba(50,200,110,.07); }
   .ss-btn[data-s="shooting"].active  { border-color:rgba(255,130,50,.55);  color:rgba(255,130,50,.92);  background:rgba(255,130,50,.07); }
@@ -4922,12 +4923,12 @@
   .planner-empty-ttl {
     font-family: var(--font-en-display);
     font-style: italic; font-size: 26px; font-weight: 400;
-    color: var(--ink-soft); opacity: .4; margin: 0;
+    color: var(--ink-dim); opacity: 1; margin: 0;
   }
   .planner-empty-sub {
     font-family: var(--font-en-mono);
     font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase;
-    color: var(--ink-soft); opacity: .28;
+    color: var(--ink-soft); opacity: .7;
   }
 
   /* ── Delete-confirm modal ───────────────────────────────────── */
@@ -5394,7 +5395,7 @@
 
     /* Enlarge tap targets for action buttons */
     .shoot-del { min-height: 36px; min-width: 36px; }
-    .shoot-cal { min-height: 36px; min-width: 28px; opacity: .28; }
+    .shoot-cal { min-height: 36px; min-width: 28px; }
 
     /* ─ Expand panel indent ─────────────────────────────────── */
     .shoot-expand-inner { padding-left: 20px; }
