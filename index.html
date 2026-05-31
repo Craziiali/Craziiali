@@ -4440,23 +4440,36 @@
   .home-eyebrow {
     font-family: var(--font-en-mono);
     font-size: 9px;
-    letter-spacing: .26em;
+    letter-spacing: .30em;
     text-transform: uppercase;
     color: var(--ink-soft);
-    margin-bottom: 52px;
-    opacity: .8;
+    margin-bottom: 48px;
+    opacity: .6;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  /* Hairlines flanking the brand name — architectural, not decorative */
+  .home-eyebrow::before,
+  .home-eyebrow::after {
+    content: '';
+    display: block;
+    width: 28px;
+    height: 1px;
+    background: var(--rule-strong);
+    flex-shrink: 0;
   }
   .home-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
-    width: min(760px, 100%);
+    width: min(560px, 100%);
   }
   .tool-card {
     position: relative;
-    padding: 34px 26px 30px;
+    padding: 36px 26px 34px;
     border: 1px solid var(--rule);
-    border-radius: 3px;
+    border-radius: 2px;
     cursor: pointer;
     background: transparent;
     text-align: left;
@@ -4465,49 +4478,74 @@
     flex-direction: column;
     user-select: none;
     -webkit-user-select: none;
-    transition: border-color .3s ease;
+    transition: border-color .25s, background .25s, transform .22s cubic-bezier(.16,1,.3,1);
+  }
+  /* Top-edge accent: thin light sweep that sharpens the card boundary on hover */
+  .tool-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%, rgba(243,243,239,.55) 50%, transparent 100%);
+    opacity: 0;
+    transition: opacity .3s;
+    pointer-events: none;
   }
   .tool-card::after {
     content: '';
     position: absolute; inset: 0;
-    background: radial-gradient(ellipse 130% 55% at 50% 0%,
-      rgba(243,243,239,.06) 0%, transparent 100%);
+    background: radial-gradient(ellipse 120% 60% at 50% 0%,
+      rgba(243,243,239,.05) 0%, transparent 100%);
     opacity: 0;
-    transition: opacity .35s ease;
+    transition: opacity .35s;
     pointer-events: none;
   }
-  .tool-card:hover               { border-color: rgba(243,243,239,.30); }
-  .tool-card:hover::after        { opacity: 1; }
-  .tool-card:active              { border-color: rgba(243,243,239,.48); }
+  .tool-card:hover {
+    border-color: rgba(243,243,239,.26);
+    background: rgba(243,243,239,.022);
+    transform: translateY(-2px);
+  }
+  .tool-card:hover::before { opacity: 1; }
+  .tool-card:hover::after  { opacity: 1; }
+  /* Press: snap back, slight border pop */
+  .tool-card:active {
+    border-color: rgba(243,243,239,.44);
+    background: rgba(243,243,239,.038);
+    transform: translateY(0);
+    transition-duration: .08s;
+  }
+  /* Number floats in top-right — a quiet index, not a label */
   .tc-num {
-    display: block;
+    position: absolute;
+    top: 20px; right: 22px;
     font-family: var(--font-en-mono);
-    font-size: 9px; letter-spacing: .16em;
-    color: var(--ink-soft); opacity: .55;
-    margin-bottom: 20px;
+    font-size: 8px; letter-spacing: .14em;
+    color: var(--ink-soft); opacity: .28;
   }
   .tc-name {
     font-family: var(--font-en-display);
     font-style: italic;
-    font-size: 30px; font-weight: 400;
+    font-size: 32px; font-weight: 400;
     color: var(--ink); line-height: 1.05;
-    margin: 0 0 12px;
+    margin: 0 0 14px;
   }
   .tc-desc {
     font-family: var(--font-en-mono);
-    font-size: 8.5px; letter-spacing: .08em;
+    font-size: 8px; letter-spacing: .10em;
     text-transform: uppercase;
-    color: var(--ink-soft); line-height: 1.75;
-    opacity: .7;
+    color: var(--ink-soft); line-height: 1.85;
+    opacity: .62;
+    margin-top: auto;
   }
   .tc-arrow {
-    position: absolute; bottom: 20px; right: 22px;
-    width: 18px; height: 18px;
+    position: absolute; bottom: 20px; right: 20px;
+    width: 16px; height: 16px;
     color: var(--ink-soft); opacity: 0;
-    transform: translate(-6px, 6px);
-    transition: opacity .3s ease, transform .3s ease;
+    transform: translate(-5px, 5px);
+    transition: opacity .28s, transform .28s cubic-bezier(.16,1,.3,1);
   }
-  .tool-card:hover .tc-arrow { opacity: .5; transform: translate(0,0); }
+  .tool-card:hover .tc-arrow { opacity: .42; transform: translate(0,0); }
 
   /* Back nav — used in invoice top-bar and planner */
   .back-nav {
@@ -5272,7 +5310,9 @@
   @media (max-width: 600px) {
 
     /* ─ Home ────────────────────────────────────────────────── */
-    .home-grid { grid-template-columns: 1fr; }
+    .home-grid { grid-template-columns: 1fr; gap: 8px; }
+    .tool-card { padding: 28px 20px 26px; }
+    .tc-name   { font-size: 28px; }
 
     /* ─ Planner title scale-down ────────────────────────────── */
     .planner-title { font-size: 44px; }
