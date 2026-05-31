@@ -125,7 +125,10 @@ def stop_sound():
         pass
 
 def ring(title, when_label, shoot_dt, location, notes):
-    """Blocks until the user clicks DISMISS or SNOOZE. Returns 'dismiss' or 'snooze'."""
+    """Shows a compact popup in the top-right corner that floats above other
+    windows but does NOT take over the screen or steal keyboard focus — so it
+    won't interrupt or crash whatever you're working in (Premiere, etc.).
+    The siren loops until you click DISMISS or SNOOZE. Returns 'dismiss'/'snooze'."""
     _ringing.set()
     # Loop the siren in the background until we stop it.
     try:
@@ -135,67 +138,85 @@ def ring(title, when_label, shoot_dt, location, notes):
 
     result = {"action": "dismiss"}
 
+    CARD_W, CARD_H = 400, 0  # height auto-grows to fit content
     root = tk.Tk()
-    root.title("CRAZIIALI ALARM")
-    root.configure(bg="#0a0a0b")
-    root.attributes("-fullscreen", True)
-    root.attributes("-topmost", True)
+    root.title("CRAZIIALI")
+    root.configure(bg="#16161c")
+    root.overrideredirect(True)         # borderless card (no title bar)
+    root.attributes("-topmost", True)   # floats above other windows
+    try: root.attributes("-alpha", 0.0)  # fade in
+    except Exception: pass
 
-    # Pulsing red banner feel
-    wrap = tk.Frame(root, bg="#0a0a0b")
-    wrap.place(relx=0.5, rely=0.5, anchor="center")
+    # Accent strip down the left edge
+    accent = tk.Frame(root, bg="#7e8cf7", width=4)
+    accent.pack(side="left", fill="y")
 
-    tk.Label(wrap, text=when_label, font=("Consolas", 26, "bold"),
-             fg="#ff5c5c", bg="#0a0a0b").pack(pady=(0, 18))
-    tk.Label(wrap, text=title, font=("Georgia", 52, "bold italic"),
-             fg="#f3f3ef", bg="#0a0a0b", wraplength=1100, justify="center").pack(pady=(0, 14))
-    tk.Label(wrap, text="Shoot at  " + fmt12(shoot_dt), font=("Consolas", 22),
-             fg="#cdd1ff", bg="#0a0a0b").pack(pady=(0, 8))
+    pad = tk.Frame(root, bg="#16161c")
+    pad.pack(side="left", fill="both", expand=True, padx=20, pady=18)
+
+    tk.Label(pad, text=when_label, font=("Consolas", 12, "bold"),
+             fg="#9aa6ff", bg="#16161c", anchor="w").pack(fill="x", pady=(0, 6))
+    tk.Label(pad, text=title, font=("Georgia", 22, "bold italic"),
+             fg="#f3f3ef", bg="#16161c", wraplength=CARD_W - 60, justify="left",
+             anchor="w").pack(fill="x", pady=(0, 8))
+    tk.Label(pad, text="Shoot at  " + fmt12(shoot_dt), font=("Consolas", 13),
+             fg="#cdd1ff", bg="#16161c", anchor="w").pack(fill="x")
     if location:
-        tk.Label(wrap, text=location, font=("Consolas", 15),
-                 fg="#9aa0b0", bg="#0a0a0b", wraplength=1000, justify="center").pack(pady=(0, 4))
+        tk.Label(pad, text=location, font=("Consolas", 10),
+                 fg="#8a90a0", bg="#16161c", wraplength=CARD_W - 60, justify="left",
+                 anchor="w").pack(fill="x", pady=(4, 0))
     if notes:
-        tk.Label(wrap, text=notes, font=("Consolas", 14),
-                 fg="#7d8290", bg="#0a0a0b", wraplength=1000, justify="center").pack(pady=(0, 4))
+        tk.Label(pad, text=notes, font=("Consolas", 10),
+                 fg="#75798a", bg="#16161c", wraplength=CARD_W - 60, justify="left",
+                 anchor="w").pack(fill="x", pady=(3, 0))
 
-    btns = tk.Frame(wrap, bg="#0a0a0b")
-    btns.pack(pady=(40, 0))
+    btns = tk.Frame(pad, bg="#16161c")
+    btns.pack(fill="x", pady=(16, 0))
 
     def do_dismiss():
         result["action"] = "dismiss"
-        stop_sound()
-        _ringing.clear()
-        root.destroy()
+        stop_sound(); _ringing.clear(); root.destroy()
 
     def do_snooze():
         result["action"] = "snooze"
-        stop_sound()
-        _ringing.clear()
-        root.destroy()
+        stop_sound(); _ringing.clear(); root.destroy()
 
-    dismiss = tk.Button(btns, text="DISMISS", font=("Consolas", 18, "bold"),
-                        fg="#0a0a0b", bg="#f3f3ef", activebackground="#ffffff",
-                        relief="flat", padx=44, pady=16, cursor="hand2", command=do_dismiss)
-    dismiss.pack(side="left", padx=12)
+    tk.Button(btns, text="DISMISS", font=("Consolas", 12, "bold"),
+              fg="#0a0a0b", bg="#f3f3ef", activebackground="#ffffff",
+              relief="flat", padx=22, pady=9, cursor="hand2", command=do_dismiss).pack(side="left", padx=(0, 8))
+    tk.Button(btns, text="SNOOZE %dm" % SNOOZE_MINUTES, font=("Consolas", 12, "bold"),
+              fg="#f3f3ef", bg="#2a2a36", activebackground="#363644",
+              relief="flat", padx=18, pady=9, cursor="hand2", command=do_snooze).pack(side="left")
 
-    snooze = tk.Button(btns, text="SNOOZE %d MIN" % SNOOZE_MINUTES, font=("Consolas", 18, "bold"),
-                       fg="#f3f3ef", bg="#1c1c24", activebackground="#2a2a36",
-                       relief="flat", padx=36, pady=16, cursor="hand2", command=do_snooze)
-    snooze.pack(side="left", padx=12)
+    # Position in the top-right corner, just under the screen edge.
+    root.update_idletasks()
+    w = root.winfo_width()
+    h = root.winfo_height()
+    sw = root.winfo_screenwidth()
+    x = sw - w - 24
+    y = 24
+    root.geometry("+%d+%d" % (x, y))
 
-    # Esc also dismisses
-    root.bind("<Escape>", lambda e: do_dismiss())
-
-    # Force it to the very front
+    # Float on top WITHOUT stealing keyboard focus (so it can't interrupt typing
+    # or playback in another app). We deliberately do NOT call focus_force().
     root.lift()
-    root.focus_force()
-    root.after(100, lambda: root.attributes("-topmost", True))
+    root.after(120, lambda: root.attributes("-topmost", True))
 
-    # Re-assert sound every 3s in case something stops it
+    # Gentle fade-in
+    def fade(a=0.0):
+        a = min(1.0, a + 0.12)
+        try: root.attributes("-alpha", a)
+        except Exception: pass
+        if a < 1.0:
+            root.after(16, lambda: fade(a))
+    root.after(10, fade)
+
+    # Re-assert sound + topmost every 3s in case something interrupts it
     def keep_ringing():
         if _ringing.is_set():
             try:
                 winsound.PlaySound(WAV_PATH, winsound.SND_FILENAME | winsound.SND_LOOP | winsound.SND_ASYNC)
+                root.attributes("-topmost", True)
             except Exception:
                 pass
             root.after(3000, keep_ringing)
@@ -231,7 +252,7 @@ def main():
     ref = db.reference("alarms")
     state = load_state()
     print("\n[ok] Connected. Watching for shoots... (leave this running)")
-    print("     1 hour before + at exact time. Loops until you dismiss.\n")
+    print("     Rings 1 hour before each shoot. Loops until you dismiss.\n")
 
     # Snooze list: (fire_at_datetime, title, label, shoot_dt, location, notes)
     snoozes = []
@@ -274,7 +295,6 @@ def main():
             notes    = rec.get("notes", "")
 
             triggers = [
-                ("exact",  sdt,                          "SHOOT NOW"),
                 ("before", sdt - timedelta(hours=1),     "SHOOT IN 1 HOUR"),
             ]
             for kind, trig, label in triggers:
