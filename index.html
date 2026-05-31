@@ -10072,7 +10072,10 @@
           ta.addEventListener('input', function(){
             scheduleElUpdate(id, { content: ta.value });
           });
-          ta.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+          ta.addEventListener('mousedown', function(e){
+            if (_tool !== 'select' || e.detail >= 2 || e.altKey) e.stopPropagation();
+          });
+          ta.addEventListener('dblclick', function(e){ e.stopPropagation(); ta.focus(); });
           /* Undo tracking: snapshot on focus, push undo entry on blur if text changed */
           var _taSnap = '';
           ta.addEventListener('focus', function(){ _taSnap = ta.value; });
