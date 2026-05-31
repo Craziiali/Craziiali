@@ -5715,32 +5715,51 @@
   /* ═══ MOOD BOARD — Gallery ══════════════════════════════════════ */
   #viewMoodboards { overflow-y: auto; overflow-x: hidden; }
   .mb-gallery-wrap { flex:1; padding:48px 40px 80px; max-width:1200px; margin:0 auto; width:100%; box-sizing:border-box; }
-  .mb-gallery-topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:44px; }
-  .mb-gallery-left { display:flex; align-items:center; gap:24px; }
-  .mb-gallery-title { font-family:var(--font-en-display); font-style:italic; font-size:32px; font-weight:400; color:var(--ink); margin:0; line-height:1; }
-  /* 26px control in a 38px pill = even 5px gutter all around, so the hover box never crowds the edge. */
+  /* Topbar: hairline separator anchors it visually above the card grid */
+  .mb-gallery-topbar { display:flex; align-items:center; justify-content:space-between; padding-bottom:28px; border-bottom:1px solid var(--rule); margin-bottom:36px; }
+  .mb-gallery-left { display:flex; align-items:center; gap:22px; }
+  /* Title: one step up from 32px so it anchors the page clearly */
+  .mb-gallery-title { font-family:var(--font-en-display); font-style:italic; font-size:36px; font-weight:400; color:var(--ink); margin:0; line-height:1; }
+  /* Notification button — shared with canvas topbar, kept as-is */
   .mb-notif-btn { position:relative; width:26px; height:26px; border-radius:8px; border:1px solid transparent; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:rgba(243,243,239,.5); transition:border-color .15s,color .15s,background .15s; flex-shrink:0; }
   .mb-notif-btn:hover { border-color:rgba(243,243,239,.1); color:rgba(243,243,239,.9); background:rgba(243,243,239,.07); }
   .mb-notif-btn svg { width:15px; height:15px; }
   .mb-notif-badge { position:absolute; top:-2px; right:-2px; min-width:13px; height:13px; padding:0 3px; box-sizing:border-box; background:#e05c5c; border-radius:7px; border:2px solid rgba(13,13,17,.94); font-family:var(--font-en-mono); font-size:7px; font-weight:600; color:#fff; display:flex; align-items:center; justify-content:center; line-height:1; }
   .mb-notif-badge:empty { display:none; }
-  .mb-new-board-btn { display:flex; align-items:center; gap:8px; padding:0 20px; height:36px; border:1px solid var(--rule); border-radius:3px; background:transparent; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; transition:border-color .22s,color .22s,background .22s; white-space:nowrap; }
-  .mb-new-board-btn:hover { border-color:rgba(243,243,239,.3); color:var(--ink); background:rgba(243,243,239,.04); }
+  /* New Board: 2px radius, active press feedback — matches home card sharpness */
+  .mb-new-board-btn { display:flex; align-items:center; gap:8px; padding:0 18px; height:36px; border:1px solid var(--rule); border-radius:2px; background:transparent; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; transition:border-color .22s,color .22s,background .22s,transform .12s; white-space:nowrap; }
+  .mb-new-board-btn:hover { border-color:rgba(243,243,239,.28); color:var(--ink); background:rgba(243,243,239,.04); }
+  .mb-new-board-btn:active { transform:translateY(1px); border-color:rgba(243,243,239,.4); transition-duration:.06s; }
   .mb-new-board-btn svg { width:12px; height:12px; flex-shrink:0; }
-  .mb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
-  .mb-card { position:relative; border:1px solid var(--rule); border-radius:6px; overflow:hidden; cursor:pointer; background:#0d0d10; transition:border-color .25s,transform .2s; display:flex; flex-direction:column; user-select:none; }
-  .mb-card:hover { border-color:rgba(243,243,239,.28); transform:translateY(-2px); }
-  .mb-card-thumb { width:100%; aspect-ratio:16/9; background:#111116; overflow:hidden; position:relative; flex-shrink:0; }
+  /* Grid: 12px gap for a tighter, more editorial rhythm */
+  .mb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
+  /* Board card: 2px radius matching home page tool cards.
+     ::before = top-edge hairline sweep (like tool-card)
+     ::after  = ambient radial glow from top edge (like tool-card) */
+  .mb-card { position:relative; border:1px solid var(--rule); border-radius:2px; overflow:hidden; cursor:pointer; background:#0d0d10; transition:border-color .25s,background .25s,transform .22s cubic-bezier(.16,1,.3,1); display:flex; flex-direction:column; user-select:none; }
+  .mb-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent 0%,rgba(243,243,239,.55) 50%,transparent 100%); opacity:0; transition:opacity .3s; pointer-events:none; z-index:1; }
+  .mb-card::after  { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 120% 50% at 50% 0%,rgba(243,243,239,.04) 0%,transparent 100%); opacity:0; transition:opacity .35s; pointer-events:none; }
+  .mb-card:hover { border-color:rgba(243,243,239,.26); background:#0e0e12; transform:translateY(-2px); }
+  .mb-card:hover::before { opacity:1; }
+  .mb-card:hover::after  { opacity:1; }
+  /* Press: snap back with brighter border — tactile physical push */
+  .mb-card:active { transform:translateY(0); border-color:rgba(243,243,239,.44); transition-duration:.07s; }
+  /* Hairline between thumb and info adds structure without weight */
+  .mb-card-thumb { width:100%; aspect-ratio:16/9; background:#111116; overflow:hidden; position:relative; flex-shrink:0; border-bottom:1px solid var(--rule); }
   .mb-card-thumb canvas,.mb-card-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
   .mb-card-thumb-empty { width:100%; height:100%; display:flex; align-items:center; justify-content:center; opacity:.15; }
   .mb-card-thumb-empty svg { width:36px; height:36px; color:var(--ink); }
-  .mb-card-info { padding:14px 16px 16px; flex:1; display:flex; flex-direction:column; gap:6px; }
-  .mb-card-name { font-family:var(--font-en-display); font-style:italic; font-size:16px; font-weight:400; color:var(--ink); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .mb-card-meta { font-family:var(--font-en-mono); font-size:8px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); opacity:.5; }
-  .mb-card-menu-btn { position:absolute; top:8px; right:8px; width:28px; height:28px; border-radius:50%; background:rgba(11,11,12,.8); border:1px solid rgba(243,243,239,.1); color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s,background .2s; backdrop-filter:blur(6px); }
+  /* Info: 2px extra padding for breathing room */
+  .mb-card-info { padding:16px 18px 18px; flex:1; display:flex; flex-direction:column; gap:6px; }
+  /* Name: 17px (up from 16) for a touch more presence */
+  .mb-card-name { font-family:var(--font-en-display); font-style:italic; font-size:17px; font-weight:400; color:var(--ink); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mb-card-meta { font-family:var(--font-en-mono); font-size:8px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft); opacity:.45; }
+  /* Menu button: square corners (3px) consistent with sharp card language;
+     z-index:2 paints it above the ::after pseudo-element */
+  .mb-card-menu-btn { position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:3px; background:rgba(11,11,12,.85); border:1px solid rgba(243,243,239,.1); color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s,background .2s,border-color .18s; backdrop-filter:blur(6px); z-index:2; }
   .mb-card:hover .mb-card-menu-btn { opacity:1; }
-  .mb-card-menu-btn:hover { background:rgba(30,30,36,.9); color:var(--ink); }
-  .mb-card-menu-btn svg { width:14px; height:14px; }
+  .mb-card-menu-btn:hover { background:rgba(30,30,36,.92); color:var(--ink); border-color:rgba(243,243,239,.22); }
+  .mb-card-menu-btn svg { width:13px; height:13px; }
   .mb-ctx-menu { position:fixed; background:rgba(18,18,24,.98); border:1px solid rgba(243,243,239,.13); border-radius:12px; padding:5px; z-index:99000; min-width:168px; box-shadow:0 20px 60px rgba(0,0,0,.75),0 4px 16px rgba(0,0,0,.4); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); animation:mbCtxIn .12s ease both; }
   @keyframes mbCtxIn { from{opacity:0;transform:scale(.96) translateY(-6px)} to{opacity:1;transform:scale(1) translateY(0)} }
   .mb-ctx-item { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:7px; font-family:var(--font-en-mono); font-size:9px; letter-spacing:.07em; text-transform:uppercase; color:rgba(243,243,239,.55); cursor:pointer; transition:background .1s,color .1s; }
@@ -6142,8 +6161,9 @@
   .mb-drawing-path { pointer-events:none; }
 
   @media (max-width:600px) {
-    .mb-gallery-wrap { padding:32px 16px 60px; }
-    .mb-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+    .mb-gallery-wrap { padding:28px 16px 60px; }
+    .mb-gallery-title { font-size:28px; }
+    .mb-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; }
     .mb-toolbar { left:8px; right:8px; transform:none; border-radius:14px; overflow-x:auto; justify-content:flex-start; bottom:16px; }
     .mb-topbar { padding:8px 10px; }
     .mb-topbar-left { padding:0 10px; max-width:calc(50vw - 12px); }
