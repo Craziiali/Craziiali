@@ -5046,7 +5046,7 @@
     transition: transform .42s cubic-bezier(.16,1,.3,1);
     will-change: transform;
   }
-  @media (max-width: 700px) {
+  @media (max-width: 700px) and (pointer: coarse) {
     html.elastic-page-lock,
     html.elastic-page-lock body {
       overscroll-behavior: none;
@@ -7883,7 +7883,7 @@
     }
 
     function initElasticPages(){
-      if (!window.matchMedia || !window.matchMedia('(max-width: 700px)').matches) return;
+      if (!window.matchMedia || !window.matchMedia('(max-width: 700px) and (pointer: coarse)').matches) return;
       var state = null;
       var threshold = 74;
       function activeElastic(){
