@@ -39,6 +39,25 @@
     /* Google Calendar OAuth access token (captured from Google sign-in). Short-lived (~1h). */
     let gcalToken = null, gcalTokenExp = 0;
     const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+    const GCAL_LS_KEY = 'cz_gcal_token';
+    /* Restore a previously captured calendar token so we DON'T re-prompt on every
+       click or page reload while it's still valid. Only re-asks once it truly
+       expires (~1h) or the user signs out. */
+    try {
+      const _savedGcal = JSON.parse(localStorage.getItem(GCAL_LS_KEY) || 'null');
+      if (_savedGcal && _savedGcal.exp && Date.now() < _savedGcal.exp) {
+        gcalToken = _savedGcal.tok; gcalTokenExp = _savedGcal.exp;
+      }
+    } catch (_) {}
+    function _persistGcal() {
+      try {
+        if (gcalToken && Date.now() < gcalTokenExp) {
+          localStorage.setItem(GCAL_LS_KEY, JSON.stringify({ tok: gcalToken, exp: gcalTokenExp }));
+        } else {
+          localStorage.removeItem(GCAL_LS_KEY);
+        }
+      } catch (_) {}
+    }
 
     window.fb = {
       auth,
@@ -48,7 +67,7 @@
       signIn:             (email, pass) => signInWithEmailAndPassword(auth, email, pass),
       createAccount:      (email, pass) => createUserWithEmailAndPassword(auth, email, pass),
       signInWithGoogle:   ()            => signInWithPopup(auth, new GoogleAuthProvider()),
-      signOut:            ()            => signOut(auth),
+      signOut:            ()            => { gcalToken = null; gcalTokenExp = 0; _persistGcal(); return signOut(auth); },
       onAuthStateChanged: (cb)          => onAuthStateChanged(auth, cb),
       currentUser:        ()            => auth.currentUser,
       updateProfile:      (name, photo) => updateProfile(auth.currentUser, { displayName: name || '', photoURL: photo || null }),
@@ -65,11 +84,15 @@
       connectCalendar: () => {
         const provider = new GoogleAuthProvider();
         provider.addScope(GCAL_SCOPE);
+        /* If they're already signed into one Google account, Google auto-completes
+           without re-asking for consent (the scope is already granted). */
+        provider.setCustomParameters({ prompt: 'select_account' });
         return signInWithPopup(auth, provider).then(function(result){
           const cred = GoogleAuthProvider.credentialFromResult(result);
           if (!cred || !cred.accessToken) throw { code:'no-token' };
           gcalToken = cred.accessToken;
           gcalTokenExp = Date.now() + 55 * 60 * 1000; /* refresh a bit before the ~1h expiry */
+          _persistGcal(); /* remember it across reloads + clicks */
           return gcalToken;
         });
       },
@@ -81,7 +104,7 @@
           headers: { 'Authorization': 'Bearer ' + gcalToken, 'Content-Type': 'application/json' },
           body: JSON.stringify(eventObj)
         }).then(function(res){
-          if (res.status === 401) { gcalToken = null; gcalTokenExp = 0; return Promise.reject({ code:'token-expired' }); }
+          if (res.status === 401) { gcalToken = null; gcalTokenExp = 0; _persistGcal(); return Promise.reject({ code:'token-expired' }); }
           if (!res.ok) {
             return res.json().then(
               function(j){ return Promise.reject({ code:'http-' + res.status, detail:j }); },
