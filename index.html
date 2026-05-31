@@ -4987,7 +4987,9 @@
   }
   html.elastic-page-lock,
   html.elastic-page-lock body {
-    overscroll-behavior-y: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+    height: 100%;
   }
   body.elastic-page-pulling .elastic-page {
     transition: none;
@@ -7798,7 +7800,7 @@
         var ctx = canStart(e);
         if (!ctx) return;
         state = { startY:e.touches[0].clientY, ctx:ctx, mode:null };
-      }, { passive:true });
+      }, { passive:true, capture:true });
       document.addEventListener('touchmove', function(e){
         if (!state || !e.touches || e.touches.length !== 1) return;
         var dy = e.touches[0].clientY - state.startY;
@@ -7824,7 +7826,7 @@
           document.body.style.setProperty('--elastic-scale', String(Math.min(.18, pull / 520)));
           document.body.style.setProperty('--elastic-rot', Math.min(300, pull * 3.2) + 'deg');
         }
-      }, { passive:false });
+      }, { passive:false, capture:true });
       document.addEventListener('touchend', function(){
         if (!state) return;
         var shouldRefresh = state.mode === 'top' && document.body.classList.contains('elastic-page-ready');
@@ -7837,8 +7839,8 @@
         } else {
           resetElastic();
         }
-      }, { passive:true });
-      document.addEventListener('touchcancel', resetElastic, { passive:true });
+      }, { passive:true, capture:true });
+      document.addEventListener('touchcancel', resetElastic, { passive:true, capture:true });
     }
     initElasticPages();
 
