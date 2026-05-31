@@ -5008,8 +5008,8 @@
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    border: 1px solid rgba(243,243,239,.16);
-    background: rgba(13,13,17,.9);
+    border: 1px solid rgba(243,243,239,calc(.16 + var(--elastic-glow, 0) * .34));
+    background: rgba(13,13,17,calc(.86 + var(--elastic-glow, 0) * .08));
     color: rgba(243,243,239,.86);
     display: flex;
     align-items: center;
@@ -5017,7 +5017,10 @@
     pointer-events: none;
     opacity: 0;
     transform: translate(-50%, -76px) scale(.86);
-    box-shadow: 0 14px 42px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.08);
+    box-shadow:
+      0 14px 42px rgba(0,0,0,.48),
+      0 0 calc(8px + var(--elastic-glow, 0) * 34px) rgba(243,243,239,calc(var(--elastic-glow, 0) * .36)),
+      inset 0 1px 0 rgba(255,255,255,calc(.08 + var(--elastic-glow, 0) * .22));
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     transition: opacity .16s ease, transform .16s cubic-bezier(.16,1,.3,1), border-color .16s, color .16s;
@@ -5032,18 +5035,7 @@
   body.elastic-page-pulling.elastic-page-top .elastic-refresh-indicator svg {
     transition:none;
   }
-  body.elastic-page-ready .elastic-refresh-indicator {
-    border-color:rgba(243,243,239,.38);
-    color:#fff;
-  }
-  body.elastic-page-refreshing .elastic-refresh-indicator {
-    opacity:1;
-    transform:translate(-50%, 0) scale(1);
-    border-color:rgba(243,243,239,.38);
-    color:#fff;
-  }
-  body.elastic-page-refreshing .elastic-refresh-indicator svg { animation:elasticSpin .75s linear infinite; }
-  @keyframes elasticSpin { to { transform:rotate(360deg); } }
+  body.elastic-page-ready .elastic-refresh-indicator { color:#fff; }
 
   /* Empty state */
   .planner-empty {
@@ -7776,11 +7768,12 @@
       }
       function resetElastic(){
         state = null;
-        document.body.classList.remove('elastic-page-pulling','elastic-page-top','elastic-page-bottom','elastic-page-ready','elastic-page-refreshing');
+        document.body.classList.remove('elastic-page-pulling','elastic-page-top','elastic-page-bottom','elastic-page-ready');
         document.body.style.setProperty('--elastic-shift', '0px');
         document.body.style.removeProperty('--elastic-pull');
         document.body.style.removeProperty('--elastic-scale');
         document.body.style.removeProperty('--elastic-rot');
+        document.body.style.removeProperty('--elastic-glow');
         setTimeout(function(){ if (!state) document.body.style.removeProperty('--elastic-shift'); }, 460);
       }
       var _origShowView = window.showView;
@@ -7792,7 +7785,7 @@
       syncElasticLock();
       function canStart(e){
         var ctx = activeElastic();
-        if (!ctx || document.body.classList.contains('elastic-page-refreshing')) return false;
+        if (!ctx) return false;
         if (!e.touches || e.touches.length !== 1) return false;
         var t = e.target;
         if (t && t.closest && t.closest('input, textarea, select, [contenteditable="true"], .auth-user-bar, .czteam-panel, .czchat-win')) return false;
@@ -7836,20 +7829,11 @@
           document.body.style.setProperty('--elastic-pull', pull + 'px');
           document.body.style.setProperty('--elastic-scale', String(Math.min(.18, pull / 520)));
           document.body.style.setProperty('--elastic-rot', Math.min(300, pull * 3.2) + 'deg');
+          document.body.style.setProperty('--elastic-glow', String(Math.min(1, pull / 130)));
         }
       }, { passive:false, capture:true });
       document.addEventListener('touchend', function(){
-        if (!state) return;
-        var shouldRefresh = state.mode === 'top' && document.body.classList.contains('elastic-page-ready');
-        if (shouldRefresh) {
-          document.body.classList.remove('elastic-page-pulling','elastic-page-top','elastic-page-bottom','elastic-page-ready');
-          document.body.classList.add('elastic-page-refreshing');
-          document.body.style.setProperty('--elastic-shift', '34px');
-          setTimeout(function(){ window.location.reload(); }, 220);
-          state = null;
-        } else {
-          resetElastic();
-        }
+        if (state) resetElastic();
       }, { passive:true, capture:true });
       document.addEventListener('touchcancel', resetElastic, { passive:true, capture:true });
     }
