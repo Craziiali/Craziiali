@@ -2,116 +2,91 @@
   CRAZIIALI — Laptop Alarm Agent  (Windows 11)
 ========================================================================
 
+  LIVE FOLDER:  C:\craziiali-alarm
+  (This copy on the Desktop is just the backup/source kept in your code
+   project. Do everything below in  C:\craziiali-alarm .)
+
 WHAT IT DOES
 ------------
-When you press the "Add to Calendar" button on a shoot in the planner,
-the website does two things now:
-
-  1. Adds the shoot to your Google Calendar (as before), AND
+When you press "Add to Calendar" on a shoot (that has a date AND time),
+the website does two things:
+  1. Adds the shoot to your Google Calendar, AND
   2. Arms a LOUD WINDOWS ALARM on this laptop.
 
-The alarm rings TWICE per shoot:
-  - 1 HOUR BEFORE the shoot
-  - AT THE EXACT shoot time
-
-It LOOPS UNTIL YOU DISMISS IT (a fullscreen red screen with a DISMISS
-and a SNOOZE button) — even if every browser is closed. The only
-requirement: this little agent must be running. After the one-time
-setup below, it starts itself automatically every time you log in.
-
-It only arms an alarm for shoots that have a TIME set (an all-day shoot
-has no exact hour to ring at).
+The alarm rings TWICE per shoot — 1 HOUR BEFORE and AT THE EXACT time —
+and LOOPS UNTIL YOU DISMISS IT (fullscreen, with DISMISS + SNOOZE),
+even with every browser closed. The only requirement is that the agent
+is running; after setup it auto-starts with Windows.
 
 
 ========================================================================
-  ONE-TIME SETUP  (about 5 minutes)
+  ALREADY DONE FOR YOU
+========================================================================
+  [x] Python 3.12 installed
+  [x] firebase-admin installed
+  [x] Agent copied to  C:\craziiali-alarm
+
+
+========================================================================
+  WHAT'S LEFT  (2 steps — only you can do these, they need your login)
 ========================================================================
 
-STEP 1 — Install Python (if you don't have it)
-----------------------------------------------
-  - Go to https://www.python.org/downloads/
-  - Download Python 3 for Windows and run the installer.
-  - IMPORTANT: on the first screen, TICK the box
-        "Add python.exe to PATH"
-    then click Install.
-
-STEP 2 — Install the agent's dependencies
------------------------------------------
-  - Double-click  install.bat  in this folder.
-  - It opens a black window, installs what's needed, then says "Done".
-
-STEP 3 — Get your Firebase key (so the agent can read your alarms)
------------------------------------------------------------------
+STEP 1 — Get your Firebase key
+------------------------------
   - Go to:  https://console.firebase.google.com/
   - Open the project:  my-figma-a7909
-  - Click the gear icon (top-left) -> "Project settings"
-  - Go to the "Service accounts" tab
-  - Click "Generate new private key" -> "Generate key"
-  - A .json file downloads. RENAME it to exactly:
-        serviceAccountKey.json
-  - MOVE it into THIS folder (next to agent.py).
-  (Keep this file private — it's the key to your database.)
+  - Gear icon (top-left) -> "Project settings"
+  - "Service accounts" tab
+  - "Generate new private key" -> "Generate key"  (a .json downloads)
+  - RENAME the file to exactly:   serviceAccountKey.json
+  - MOVE it into:                 C:\craziiali-alarm
+  (Keep it private — it's the key to your database. It lives only on
+   this PC, never in the website code.)
 
-STEP 4 — Add the database rule (one line, so the website can arm alarms)
------------------------------------------------------------------------
-  - In the Firebase Console, open: Realtime Database -> Rules
-  - Inside the top-level rules, add an "alarms" entry so it looks like:
+STEP 2 — Publish the database rule (so the website can arm alarms)
+-----------------------------------------------------------------
+  - Firebase Console -> Realtime Database -> Rules
+  - Add an "alarms" entry to the rules, then Publish:
 
-        {
-          "rules": {
-            ... your existing rules ...,
-            "alarms": { ".read": "auth != null", ".write": "auth != null" }
-          }
-        }
+        "alarms": { ".read": "auth != null", ".write": "auth != null" }
 
-  - Click "Publish".
-  (If you'd like, send me your current rules and I'll merge it for you.)
-
-STEP 5 — Test it
-----------------
-  - Double-click  run-alarm.bat  (a window stays open showing status).
-  - In the planner, make a shoot with TODAY's date and a time about
-    2 minutes from now, then press its "Add to Calendar" button.
-  - Within ~15 seconds of that time, the alarm should ring loudly and
-    fill the screen. Click DISMISS to stop it.
-
-STEP 6 — Make it automatic
---------------------------
-  - Close the test window.
-  - Double-click  install-autostart.bat
-  - From now on the agent runs silently in the background every time
-    you log into Windows. You never have to think about it again.
+  (Easiest: paste your current rules to me and I'll merge this in.)
 
 
 ========================================================================
-  EVERYDAY USE
+  THEN: TEST IT
 ========================================================================
-  - Just press "Add to Calendar" on any shoot that has a date + time.
-  - You'll get the Google Calendar event AND the two laptop alarms.
-  - Deleting a shoot cancels its laptop alarm automatically.
+  - Open  C:\craziiali-alarm  and double-click  run-alarm.bat
+    (a window stays open showing "Connected").
+  - In the planner, make a shoot with TODAY's date + a time ~2 minutes
+    away, and press its "Add to Calendar" button.
+  - Within ~15 seconds of that time the alarm fills the screen and rings.
+    Click DISMISS to stop it.
+
+  MAKE IT AUTOMATIC:
+  - Close the test window, then double-click  install-autostart.bat
+  - It now runs silently in the background every time you log into
+    Windows. You never touch it again.
 
 
 ========================================================================
   HANDY CONTROLS
 ========================================================================
-  - Stop the agent now:        Task Manager -> "pythonw.exe" -> End task
-  - Turn off auto-start:        run  uninstall-autostart.bat
-  - Change snooze length / how loud / colors: edit the settings near the
-    top of agent.py (SNOOZE_MINUTES, GRACE_MINUTES, the amp value).
-  - The siren file (alarm.wav) is generated automatically on first run.
-    Delete it and the agent makes a fresh one. You can also drop in your
-    OWN alarm.wav (any WAV) and the agent will loop that instead.
+  - Stop the agent now:    Task Manager -> "pythonw.exe" -> End task
+  - Turn off auto-start:    run  uninstall-autostart.bat
+  - Adjust snooze length / loudness / lead time: edit the settings near
+    the top of agent.py  (SNOOZE_MINUTES, GRACE_MINUTES, amp).
+  - Use your own sound: drop any  alarm.wav  into the folder and the
+    agent loops that instead (it auto-generates one if missing).
 
 
 ========================================================================
   TROUBLESHOOTING
 ========================================================================
-  - "Python is not installed": redo Step 1 and make sure you ticked
-    "Add python.exe to PATH".
-  - "Missing serviceAccountKey.json": redo Step 3 (the filename must be
-    exactly serviceAccountKey.json and it must be in this folder).
-  - No alarm fired: make sure the shoot has BOTH a date and a time, that
-    run-alarm.bat shows "Connected", and that you published the Step 4
-    rule. The agent checks every 15 seconds, so allow a few seconds.
-  - It only rings if the trigger time is now or up to 5 minutes past
-    (so booting up hours later won't ring for shoots already gone).
+  - "Missing serviceAccountKey.json": redo Step 1; filename must be
+    exactly serviceAccountKey.json and sit in C:\craziiali-alarm.
+  - No alarm fired: make sure the shoot has BOTH a date and a time,
+    run-alarm.bat shows "Connected", and Step 2's rule is published.
+    The agent checks every 15 seconds, so allow a few seconds.
+  - It only rings if the time is now or up to 5 minutes past, so
+    booting up hours later won't ring for shoots already gone.
