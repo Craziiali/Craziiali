@@ -5036,6 +5036,47 @@
     transition:none;
   }
   body.elastic-page-ready .elastic-refresh-indicator { color:#fff; }
+  .top-load-line {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 200001;
+    width: 100%;
+    height: 2px;
+    pointer-events: none;
+    opacity: 0;
+    overflow: hidden;
+    background: transparent;
+  }
+  .top-load-line::before {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(243,243,239,.18), rgba(243,243,239,.92), rgba(243,243,239,.28));
+    transform: translateX(-100%);
+    box-shadow: 0 0 14px rgba(243,243,239,.38);
+  }
+  .top-load-line.loading {
+    opacity: 1;
+  }
+  .top-load-line.loading::before {
+    animation: topLoadSweep 1.1s cubic-bezier(.65,0,.35,1) infinite;
+  }
+  .top-load-line.done {
+    opacity: 0;
+    transition: opacity .32s ease;
+  }
+  .top-load-line.done::before {
+    animation: none;
+    transform: translateX(0);
+    transition: transform .18s ease;
+  }
+  @keyframes topLoadSweep {
+    0% { transform: translateX(-100%) scaleX(.28); }
+    48% { transform: translateX(-10%) scaleX(.72); }
+    100% { transform: translateX(100%) scaleX(.38); }
+  }
 
   /* Empty state */
   .planner-empty {
@@ -6405,6 +6446,7 @@
     position:fixed;inset:0;z-index:199999;
     background:#0b0b0c;pointer-events:none;
   "></div>
+  <div id="topLoadLine" class="top-load-line loading" aria-hidden="true"></div>
   <div id="elasticRefreshIndicator" class="elastic-refresh-indicator" aria-hidden="true">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
       <path d="M16 8.2A6 6 0 1 0 14.1 14"/>
@@ -7751,6 +7793,21 @@
     window.showView = showView;
     window._getCurrentView = function(){ return current; };
     window._hasExplicitRoute = !!routeViewFromPath();
+    function startTopLoadLine(){
+      var line = document.getElementById('topLoadLine');
+      if (!line) return;
+      line.classList.remove('done');
+      line.classList.add('loading');
+    }
+    function finishTopLoadLine(){
+      var line = document.getElementById('topLoadLine');
+      if (!line) return;
+      line.classList.remove('loading');
+      line.classList.add('done');
+      setTimeout(function(){ line.classList.remove('done'); }, 420);
+    }
+    window._startTopLoadLine = startTopLoadLine;
+    window._finishTopLoadLine = finishTopLoadLine;
 
     function initElasticPages(){
       if (!window.matchMedia || !window.matchMedia('(hover: none), (pointer: coarse), (max-width: 700px)').matches) return;
@@ -7836,7 +7893,10 @@
         if (!state) return;
         var shouldRefresh = state.mode === 'top' && document.body.classList.contains('elastic-page-ready');
         resetElastic();
-        if (shouldRefresh) setTimeout(function(){ window.location.reload(); }, 80);
+        if (shouldRefresh) {
+          startTopLoadLine();
+          setTimeout(function(){ window.location.reload(); }, 80);
+        }
       }, { passive:true, capture:true });
       document.addEventListener('touchcancel', resetElastic, { passive:true, capture:true });
     }
@@ -7849,6 +7909,7 @@
       if (revealMoodboard) window._prepareMoodboardReloadElements();
       var l = document.getElementById('appLoader');
       if (l) l.remove();
+      finishTopLoadLine();
       if (shouldAnimateStartup) {
         _startupRevealAnimated = true;
         requestAnimationFrame(function(){
