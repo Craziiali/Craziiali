@@ -7808,6 +7808,10 @@
     }
     window._startTopLoadLine = startTopLoadLine;
     window._finishTopLoadLine = finishTopLoadLine;
+    function pulseRefreshHaptic(){
+      if (!navigator.vibrate) return;
+      try { navigator.vibrate([18, 22, 18]); } catch(e) {}
+    }
 
     function initElasticPages(){
       if (!window.matchMedia || !window.matchMedia('(hover: none), (pointer: coarse), (max-width: 700px)').matches) return;
@@ -7894,6 +7898,7 @@
         var shouldRefresh = state.mode === 'top' && document.body.classList.contains('elastic-page-ready');
         resetElastic();
         if (shouldRefresh) {
+          pulseRefreshHaptic();
           startTopLoadLine();
           setTimeout(function(){ window.location.reload(); }, 80);
         }
