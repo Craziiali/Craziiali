@@ -6046,7 +6046,7 @@
   .mb-font-select { background:transparent; border:1px solid rgba(243,243,239,.1); border-radius:4px; color:var(--ink-soft); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.06em; padding:3px 7px; cursor:pointer; outline:none; transition:border-color .15s; }
   .mb-font-select:hover { border-color:rgba(243,243,239,.25); }
   .mb-font-select option { background:#1a1a20; }
-  .mb-stage { position:absolute; inset:0; top:0; bottom:0; overflow:hidden; cursor:default; }
+  .mb-stage { position:absolute; inset:0; top:0; bottom:0; overflow:hidden; cursor:default; touch-action:none; overscroll-behavior:none; }
   .mb-stage.tool-select { cursor:default; }
   .mb-stage.tool-hand { cursor:grab; }
   .mb-stage.tool-hand.panning { cursor:grabbing; }
@@ -6298,7 +6298,22 @@
     .mb-gallery-actions { width:100%; gap:8px; justify-content:flex-end; }
     .mb-new-board-btn { font-size:8px; letter-spacing:.1em; padding:5px 11px; }
     .mb-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; }
-    .mb-toolbar { left:8px; right:8px; transform:none; border-radius:14px; overflow-x:auto; justify-content:flex-start; bottom:max(16px,env(safe-area-inset-bottom)); }
+    .mb-toolbar { left:8px; right:8px; transform:none; border-radius:14px; overflow-x:auto; overflow-y:visible; justify-content:flex-start; bottom:max(16px,env(safe-area-inset-bottom)); padding:6px 8px; scrollbar-width:none; }
+    .mb-toolbar::-webkit-scrollbar { display:none; }
+    .mb-tool-btn { width:34px; height:34px; border-radius:9px; flex:0 0 auto; }
+    .mb-tool-sep { margin:0 3px; }
+    .mb-tool-art-pen { width:14px; height:30px; margin-top:-5px; }
+    .mb-tool-art-pen::before { top:-8px; border-left-width:5px; border-right-width:5px; border-bottom-width:10px; }
+    .mb-tool-art-pen::after { bottom:-6px; height:8px; }
+    .mb-tool-art-sticky { width:26px; height:24px; }
+    .mb-tool-art-shape { width:21px; height:21px; }
+    .mb-tool-art-shape::after { width:16px; height:16px; right:-11px; bottom:-8px; }
+    .mb-tool-menu { max-width:calc(100vw - 28px); overflow-x:auto; }
+    .mb-stamp-wheel { transform:translateX(-50%) translateY(0) scale(.82) !important; transform-origin:50% 100%; }
+    .mb-tool-wrap.open .mb-stamp-wheel { transform:translateX(-50%) translateY(0) scale(.82) !important; }
+    .mb-propbar { max-width:calc(100vw - 16px); overflow-x:auto; scrollbar-width:none; }
+    .mb-propbar::-webkit-scrollbar { display:none; }
+    .mb-stage { touch-action:none; }
     .mb-topbar { padding:8px 10px; gap:8px; }
     .mb-topbar-left { padding:0 10px; max-width:calc(58vw - 12px); min-width:0; }
     .mb-topbar-right { padding:0 6px 0 8px; gap:4px; flex-shrink:0; }
@@ -10150,6 +10165,9 @@
     var _spaceDown=false;   /* space bar held (temporary hand tool) */
     var _isPanning=false;   /* middle-mouse or space+drag */
     var _panStart=null;
+    var _touchGesture=null; /* mobile-only pan / pinch / drag gesture state */
+    var _mobileFitDone=false;
+    var _suppressMouseUntil=0; /* avoid synthetic mouse events after touch */
 
     /* Throttle: cursor broadcast */
     var _cursorTimer=null, _lastCx=-9999, _lastCy=-9999;
@@ -10190,6 +10208,10 @@
 
     function canEdit() {
       return _isEditor && (_myRole === 'admin' || _myRole === 'viewer');
+    }
+
+    function isMobileCanvasMode() {
+      return !!(window.matchMedia && window.matchMedia('(max-width: 600px), (hover: none), (pointer: coarse)').matches);
     }
 
     /* ── Coordinate transforms ──────────────────────────── */
@@ -10233,13 +10255,20 @@
 
     function fitAll() {
       var els = Object.values(_elements);
-      if (!els.length) { _zoom=1; _panX=0; _panY=0; applyTransform(); return; }
+      if (!els.length) {
+        var r0 = stage.getBoundingClientRect();
+        _zoom=1;
+        _panX=isMobileCanvasMode() ? Math.round(r0.width/2) : 0;
+        _panY=isMobileCanvasMode() ? Math.round(r0.height/2) : 0;
+        applyTransform();
+        return;
+      }
       var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
       els.forEach(function(e){
         minX=Math.min(minX,e.x); minY=Math.min(minY,e.y);
         maxX=Math.max(maxX,e.x+(e.w||200)); maxY=Math.max(maxY,e.y+(e.h||120));
       });
-      var pad=80, r=stage.getBoundingClientRect();
+      var pad=isMobileCanvasMode()?34:80, r=stage.getBoundingClientRect();
       var sw=r.width-pad*2, sh=r.height-pad*2;
       var fw=maxX-minX, fh=maxY-minY;
       if(fw<1)fw=600; if(fh<1)fh=400;
@@ -10878,6 +10907,7 @@
     /* ── Element listeners (drag, select) ───────────────── */
     function attachElListeners(el, id) {
       el.addEventListener('mousedown', function(e){
+        if (Date.now() < _suppressMouseUntil) return;
         /* Middle-mouse click deletes the element directly. */
         if (e.button === 1) {
           var dd = _elements[id];
@@ -11134,6 +11164,7 @@
 
     /* ── Stage mouse down: tool actions ─────────────────── */
     function onStageMouseDown(e) {
+      if (Date.now() < _suppressMouseUntil) return;
       /* PAN takes priority over everything: space+drag or the hand tool pans the board no matter what
          is under the cursor (an image, a sticky, empty space). Middle-mouse on an element is handled by
          the element's own handler (delete) and stops propagation, so a button-1 event reaching here is
@@ -11256,6 +11287,250 @@
         /* Plain mouse wheel = zoom centered on cursor */
         var factor2 = e.deltaY < 0 ? 1.1 : 1/1.1;
         setZoom(_zoom * factor2, e.clientX, e.clientY);
+      }
+    }
+
+    function touchMidpoint(touches) {
+      return { x:(touches[0].clientX + touches[1].clientX) / 2, y:(touches[0].clientY + touches[1].clientY) / 2 };
+    }
+    function touchDistance(touches) {
+      var dx = touches[0].clientX - touches[1].clientX;
+      var dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx*dx + dy*dy) || 1;
+    }
+    function isEditableTouchTarget(target) {
+      return !!(target && target.closest && target.closest('input, textarea, select, [contenteditable="true"], .mb-propbar, .mb-topbar, .mb-toolbar, .mb-tool-menu, .mb-embed-live'));
+    }
+    function beginTouchPan(t) {
+      _touchGesture = { type:'pan', startX:t.clientX, startY:t.clientY, panX:_panX, panY:_panY };
+      if (stage) stage.classList.add('panning');
+    }
+    function selectTouchedElement(id) {
+      if (!id || !_elements[id]) return;
+      if (_selected.indexOf(id) < 0) _selected = [id];
+      renderAll();
+      updatePropbar();
+    }
+    function beginTouchDrag(id, t) {
+      var d = _elements[id];
+      if (!canEdit() || !d || d.locked) return;
+      var origPos = _selected.map(function(sid){
+        var sd = _elements[sid];
+        return sd ? { id:sid, x:sd.x, y:sd.y } : null;
+      }).filter(Boolean);
+      _touchGesture = { type:'drag', startX:t.clientX, startY:t.clientY, lastX:t.clientX, lastY:t.clientY, origPos:origPos, active:false };
+    }
+    function addAtTouchTool(tool, pos) {
+      if (tool === 'sticky') {
+        addElement('sticky', pos.x-100, pos.y-60);
+        setTool('select');
+      } else if (tool === 'text') {
+        addElement('text', pos.x-60, pos.y-18);
+        setTool('select');
+      } else if (tool === 'stamp') {
+        addElement('stamp', pos.x-36, pos.y-36, 72, 72);
+        setTool('select');
+      } else if (tool === 'comment') {
+        addElement('comment', pos.x-90, pos.y-56, 180, 112);
+        setTool('select');
+      } else if (tool === 'image') {
+        openImagePicker(pos.x, pos.y);
+        setTool('select');
+      } else if (tool === 'rect' || tool === 'circle' || tool === 'diamond') {
+        addElement(tool, pos.x-80, pos.y-60, 160, 120);
+        setTool('select');
+      }
+    }
+    function beginTouchDraw(tool, pos, t) {
+      if (tool === 'pen') {
+        var pathPrev = document.createElementNS('http://www.w3.org/2000/svg','path');
+        pathPrev.setAttribute('fill','none');
+        pathPrev.setAttribute('stroke', _propStrokeColor);
+        pathPrev.setAttribute('stroke-width', _propStrokeWidth);
+        pathPrev.setAttribute('stroke-linecap','round');
+        pathPrev.setAttribute('stroke-linejoin','round');
+        pathPrev.setAttribute('class','mb-drawing-path');
+        svgLayer.appendChild(pathPrev);
+        _drawing = { el: pathPrev, points: [[pos.x, pos.y]] };
+        _touchGesture = { type:'draw', startX:t.clientX, startY:t.clientY, lastX:t.clientX, lastY:t.clientY };
+      } else if (tool === 'arrow') {
+        var arG = document.createElementNS('http://www.w3.org/2000/svg','g');
+        var arLn = document.createElementNS('http://www.w3.org/2000/svg','line');
+        arLn.setAttribute('x1',pos.x); arLn.setAttribute('y1',pos.y);
+        arLn.setAttribute('x2',pos.x); arLn.setAttribute('y2',pos.y);
+        arLn.setAttribute('stroke',_propStrokeColor); arLn.setAttribute('stroke-width',_propStrokeWidth); arLn.setAttribute('stroke-linecap','round');
+        var arHd = document.createElementNS('http://www.w3.org/2000/svg','path');
+        arHd.setAttribute('fill','none'); arHd.setAttribute('stroke',_propStrokeColor); arHd.setAttribute('stroke-width',_propStrokeWidth); arHd.setAttribute('stroke-linecap','round');
+        arG.appendChild(arLn); arG.appendChild(arHd);
+        svgLayer.appendChild(arG);
+        _arrowDraw = { g:arG, line:arLn, head:arHd, x1:pos.x, y1:pos.y };
+        _touchGesture = { type:'arrow', startX:t.clientX, startY:t.clientY, lastX:t.clientX, lastY:t.clientY };
+      }
+    }
+    function onStageTouchStart(e) {
+      if (!isMobileCanvasMode() || !stage || !canvas) return;
+      _suppressMouseUntil = Date.now() + 750;
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        var mid = touchMidpoint(e.touches);
+        var r = stage.getBoundingClientRect();
+        _touchGesture = {
+          type:'pinch',
+          startDist:touchDistance(e.touches),
+          startZoom:_zoom,
+          worldX:(mid.x-r.left-_panX)/_zoom,
+          worldY:(mid.y-r.top-_panY)/_zoom
+        };
+        if (stage) stage.classList.add('panning');
+        return;
+      }
+      if (e.touches.length !== 1 || isEditableTouchTarget(e.target)) return;
+      var t = e.touches[0];
+      var el = e.target.closest && e.target.closest('.mb-el');
+      var id = el && el.dataset ? el.dataset.id : '';
+      var svgDataEl = !el && e.target.closest ? e.target.closest('[data-id]') : null;
+      var svgId = svgDataEl ? svgDataEl.getAttribute('data-id') : '';
+      var pos = screenToCanvas(t.clientX, t.clientY);
+
+      if (_tool === 'hand' || _spaceDown) {
+        e.preventDefault();
+        beginTouchPan(t);
+        return;
+      }
+      if (_tool === 'select') {
+        e.preventDefault();
+        if (id) {
+          selectTouchedElement(id);
+          beginTouchDrag(id, t);
+        } else if (svgId) {
+          selectTouchedElement(svgId);
+        } else {
+          if (_selected.length) { _selected = []; renderAll(); updatePropbar(); }
+          beginTouchPan(t);
+        }
+        return;
+      }
+      if (!canEdit()) return;
+      e.preventDefault();
+      if (_tool === 'pen' || _tool === 'arrow') beginTouchDraw(_tool, pos, t);
+      else addAtTouchTool(_tool, pos);
+    }
+    function onStageTouchMove(e) {
+      if (!isMobileCanvasMode() || !_touchGesture) return;
+      _suppressMouseUntil = Date.now() + 750;
+      if (_touchGesture.type === 'pinch') {
+        if (e.touches.length < 2) return;
+        e.preventDefault();
+        var mid = touchMidpoint(e.touches);
+        var r = stage.getBoundingClientRect();
+        _zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, _touchGesture.startZoom * (touchDistance(e.touches) / _touchGesture.startDist)));
+        _panX = mid.x - r.left - (_touchGesture.worldX * _zoom);
+        _panY = mid.y - r.top  - (_touchGesture.worldY * _zoom);
+        applyTransform();
+        return;
+      }
+      if (e.touches.length !== 1) return;
+      var t = e.touches[0];
+      _touchGesture.lastX = t.clientX;
+      _touchGesture.lastY = t.clientY;
+      if (_touchGesture.type === 'pan') {
+        e.preventDefault();
+        _panX = _touchGesture.panX + (t.clientX - _touchGesture.startX);
+        _panY = _touchGesture.panY + (t.clientY - _touchGesture.startY);
+        applyTransform();
+        return;
+      }
+      if (_touchGesture.type === 'drag') {
+        e.preventDefault();
+        var ddx = (t.clientX - _touchGesture.startX) / _zoom;
+        var ddy = (t.clientY - _touchGesture.startY) / _zoom;
+        var dragPx = Math.sqrt(Math.pow(t.clientX - _touchGesture.startX, 2) + Math.pow(t.clientY - _touchGesture.startY, 2));
+        if (!_touchGesture.active) {
+          if (dragPx < 5) return;
+          _touchGesture.active = true;
+        }
+        _touchGesture.origPos.forEach(function(op){
+          var dom = _elDoms[op.id];
+          if (dom) { dom.style.left=(op.x+ddx)+'px'; dom.style.top=(op.y+ddy)+'px'; }
+        });
+        positionPropbar();
+        return;
+      }
+      if (_touchGesture.type === 'draw' && _drawing) {
+        e.preventDefault();
+        var pos = screenToCanvas(t.clientX, t.clientY);
+        _drawing.points.push([pos.x, pos.y]);
+        _drawing.el.setAttribute('d', smoothPath(_drawing.points));
+        return;
+      }
+      if (_touchGesture.type === 'arrow' && _arrowDraw) {
+        e.preventDefault();
+        var pos2 = screenToCanvas(t.clientX, t.clientY);
+        _arrowDraw.line.setAttribute('x2', pos2.x);
+        _arrowDraw.line.setAttribute('y2', pos2.y);
+        _arrowDraw.head.setAttribute('d', arrowheadPath(_arrowDraw.x1,_arrowDraw.y1,pos2.x,pos2.y));
+      }
+    }
+    function onStageTouchEnd(e) {
+      if (!isMobileCanvasMode() || !_touchGesture) return;
+      _suppressMouseUntil = Date.now() + 750;
+      if (_touchGesture.type === 'pinch') {
+        if (e.touches.length === 1) beginTouchPan(e.touches[0]);
+        else { _touchGesture = null; if (stage) stage.classList.remove('panning'); }
+        return;
+      }
+      if (_touchGesture.type === 'pan') {
+        _touchGesture = null;
+        if (stage) stage.classList.remove('panning');
+        return;
+      }
+      if (_touchGesture.type === 'drag') {
+        var endX = _touchGesture.lastX || _touchGesture.startX;
+        var endY = _touchGesture.lastY || _touchGesture.startY;
+        var ddx = (endX - _touchGesture.startX) / _zoom;
+        var ddy = (endY - _touchGesture.startY) / _zoom;
+        if (_touchGesture.active && (Math.abs(ddx) > 1 || Math.abs(ddy) > 1)) {
+          var updates = [];
+          _touchGesture.origPos.forEach(function(op){
+            var nx = Math.round(op.x + ddx), ny = Math.round(op.y + ddy);
+            updates.push({ id: op.id, x: nx, y: ny });
+            commitElUpdate(op.id, { x: nx, y: ny });
+          });
+          pushUndo({ type:'move', items: _touchGesture.origPos.map(function(op,i){ return { id:op.id, before:{x:op.x,y:op.y}, after:{x:updates[i].x,y:updates[i].y}}; }) });
+        }
+        _touchGesture = null;
+        return;
+      }
+      if (_touchGesture.type === 'draw' && _drawing) {
+        var pts = _drawing.points;
+        if (pts.length > 1) {
+          var pathId = genId();
+          var pathData = { type:'path', points:pts, stroke:_propStrokeColor, strokeWidth:_propStrokeWidth, x:0,y:0,w:0,h:0, z: nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
+          _elements[pathId] = pathData;
+          pushUndo({ type:'create', id:pathId, data: JSON.parse(JSON.stringify(pathData)) });
+          commitElSet(pathId, pathData);
+          renderSvgEl(pathId, pathData);
+        }
+        _drawing.el.remove();
+        _drawing = null;
+        _touchGesture = null;
+        return;
+      }
+      if (_touchGesture.type === 'arrow' && _arrowDraw) {
+        var x2f = parseFloat(_arrowDraw.line.getAttribute('x2'));
+        var y2f = parseFloat(_arrowDraw.line.getAttribute('y2'));
+        var dist = Math.sqrt(Math.pow(x2f-_arrowDraw.x1,2)+Math.pow(y2f-_arrowDraw.y1,2));
+        if (dist > 10) {
+          var arId = genId();
+          var arData = { type:'arrow', x:_arrowDraw.x1, y:_arrowDraw.y1, x2:x2f, y2:y2f, stroke:_propStrokeColor, strokeWidth:_propStrokeWidth, w:0,h:0, z:nextZ(), createdBy:_myUid||'', updatedAt:Date.now() };
+          _elements[arId] = arData;
+          pushUndo({ type:'create', id:arId, data: JSON.parse(JSON.stringify(arData)) });
+          commitElSet(arId, arData);
+          renderSvgEl(arId, arData);
+        }
+        _arrowDraw.g.remove();
+        _arrowDraw = null;
+        _touchGesture = null;
       }
     }
 
@@ -12610,6 +12885,7 @@
       if (canvas) { var _oldEls = Array.from(canvas.querySelectorAll('.mb-el')); _oldEls.forEach(function(n){ n.remove(); }); }
       _elements = {}; _elDoms = {}; _selected = []; _undoStack=[]; _redoStack=[];
       _zoom=1; _panX=0; _panY=0;
+      _touchGesture=null; _mobileFitDone=false;
       try { localStorage.setItem('cz_board', boardId); } catch(e){}
       window.showView('moodboardCanvas');
       var startupOpening = (window._pendingStartupBoard === boardId);
@@ -12654,6 +12930,11 @@
       _unsubElements = window.fb.boards.elements.watchAll(boardId, function(data){
         _elements = data || {};
         renderAll();
+        if (isMobileCanvasMode() && !_mobileFitDone) {
+          if (Object.keys(_elements).length) _mobileFitDone = true;
+          setTimeout(function(){ if (_boardId === boardId) fitAll(); }, 120);
+          setTimeout(function(){ if (_boardId === boardId) fitAll(); }, 520);
+        }
         scheduleMinimapUpdate();
         scheduleThumbUpdate();
       });
@@ -13271,6 +13552,10 @@
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup',   onMouseUp);
       stage.addEventListener('wheel', onStageWheel, { passive: false });
+      stage.addEventListener('touchstart', onStageTouchStart, { passive: false });
+      stage.addEventListener('touchmove', onStageTouchMove, { passive: false });
+      stage.addEventListener('touchend', onStageTouchEnd, { passive: false });
+      stage.addEventListener('touchcancel', onStageTouchEnd, { passive: false });
 
       /* Tool buttons — click activates the tool; a click that follows a drag-to-place is suppressed. */
       toolbar.querySelectorAll('.mb-tool-btn[data-tool]').forEach(function(btn){
