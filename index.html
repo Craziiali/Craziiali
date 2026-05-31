@@ -10449,8 +10449,13 @@
           var sd = _elements[sid];
           return sd ? { id:sid, x:sd.x, y:sd.y } : null;
         }).filter(Boolean);
-        _drag = { startX: e.clientX, startY: e.clientY, origPos: origPos };
-        e.preventDefault();
+        _drag = {
+          startX: e.clientX,
+          startY: e.clientY,
+          origPos: origPos,
+          active: false,
+          textTarget: e.target && e.target.classList && e.target.classList.contains('mb-sticky-text') ? e.target : null
+        };
       });
 
       /* SVG path click */
@@ -10501,6 +10506,17 @@
       if (_drag) {
         var ddx = (e.clientX - _drag.startX) / _zoom;
         var ddy = (e.clientY - _drag.startY) / _zoom;
+        var dragPx = Math.sqrt(Math.pow(e.clientX - _drag.startX, 2) + Math.pow(e.clientY - _drag.startY, 2));
+        if (!_drag.active) {
+          if (dragPx < 5) return;
+          if (_drag.textTarget && document.activeElement === _drag.textTarget && _drag.textTarget.selectionStart !== _drag.textTarget.selectionEnd) {
+            _drag = null;
+            return;
+          }
+          _drag.active = true;
+          if (_drag.textTarget && _drag.textTarget.blur) _drag.textTarget.blur();
+        }
+        e.preventDefault();
         _drag.origPos.forEach(function(op){
           var dom = _elDoms[op.id];
           if (dom) { dom.style.left=(op.x+ddx)+'px'; dom.style.top=(op.y+ddy)+'px'; }
@@ -10571,7 +10587,7 @@
       if (_drag) {
         var ddx = (e.clientX - _drag.startX) / _zoom;
         var ddy = (e.clientY - _drag.startY) / _zoom;
-        if (Math.abs(ddx) > 1 || Math.abs(ddy) > 1) {
+        if (_drag.active && (Math.abs(ddx) > 1 || Math.abs(ddy) > 1)) {
           var updates = [];
           _drag.origPos.forEach(function(op){
             var nx = Math.round(op.x + ddx), ny = Math.round(op.y + ddy);
