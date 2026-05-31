@@ -4992,45 +4992,6 @@
   body.elastic-page-pulling .elastic-page {
     transition: none;
   }
-  .elastic-refresh-indicator {
-    position: fixed;
-    top: max(14px, env(safe-area-inset-top));
-    left: 50%;
-    z-index: 199998;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    border: 1px solid rgba(243,243,239,.16);
-    background: rgba(13,13,17,.9);
-    color: rgba(243,243,239,.86);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    opacity: 0;
-    transform: translate(-50%, -76px) scale(.86);
-    box-shadow: 0 14px 42px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.08);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    transition: opacity .16s ease, transform .16s cubic-bezier(.16,1,.3,1), border-color .16s, color .16s;
-  }
-  .elastic-refresh-indicator svg { width:19px; height:19px; transform:rotate(var(--elastic-rot, 0deg)); transition:transform .12s linear; }
-  body.elastic-page-pulling.elastic-page-top .elastic-refresh-indicator {
-    opacity:1;
-    transform:translate(-50%, calc(-76px + var(--elastic-pull, 0px))) scale(calc(.86 + var(--elastic-scale, 0)));
-  }
-  body.elastic-page-ready .elastic-refresh-indicator {
-    border-color:rgba(243,243,239,.38);
-    color:#fff;
-  }
-  body.elastic-page-refreshing .elastic-refresh-indicator {
-    opacity:1;
-    transform:translate(-50%, 0) scale(1);
-    border-color:rgba(243,243,239,.38);
-    color:#fff;
-  }
-  body.elastic-page-refreshing .elastic-refresh-indicator svg { animation:elasticSpin .75s linear infinite; }
-  @keyframes elasticSpin { to { transform:rotate(360deg); } }
 
   /* Empty state */
   .planner-empty {
@@ -6400,12 +6361,6 @@
     position:fixed;inset:0;z-index:199999;
     background:#0b0b0c;pointer-events:none;
   "></div>
-  <div id="elasticRefreshIndicator" class="elastic-refresh-indicator" aria-hidden="true">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M16 8.2A6 6 0 1 0 14.1 14"/>
-      <path d="M16 3.6v4.6h-4.6"/>
-    </svg>
-  </div>
   <div class="halo" aria-hidden="true"></div>
   <div class="halo-core" aria-hidden="true"></div>
 
@@ -7750,7 +7705,6 @@
     function initElasticPages(){
       if (!window.matchMedia || !window.matchMedia('(hover: none), (pointer: coarse), (max-width: 700px)').matches) return;
       var state = null;
-      var threshold = 74;
       function activeElastic(){
         if (!ELASTIC_VIEWS[current] || document.body.dataset.view !== current) return null;
         var overlay = OVERLAYS[current];
@@ -7763,11 +7717,8 @@
       }
       function resetElastic(){
         state = null;
-        document.body.classList.remove('elastic-page-pulling','elastic-page-top','elastic-page-bottom','elastic-page-ready','elastic-page-refreshing');
+        document.body.classList.remove('elastic-page-pulling','elastic-page-top','elastic-page-bottom');
         document.body.style.setProperty('--elastic-shift', '0px');
-        document.body.style.removeProperty('--elastic-pull');
-        document.body.style.removeProperty('--elastic-scale');
-        document.body.style.removeProperty('--elastic-rot');
         setTimeout(function(){ if (!state) document.body.style.removeProperty('--elastic-shift'); }, 460);
       }
       var _origShowView = window.showView;
@@ -7779,7 +7730,7 @@
       syncElasticLock();
       function canStart(e){
         var ctx = activeElastic();
-        if (!ctx || document.body.classList.contains('elastic-page-refreshing')) return false;
+        if (!ctx) return false;
         if (!e.touches || e.touches.length !== 1) return false;
         var t = e.target;
         if (t && t.closest && t.closest('input, textarea, select, [contenteditable="true"], .auth-user-bar, .czteam-panel, .czchat-win')) return false;
@@ -7810,33 +7761,16 @@
         }
         if ((state.mode === 'top' && dy <= 0) || (state.mode === 'bottom' && dy >= 0)) { resetElastic(); return; }
         if ((state.mode === 'top' && !atTop(el)) || (state.mode === 'bottom' && !atBottom(el))) { resetElastic(); return; }
-        e.preventDefault();
+        if (state.mode === 'bottom') e.preventDefault();
         var pull = rubberDistance(Math.abs(dy));
         var signedPull = state.mode === 'top' ? pull : -pull;
-        var ready = state.mode === 'top' && pull >= threshold;
         document.body.classList.add('elastic-page-pulling');
         document.body.classList.toggle('elastic-page-top', state.mode === 'top');
         document.body.classList.toggle('elastic-page-bottom', state.mode === 'bottom');
-        document.body.classList.toggle('elastic-page-ready', ready);
         document.body.style.setProperty('--elastic-shift', signedPull + 'px');
-        if (state.mode === 'top') {
-          document.body.style.setProperty('--elastic-pull', pull + 'px');
-          document.body.style.setProperty('--elastic-scale', String(Math.min(.18, pull / 520)));
-          document.body.style.setProperty('--elastic-rot', Math.min(300, pull * 3.2) + 'deg');
-        }
       }, { passive:false });
       document.addEventListener('touchend', function(){
-        if (!state) return;
-        var shouldRefresh = state.mode === 'top' && document.body.classList.contains('elastic-page-ready');
-        if (shouldRefresh) {
-          document.body.classList.remove('elastic-page-pulling','elastic-page-top','elastic-page-bottom','elastic-page-ready');
-          document.body.classList.add('elastic-page-refreshing');
-          document.body.style.setProperty('--elastic-shift', '34px');
-          setTimeout(function(){ window.location.reload(); }, 220);
-          state = null;
-        } else {
-          resetElastic();
-        }
+        if (state) resetElastic();
       }, { passive:true });
       document.addEventListener('touchcancel', resetElastic, { passive:true });
     }
