@@ -3647,7 +3647,7 @@
     body[data-view="planner"] .auth-user-bar { display:flex; }
     /* Sign-in trigger: visible only when public */
     .auth-signin-trigger{
-      display:none;align-items:center;gap:6px;
+      display:none;align-items:center;justify-content:center;gap:6px;
       background:rgba(11,11,13,.42);border:1px solid rgba(243,243,239,.14);border-radius:8px;
       min-height:34px;padding:0 13px;font-family:var(--font-en-mono);font-size:8.5px;letter-spacing:.14em;
       text-transform:uppercase;color:var(--ink-dim);cursor:pointer;transition:color .22s,border-color .22s,background .22s;white-space:nowrap;line-height:1;
@@ -3678,6 +3678,7 @@
     body.role-admin .auth-signout-btn,
     body.role-viewer .auth-signout-btn { display:flex; }
     .auth-signout-btn{
+      align-items:center;justify-content:center;
       background:rgba(11,11,13,.42);border:1px solid rgba(243,243,239,.14);border-radius:8px;
       min-height:34px;padding:0 13px;font-family:var(--font-en-mono);font-size:8.5px;letter-spacing:.14em;
       text-transform:uppercase;color:var(--ink-dim);cursor:pointer;transition:color .22s,border-color .22s,background .22s;white-space:nowrap;line-height:1;
