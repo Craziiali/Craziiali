@@ -1,0 +1,313 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+CRAZIIALI — Laptop Alarm Agent (Windows 11)
+===========================================
+Listens to the Firebase Realtime Database "alarms" node. When you press the
+"Add to Calendar" button in the planner, the website writes an alarm record
+here. This agent rings a REAL, LOUD Windows alarm that LOOPS UNTIL DISMISSED,
+both 1 HOUR BEFORE and AT THE EXACT shoot time — even if every browser is
+closed. The only requirement is that this agent is running (it auto-starts
+with Windows once you set that up; see README.txt).
+
+No sound file needed — the agent generates its own siren WAV on first run.
+No internet downloads per alarm — everything is instant over Firebase.
+"""
+
+import os
+import sys
+import json
+import time
+import math
+import wave
+import struct
+import threading
+from datetime import datetime, timedelta
+
+# ── Third-party (installed by install.bat) ─────────────────────────────
+try:
+    import firebase_admin
+    from firebase_admin import credentials, db
+except ImportError:
+    print("\n[!] firebase-admin is not installed.")
+    print("    Double-click  install.bat  in this folder first, then run again.\n")
+    input("Press Enter to close...")
+    sys.exit(1)
+
+# ── Windows-only sound ─────────────────────────────────────────────────
+try:
+    import winsound
+except ImportError:
+    print("\n[!] This agent only runs on Windows.\n")
+    sys.exit(1)
+
+import tkinter as tk
+
+# ── Configuration ──────────────────────────────────────────────────────
+HERE          = os.path.dirname(os.path.abspath(__file__))
+KEY_PATH      = os.path.join(HERE, "serviceAccountKey.json")
+WAV_PATH      = os.path.join(HERE, "alarm.wav")
+STATE_PATH    = os.path.join(HERE, "fired.json")
+DATABASE_URL  = "https://my-figma-a7909-default-rtdb.europe-west1.firebasedatabase.app"
+
+POLL_SECONDS  = 15           # how often we check the clock + refresh from Firebase
+GRACE_MINUTES = 5            # only ring if we're within this many minutes AFTER the trigger
+                             # (so booting up hours later doesn't ring for shoots already past)
+SNOOZE_MINUTES = 5           # snooze button delay
+
+
+# ── Generate a loud two-tone siren WAV on first run (no download needed) ─
+def ensure_wav():
+    if os.path.exists(WAV_PATH):
+        return
+    framerate = 44100
+    amp = 0.75 * 32767          # loud
+    seg = 0.28                  # seconds per tone
+    tones = [880, 1175, 880, 1175]   # urgent back-and-forth
+    frames = bytearray()
+    for freq in tones:
+        n = int(framerate * seg)
+        for i in range(n):
+            # slight attack/decay so it doesn't click harshly
+            env = min(1.0, i / 400.0, (n - i) / 400.0)
+            val = int(amp * env * math.sin(2 * math.pi * freq * (i / framerate)))
+            frames += struct.pack("<h", val)
+    with wave.open(WAV_PATH, "w") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(framerate)
+        w.writeframes(bytes(frames))
+
+
+# ── Persisted "already fired" state ─────────────────────────────────────
+def load_state():
+    try:
+        with open(STATE_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def save_state(state):
+    try:
+        with open(STATE_PATH, "w", encoding="utf-8") as f:
+            json.dump(state, f)
+    except Exception as e:
+        print("[!] could not save state:", e)
+
+
+# ── Parse the website's date ("YYYY.MM.DD") + time ("HH:MM") ────────────
+def shoot_datetime(rec):
+    date = str(rec.get("date", ""))
+    tm   = str(rec.get("time", ""))
+    parts = date.replace("-", ".").replace("/", ".").split(".")
+    m = tm.split(":")
+    if len(parts) != 3 or len(m) != 2:
+        return None
+    try:
+        return datetime(int(parts[0]), int(parts[1]), int(parts[2]), int(m[0]), int(m[1]))
+    except ValueError:
+        return None
+
+def fmt12(dt):
+    h = dt.hour % 12 or 12
+    ap = "AM" if dt.hour < 12 else "PM"
+    return "%d:%02d %s" % (h, dt.minute, ap)
+
+
+# ── THE ALARM: loud looping sound + fullscreen dismissable window ───────
+_ringing = threading.Event()
+
+def stop_sound():
+    try:
+        winsound.PlaySound(None, 0)
+    except Exception:
+        pass
+
+def ring(title, when_label, shoot_dt, location, notes):
+    """Blocks until the user clicks DISMISS or SNOOZE. Returns 'dismiss' or 'snooze'."""
+    _ringing.set()
+    # Loop the siren in the background until we stop it.
+    try:
+        winsound.PlaySound(WAV_PATH, winsound.SND_FILENAME | winsound.SND_LOOP | winsound.SND_ASYNC)
+    except Exception as e:
+        print("[!] sound error:", e)
+
+    result = {"action": "dismiss"}
+
+    root = tk.Tk()
+    root.title("CRAZIIALI ALARM")
+    root.configure(bg="#0a0a0b")
+    root.attributes("-fullscreen", True)
+    root.attributes("-topmost", True)
+
+    # Pulsing red banner feel
+    wrap = tk.Frame(root, bg="#0a0a0b")
+    wrap.place(relx=0.5, rely=0.5, anchor="center")
+
+    tk.Label(wrap, text=when_label, font=("Consolas", 26, "bold"),
+             fg="#ff5c5c", bg="#0a0a0b").pack(pady=(0, 18))
+    tk.Label(wrap, text=title, font=("Georgia", 52, "bold italic"),
+             fg="#f3f3ef", bg="#0a0a0b", wraplength=1100, justify="center").pack(pady=(0, 14))
+    tk.Label(wrap, text="Shoot at  " + fmt12(shoot_dt), font=("Consolas", 22),
+             fg="#cdd1ff", bg="#0a0a0b").pack(pady=(0, 8))
+    if location:
+        tk.Label(wrap, text=location, font=("Consolas", 15),
+                 fg="#9aa0b0", bg="#0a0a0b", wraplength=1000, justify="center").pack(pady=(0, 4))
+    if notes:
+        tk.Label(wrap, text=notes, font=("Consolas", 14),
+                 fg="#7d8290", bg="#0a0a0b", wraplength=1000, justify="center").pack(pady=(0, 4))
+
+    btns = tk.Frame(wrap, bg="#0a0a0b")
+    btns.pack(pady=(40, 0))
+
+    def do_dismiss():
+        result["action"] = "dismiss"
+        stop_sound()
+        _ringing.clear()
+        root.destroy()
+
+    def do_snooze():
+        result["action"] = "snooze"
+        stop_sound()
+        _ringing.clear()
+        root.destroy()
+
+    dismiss = tk.Button(btns, text="DISMISS", font=("Consolas", 18, "bold"),
+                        fg="#0a0a0b", bg="#f3f3ef", activebackground="#ffffff",
+                        relief="flat", padx=44, pady=16, cursor="hand2", command=do_dismiss)
+    dismiss.pack(side="left", padx=12)
+
+    snooze = tk.Button(btns, text="SNOOZE %d MIN" % SNOOZE_MINUTES, font=("Consolas", 18, "bold"),
+                       fg="#f3f3ef", bg="#1c1c24", activebackground="#2a2a36",
+                       relief="flat", padx=36, pady=16, cursor="hand2", command=do_snooze)
+    snooze.pack(side="left", padx=12)
+
+    # Esc also dismisses
+    root.bind("<Escape>", lambda e: do_dismiss())
+
+    # Force it to the very front
+    root.lift()
+    root.focus_force()
+    root.after(100, lambda: root.attributes("-topmost", True))
+
+    # Re-assert sound every 3s in case something stops it
+    def keep_ringing():
+        if _ringing.is_set():
+            try:
+                winsound.PlaySound(WAV_PATH, winsound.SND_FILENAME | winsound.SND_LOOP | winsound.SND_ASYNC)
+            except Exception:
+                pass
+            root.after(3000, keep_ringing)
+    root.after(3000, keep_ringing)
+
+    root.mainloop()
+    stop_sound()
+    return result["action"]
+
+
+# ── Main loop ───────────────────────────────────────────────────────────
+def main():
+    print("=" * 56)
+    print("  CRAZIIALI — Laptop Alarm Agent")
+    print("=" * 56)
+
+    if not os.path.exists(KEY_PATH):
+        print("\n[!] Missing serviceAccountKey.json in this folder.")
+        print("    See README.txt → Step 3 (download it from Firebase).\n")
+        input("Press Enter to close...")
+        sys.exit(1)
+
+    ensure_wav()
+
+    try:
+        cred = credentials.Certificate(KEY_PATH)
+        firebase_admin.initialize_app(cred, {"databaseURL": DATABASE_URL})
+    except Exception as e:
+        print("\n[!] Could not connect to Firebase:", e, "\n")
+        input("Press Enter to close...")
+        sys.exit(1)
+
+    ref = db.reference("alarms")
+    state = load_state()
+    print("\n[ok] Connected. Watching for shoots... (leave this running)")
+    print("     1 hour before + at exact time. Loops until you dismiss.\n")
+
+    # Snooze list: (fire_at_datetime, title, label, shoot_dt, location, notes)
+    snoozes = []
+
+    while True:
+        now = datetime.now()
+
+        # 1) Fire any due snoozes first
+        still = []
+        for s in snoozes:
+            if now >= s[0]:
+                act = ring(s[1], s[2], s[3], s[4], s[5])
+                if act == "snooze":
+                    still.append((now + timedelta(minutes=SNOOZE_MINUTES), s[1], s[2], s[3], s[4], s[5]))
+            else:
+                still.append(s)
+        snoozes = still
+
+        # 2) Pull alarms from Firebase
+        try:
+            data = ref.get() or {}
+        except Exception as e:
+            print("[!] read error:", e)
+            data = {}
+
+        # 3) Check each alarm's two triggers
+        for aid, rec in (data.items() if isinstance(data, dict) else []):
+            if not isinstance(rec, dict):
+                continue
+            sdt = shoot_datetime(rec)
+            if not sdt:
+                continue
+            title    = rec.get("title", "Shoot")
+            location = rec.get("location", "")
+            notes    = rec.get("notes", "")
+
+            triggers = [
+                ("exact",  sdt,                          "SHOOT NOW"),
+                ("before", sdt - timedelta(hours=1),     "SHOOT IN 1 HOUR"),
+            ]
+            for kind, trig, label in triggers:
+                key = "%s|%s|%s" % (aid, kind, trig.isoformat())
+                if state.get(key):
+                    continue  # already handled
+                # Only ring inside the grace window [trig, trig+grace]
+                if trig <= now <= trig + timedelta(minutes=GRACE_MINUTES):
+                    state[key] = True
+                    save_state(state)
+                    act = ring(title, label, sdt, location, notes)
+                    if act == "snooze":
+                        snoozes.append((datetime.now() + timedelta(minutes=SNOOZE_MINUTES),
+                                        title, label, sdt, location, notes))
+                # Mark long-past triggers as handled so they never ring on a late boot
+                elif now > trig + timedelta(minutes=GRACE_MINUTES):
+                    state[key] = True
+                    save_state(state)
+
+        # 4) Prune state entries for triggers far in the past (keep file small)
+        cutoff = (now - timedelta(days=30))
+        pruned = {}
+        for k, v in state.items():
+            try:
+                iso = k.split("|")[-1]
+                if datetime.fromisoformat(iso) >= cutoff:
+                    pruned[k] = v
+            except Exception:
+                pruned[k] = v
+        if len(pruned) != len(state):
+            state = pruned
+            save_state(state)
+
+        time.sleep(POLL_SECONDS)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        stop_sound()
+        print("\nStopped.")

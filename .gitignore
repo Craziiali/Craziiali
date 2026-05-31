@@ -1,0 +1,9 @@
+functions/node_modules
+functions/.env
+.firebase/
+
+# Alarm agent — never commit the private key or local runtime files
+craziiali-alarm/serviceAccountKey.json
+craziiali-alarm/fired.json
+craziiali-alarm/alarm.wav
+craziiali-alarm/__pycache__/

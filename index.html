@@ -468,6 +468,28 @@
             onValue(rtdbRef(rtdb, 'adminMeta/uid'), s => res(s.val() || null), { onlyOnce: true });
           });
         }
+      },
+
+      /* ── Laptop alarms ────────────────────────────────────────
+         Written when the planner "Add to Calendar" button is pressed.
+         A local agent on the PC (craziiali-alarm/agent.py) listens to this
+         node and fires a real Windows alarm (loops until dismissed) both
+         1 hour before and at the exact shoot time — even with the browser
+         closed. RTDB rules need: "alarms": { ".read":"auth!=null", ".write":"auth!=null" } */
+      alarms: {
+        set(id, data) {
+          if (!rtdb) return Promise.resolve(null);
+          return rtdbSet(rtdbRef(rtdb, 'alarms/' + id), { ...data, updatedAt: Date.now() })
+            .catch(e => console.error(
+              '[Alarm] write denied:', e.code,
+              '— Firebase Console → Realtime Database → Rules → add:\n',
+              '"alarms": { ".read":"auth != null", ".write":"auth != null" }'
+            ));
+        },
+        remove(id) {
+          if (!rtdb) return;
+          rtdbRemove(rtdbRef(rtdb, 'alarms/' + id)).catch(function(){});
+        }
       }
     };
     /* Check existing auth state first — only sign in anonymously when truly no user.
@@ -8230,6 +8252,21 @@
         return;
       }
 
+      /* Push a laptop-alarm record to Firebase. The local agent
+         (craziiali-alarm/agent.py) listens to this and rings a real Windows
+         alarm 1 hour before + at the exact time, even with the browser closed.
+         Only meaningful for timed shoots — an all-day shoot has no exact hour. */
+      if (window.fb && window.fb.alarms && /^\d{1,2}:\d{2}$/.test(String(p.time||''))) {
+        window.fb.alarms.set(p.id, {
+          title:    [p.name, p.client].filter(Boolean).join(' · ') || 'Shoot',
+          date:     p.date,            /* YYYY.MM.DD */
+          time:     p.time,            /* HH:MM 24h  */
+          location: p.location || '',
+          notes:    p.notes || '',
+          status:   'armed'
+        });
+      }
+
       var span = btn ? btn.querySelector('span') : null;
       var origLabel = span ? span.textContent : '';
       function setBusy(on){ if(btn) btn.style.opacity = on ? '.6' : ''; if(span) span.textContent = on ? 'Adding…' : origLabel; }
@@ -8450,6 +8487,7 @@
           fn(label).then(function(confirmed){
             if(!confirmed) return;
             projects = projects.filter(function(x){ return x.id!==p.id; });
+            if (window.fb && window.fb.alarms) window.fb.alarms.remove(p.id); /* cancel any laptop alarm */
             renderPlanner(); updateStats(); savePlanner();
           });
         });
