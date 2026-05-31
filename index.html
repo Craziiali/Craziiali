@@ -3649,8 +3649,8 @@
     .auth-signin-trigger{
       display:none;align-items:center;gap:6px;
       background:rgba(11,11,13,.42);border:1px solid rgba(243,243,239,.14);border-radius:8px;
-      padding:8px 13px 7px;font-family:var(--font-en-mono);font-size:8.5px;letter-spacing:.14em;
-      text-transform:uppercase;color:var(--ink-dim);cursor:pointer;transition:color .22s,border-color .22s,background .22s;white-space:nowrap;
+      min-height:34px;padding:0 13px;font-family:var(--font-en-mono);font-size:8.5px;letter-spacing:.14em;
+      text-transform:uppercase;color:var(--ink-dim);cursor:pointer;transition:color .22s,border-color .22s,background .22s;white-space:nowrap;line-height:1;
     }
     .auth-signin-trigger:hover{color:var(--ink);border-color:rgba(243,243,239,.34);background:rgba(243,243,239,.035)}
     body.role-public .auth-signin-trigger { display:flex; }
@@ -3679,8 +3679,8 @@
     body.role-viewer .auth-signout-btn { display:flex; }
     .auth-signout-btn{
       background:rgba(11,11,13,.42);border:1px solid rgba(243,243,239,.14);border-radius:8px;
-      padding:8px 13px 7px;font-family:var(--font-en-mono);font-size:8.5px;letter-spacing:.14em;
-      text-transform:uppercase;color:var(--ink-dim);cursor:pointer;transition:color .22s,border-color .22s,background .22s;white-space:nowrap;
+      min-height:34px;padding:0 13px;font-family:var(--font-en-mono);font-size:8.5px;letter-spacing:.14em;
+      text-transform:uppercase;color:var(--ink-dim);cursor:pointer;transition:color .22s,border-color .22s,background .22s;white-space:nowrap;line-height:1;
     }
     .auth-signout-btn:hover{color:var(--ink);border-color:rgba(243,243,239,.34);background:rgba(243,243,239,.035)}
     /* Shield / backup-password button — admin only */
@@ -5548,7 +5548,8 @@
     .auth-bar-sep { display: none !important; }
     .auth-signin-trigger,
     .auth-signout-btn {
-      padding: 7px 10px 6px;
+      min-height: 32px;
+      padding: 0 10px;
       font-size: 7.5px;
       letter-spacing: .1em;
     }
