@@ -5779,11 +5779,36 @@
   .mb-notif-btn svg { width:15px; height:15px; }
   .mb-notif-badge { position:absolute; top:-2px; right:-2px; min-width:13px; height:13px; padding:0 3px; box-sizing:border-box; background:#e05c5c; border-radius:7px; border:2px solid rgba(13,13,17,.94); font-family:var(--font-en-mono); font-size:7px; font-weight:600; color:#fff; display:flex; align-items:center; justify-content:center; line-height:1; }
   .mb-notif-badge:empty { display:none; }
-  /* New Board: 2px radius, active press feedback — matches home card sharpness */
-  .mb-new-board-btn { display:flex; align-items:center; gap:8px; padding:0 18px; height:36px; border:1px solid var(--rule-strong); border-radius:2px; background:transparent; color:var(--ink-dim); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; transition:border-color .22s,color .22s,background .22s,transform .12s; white-space:nowrap; }
-  .mb-new-board-btn:hover { border-color:var(--ink-soft); color:var(--ink); background:rgba(243,243,239,.04); }
-  .mb-new-board-btn:active { transform:translateY(1px); border-color:rgba(243,243,239,.4); transition-duration:.06s; }
-  .mb-new-board-btn svg { width:12px; height:12px; flex-shrink:0; }
+  .mb-gallery-actions { display:flex; align-items:center; gap:10px; }
+  .mb-new-board-btn {
+    display:flex; align-items:center; gap:10px;
+    height:34px; padding:0 13px 0 7px;
+    border:1px solid rgba(var(--accent-rgb),.28);
+    border-radius:11px;
+    background:linear-gradient(180deg,rgba(243,243,239,.075),rgba(243,243,239,.026));
+    color:rgba(243,243,239,.78);
+    font-family:var(--font-en-mono); font-size:8.5px; letter-spacing:.13em; text-transform:uppercase;
+    cursor:pointer; white-space:nowrap;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 28px rgba(0,0,0,.16);
+    transition:border-color .22s,color .22s,background .22s,box-shadow .22s,transform .12s;
+  }
+  .mb-new-board-btn svg {
+    width:16px; height:16px; flex-shrink:0;
+    padding:4px; border-radius:7px;
+    background:rgba(var(--accent-rgb),.16);
+    color:var(--accent-soft);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+    transition:background .22s,color .22s,transform .22s cubic-bezier(.16,1,.3,1);
+  }
+  .mb-new-board-btn:hover {
+    border-color:rgba(var(--accent-rgb),.52);
+    color:rgba(243,243,239,.94);
+    background:linear-gradient(180deg,rgba(var(--accent-rgb),.13),rgba(243,243,239,.035));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 14px 34px rgba(0,0,0,.24),0 0 18px rgba(var(--accent-rgb),.12);
+    transform:translateY(-1px);
+  }
+  .mb-new-board-btn:hover svg { background:rgba(var(--accent-rgb),.28); color:#fff; transform:rotate(90deg); }
+  .mb-new-board-btn:active { transform:translateY(0); border-color:rgba(var(--accent-rgb),.62); transition-duration:.06s; }
   /* Grid: 12px gap for a tighter, more editorial rhythm */
   .mb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
   /* Board card: 2px radius matching home page tool cards.
@@ -6216,6 +6241,10 @@
   @media (max-width:600px) {
     .mb-gallery-wrap { padding:28px 16px 60px; }
     .mb-gallery-title { font-size:28px; }
+    .mb-gallery-topbar { align-items:flex-start; gap:16px; }
+    .mb-gallery-left { gap:14px; }
+    .mb-gallery-actions { gap:8px; }
+    .mb-new-board-btn { height:32px; padding-right:10px; font-size:8px; letter-spacing:.1em; }
     .mb-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; }
     .mb-toolbar { left:8px; right:8px; transform:none; border-radius:14px; overflow-x:auto; justify-content:flex-start; bottom:16px; }
     .mb-topbar { padding:8px 10px; }
@@ -6303,7 +6332,7 @@
           </button>
           <h1 class="mb-gallery-title">Mood Boards</h1>
         </div>
-        <div style="display:flex;align-items:center;gap:10px">
+        <div class="mb-gallery-actions">
           <button class="mb-notif-btn" id="mbNotifBtn" type="button" title="Notifications">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2a6 6 0 0 1 6 6c0 3.5 1.5 5 1.5 5h-15S4 11.5 4 8a6 6 0 0 1 6-6z"/><path d="M8.7 17a1.3 1.3 0 0 0 2.6 0"/></svg>
             <span class="mb-notif-badge" id="mbNotifBadge"></span>
