@@ -4677,8 +4677,8 @@
 
   .shoot-main {
     display: grid;
-    /* dot | idx | name+client | notes | date | time | location | priority | del */
-    grid-template-columns: 10px 26px minmax(120px,220px) 1fr 90px 64px 110px 72px 28px;
+    /* dot | idx | name+client | notes | date | time | location | priority | cal | del */
+    grid-template-columns: 10px 26px minmax(120px,220px) 1fr 90px 64px 110px 72px 24px 28px;
     gap: 16px; align-items: center;
     padding: 16px 0;
   }
@@ -4831,20 +4831,21 @@
   .shoot-row.open .shoot-expand { max-height: 80px; opacity: 1; }
   .shoot-expand-inner {
     padding: 0 28px 16px 60px;
-    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   }
   .shoot-status-sel { display: flex; gap: 6px; flex-wrap: wrap; }
-  /* Add-to-Calendar button (exports an .ics for Apple/Google with a 1-hour reminder) */
+  /* Add-to-Calendar — icon-only in the main row, same hover-reveal pattern as .shoot-del */
   .shoot-cal {
-    display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
-    font-family: var(--font-en-mono); font-size: 7.5px; letter-spacing: .12em; text-transform: uppercase;
-    border-radius: 100px; border: 1px solid rgba(126,140,247,.4); background: rgba(126,140,247,.08);
-    color: #b4bcff; padding: 4px 12px; cursor: pointer; white-space: nowrap;
-    transition: border-color .22s, color .22s, background .22s;
+    background: transparent; border: none; cursor: pointer;
+    color: var(--ink-soft); opacity: 0; padding: 4px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: opacity .2s, color .18s;
   }
-  .shoot-cal:hover { border-color: rgba(126,140,247,.72); background: rgba(126,140,247,.16); color: #cdd1ff; }
-  .shoot-cal svg { width: 11px; height: 11px; }
-  .shoot-cal.cal-flash { border-color: rgba(50,200,110,.6); background: rgba(50,200,110,.12); color: #6fe39a; }
+  .shoot-row:hover .shoot-cal            { opacity: .3; }
+  .shoot-cal:hover                       { opacity: 1 !important; color: rgba(126,140,247,.85); }
+  .shoot-cal svg                         { width: 13px; height: 13px; display: block; }
+  /* Success flash: turns green for ~2 s then reverts */
+  .shoot-cal.cal-flash                   { color: rgba(50,200,110,.85); opacity: 1 !important; }
   .pl-cal-toast {
     position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(12px);
     background: rgba(13,13,17,.96); border: 1px solid rgba(243,243,239,.14); border-radius: 12px;
@@ -5358,7 +5359,7 @@
 
     /* ─ Shoot row: 6 tight columns ─────────────────────────── */
     .shoot-main {
-      grid-template-columns: 10px 1fr 62px 50px 40px 36px;
+      grid-template-columns: 10px 1fr 62px 50px 40px 28px 36px;
       gap: 10px 10px;
     }
     /* Hide index only — desc and loc restored on rows 2 & 3 */
@@ -5391,8 +5392,9 @@
     /* Expand panel: taller on mobile to fit 2 rows of status btns */
     .shoot-row.open .shoot-expand { max-height: 150px; }
 
-    /* Enlarge tap target for the delete button */
+    /* Enlarge tap targets for action buttons */
     .shoot-del { min-height: 36px; min-width: 36px; }
+    .shoot-cal { min-height: 36px; min-width: 28px; opacity: .28; }
 
     /* ─ Expand panel indent ─────────────────────────────────── */
     .shoot-expand-inner { padding-left: 20px; }
@@ -8352,6 +8354,9 @@
               PLABELS[p.priority]+
             '</button>'+
 
+            '<button class="shoot-cal" type="button" title="Add to Google Calendar">'+
+              '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.8" width="11" height="9.7" rx="1.5"/><path d="M1.5 5.6h11M4.3 1.3v2.4M9.7 1.3v2.4M7 7.4v3M5.5 8.9h3"/></svg>'+
+            '</button>'+
             '<button class="shoot-del" title="Remove">'+
               '<svg viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.2">'+
                 '<path d="M1.5 1.5l6 6M7.5 1.5l-6 6"/>'+
@@ -8368,10 +8373,6 @@
                          ' data-s="'+s+'">'+SLABELS[s]+'</button>';
                 }).join('')+
               '</div>'+
-              '<button class="shoot-cal" type="button" title="Open in Google Calendar — pre-filled, just click Save">'+
-                '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.8" width="11" height="9.7" rx="1.5"/><path d="M1.5 5.6h11M4.3 1.3v2.4M9.7 1.3v2.4M7 7.4v3M5.5 8.9h3"/></svg>'+
-                '<span>Add to Calendar</span>'+
-              '</button>'+
             '</div>'+
           '</div>';
 
