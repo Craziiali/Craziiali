@@ -4491,6 +4491,9 @@
     justify-content: center;
     min-height: 100dvh;
     padding: 60px 24px;
+    transform: translateY(var(--ptr-home-shift, 0px));
+    transition: transform .22s cubic-bezier(.16,1,.3,1);
+    will-change: transform;
   }
   .home-eyebrow {
     font-family: var(--font-en-mono);
@@ -4991,6 +4994,14 @@
     transition: opacity .16s ease, transform .16s cubic-bezier(.16,1,.3,1), border-color .16s, color .16s;
   }
   .pull-refresh-indicator svg { width: 19px; height: 19px; transform: rotate(var(--ptr-rot, 0deg)); transition: transform .12s linear; }
+  html.ptr-home-native-lock,
+  html.ptr-home-native-lock body {
+    overscroll-behavior-y: none;
+  }
+  body.ptr-home-pulling .home-wrap,
+  body.ptr-home-refreshing .home-wrap {
+    transition: transform .05s linear;
+  }
   body.ptr-home-pulling .pull-refresh-indicator {
     opacity: 1;
     transform: translate(-50%, calc(-76px + var(--ptr-pull, 0px))) scale(calc(.86 + var(--ptr-scale, 0)));
@@ -7649,6 +7660,7 @@
 
       var prev = current; current = name;
       document.body.dataset.view = name;
+      document.documentElement.classList.toggle('ptr-home-native-lock', name === 'home');
       localStorage.setItem('cz_view', name);
 
       /* Going to invoice: blur any focused field first, then fade overlay out */
@@ -7727,13 +7739,24 @@
       if (!indicator || !window.matchMedia || !window.matchMedia('(hover: none), (pointer: coarse), (max-width: 700px)').matches) return;
       var state = null;
       var threshold = 74;
+      function syncNativePullLock(){
+        document.documentElement.classList.toggle('ptr-home-native-lock', current === 'home' && document.body.dataset.view === 'home');
+      }
       function resetPull(){
         state = null;
-        document.body.classList.remove('ptr-home-pulling','ptr-home-ready');
+        document.body.classList.remove('ptr-home-pulling','ptr-home-ready','ptr-home-refreshing');
         document.body.style.removeProperty('--ptr-pull');
         document.body.style.removeProperty('--ptr-scale');
         document.body.style.removeProperty('--ptr-rot');
+        document.body.style.removeProperty('--ptr-home-shift');
       }
+      var _origShowView = window.showView;
+      window.showView = function(name){
+        _origShowView(name);
+        if (name !== 'home') resetPull();
+        requestAnimationFrame(syncNativePullLock);
+      };
+      syncNativePullLock();
       function canStart(e){
         if (document.body.classList.contains('ptr-home-refreshing')) return false;
         if (current !== 'home' || document.body.dataset.view !== 'home') return false;
@@ -7761,12 +7784,14 @@
         document.body.style.setProperty('--ptr-pull', pull + 'px');
         document.body.style.setProperty('--ptr-scale', String(Math.min(.18, pull / 520)));
         document.body.style.setProperty('--ptr-rot', Math.min(300, pull * 3.2) + 'deg');
+        document.body.style.setProperty('--ptr-home-shift', Math.min(46, pull * .46) + 'px');
       }, { passive:false });
       document.addEventListener('touchend', function(){
         if (!state) return;
         if (state.ready) {
           document.body.classList.remove('ptr-home-pulling','ptr-home-ready');
           document.body.classList.add('ptr-home-refreshing');
+          document.body.style.setProperty('--ptr-home-shift', '34px');
           setTimeout(function(){ window.location.reload(); }, 220);
         } else {
           resetPull();
@@ -7850,6 +7875,7 @@
       updateRoute('home', false);
       if (!viewHome.classList.contains('v-gone')) return; /* already visible */
       document.body.dataset.view = 'home';
+      document.documentElement.classList.add('ptr-home-native-lock');
       current = 'home';
       viewHome.classList.remove('v-hidden', 'v-gone');
       requestAnimationFrame(function(){
