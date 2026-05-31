@@ -3830,24 +3830,37 @@
       }
       .block.payment dd.iban-row .iban {
         min-width: 0;
-        flex: 1 1 auto;
+        flex: 0 1 auto;
         font-size: 11.2px;
         letter-spacing: .015em;
         word-break: normal;
         overflow-wrap: anywhere;
       }
       .block.payment dd.iban-row .iban-copy {
-        width: 28px;
-        height: 28px;
-        min-width: 28px;
+        width: 17px;
+        height: 17px;
+        min-width: 17px;
         padding: 0;
         justify-content: center;
-        border-radius: 50%;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        color: var(--ink-soft);
       }
       .block.payment dd.iban-row .iban-copy svg {
-        width: 12px;
-        height: 12px;
-        opacity: .72;
+        width: 14px;
+        height: 14px;
+        opacity: .58;
+      }
+      .block.payment dd.iban-row .iban-copy:hover,
+      .block.payment dd.iban-row .iban-copy.copied {
+        background: transparent;
+        box-shadow: none;
+        color: var(--ink);
+      }
+      .block.payment dd.iban-row .iban-copy:hover svg,
+      .block.payment dd.iban-row .iban-copy.copied svg {
+        opacity: .86;
       }
       .block.payment dd.iban-row #ibanCopyLabel {
         position:absolute;
