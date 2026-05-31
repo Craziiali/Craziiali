@@ -12389,9 +12389,10 @@
         }
 
         /* Don't intercept Ctrl+Z / Ctrl+Shift+Z when the cursor is inside a text
-           input — let the browser handle native text undo/redo there. */
-        if ((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key==='z') { if(inInput)return; e.preventDefault(); undo(); return; }
-        if ((e.ctrlKey||e.metaKey) && (e.shiftKey&&e.key==='z'||e.key==='y')) { if(inInput)return; e.preventDefault(); redo(); return; }
+           input — let the browser handle native text undo/redo there.
+           Use toLowerCase() because Shift makes e.key uppercase ('Z' not 'z'). */
+        if ((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z') { if(inInput)return; e.preventDefault(); undo(); return; }
+        if ((e.ctrlKey||e.metaKey) && (e.shiftKey&&e.key.toLowerCase()==='z'||e.key.toLowerCase()==='y')) { if(inInput)return; e.preventDefault(); redo(); return; }
         if ((e.ctrlKey||e.metaKey) && e.key==='d') { e.preventDefault(); duplicateSelected(); return; }
         if ((e.ctrlKey||e.metaKey) && e.key==='=') { e.preventDefault(); setZoom(_zoom*1.2); return; }
         if ((e.ctrlKey||e.metaKey) && e.key==='-') { e.preventDefault(); setZoom(_zoom/1.2); return; }
