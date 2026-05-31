@@ -5784,6 +5784,39 @@
   .mb-prop-btn:hover { background:rgba(243,243,239,.07); color:var(--ink); border-color:rgba(243,243,239,.1); }
   .mb-prop-btn.active { background:rgba(126,140,247,.12); color:#7e8cf7; border-color:rgba(126,140,247,.35); }
   .mb-prop-btn svg { width:13px; height:13px; }
+  .mb-pop-wrap { position:relative; display:inline-flex; align-items:center; }
+  .mb-pop-toggle { gap:5px; min-width:34px; }
+  .mb-prop-caret { width:7px; height:7px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(45deg) translateY(-1px); opacity:.7; }
+  .mb-prop-current-dot { width:20px; height:20px; border-radius:50%; border:2px solid rgba(243,243,239,.8); box-shadow:0 0 0 1px rgba(0,0,0,.25); }
+  .mb-prop-icon-label { font-family:var(--font-en-body); font-size:16px; font-weight:650; letter-spacing:-.04em; line-height:1; }
+  .mb-size-trigger { min-width:58px; padding:0 7px 0 10px; justify-content:space-between; background:rgba(126,140,247,.08); border-color:rgba(126,140,247,.22); color:rgba(243,243,239,.9); }
+  .mb-size-trigger-num { font-family:var(--font-en-mono); font-size:12px; font-weight:700; }
+  .mb-size-trigger-stepper { display:grid; gap:2px; opacity:.85; }
+  .mb-size-trigger-stepper span { width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; }
+  .mb-size-trigger-stepper span:first-child { border-bottom:5px solid currentColor; }
+  .mb-size-trigger-stepper span:last-child { border-top:5px solid currentColor; }
+  .mb-popover { display:block; position:absolute; left:50%; bottom:calc(100% + 13px); transform:translateX(-50%) translateY(4px) scale(.98); min-width:128px; padding:9px; border-radius:14px; border:1px solid rgba(243,243,239,.12); background:rgba(20,20,22,.98); box-shadow:0 18px 48px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.07); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .12s,transform .12s,visibility .12s; z-index:1000; }
+  .mb-popover::after { content:""; position:absolute; left:50%; bottom:-5px; width:10px; height:10px; transform:translateX(-50%) rotate(45deg); background:rgba(20,20,22,.98); border-right:1px solid rgba(243,243,239,.12); border-bottom:1px solid rgba(243,243,239,.12); }
+  .mb-pop-wrap.open > .mb-popover { opacity:1; visibility:visible; pointer-events:all; transform:translateX(-50%) translateY(0) scale(1); }
+  .mb-pop-wrap.open > .mb-pop-toggle[data-tip]::before,.mb-pop-wrap.open > .mb-pop-toggle[data-tip]::after { opacity:0; }
+  .mb-pop-grid { display:grid; grid-template-columns:repeat(6,24px); gap:8px; }
+  .mb-pop-swatch { width:24px; height:24px; border-radius:50%; border:2px solid rgba(243,243,239,.16); background:var(--sw); cursor:pointer; transition:transform .12s,border-color .12s,box-shadow .12s; }
+  .mb-pop-swatch:hover { transform:scale(1.08); border-color:rgba(243,243,239,.6); }
+  .mb-pop-swatch.active { border-color:#fff; box-shadow:0 0 0 2px rgba(126,140,247,.45); }
+  .mb-pop-list { display:grid; gap:3px; min-width:150px; }
+  .mb-pop-option { height:34px; border:0; border-radius:8px; background:transparent; color:rgba(243,243,239,.78); font-family:var(--font-en-body); font-size:13px; text-align:left; padding:0 10px; display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; }
+  .mb-pop-option:hover { background:rgba(243,243,239,.08); color:#f3f3ef; }
+  .mb-pop-option.active { background:rgba(126,140,247,.18); color:#fff; }
+  .mb-pop-option small { color:rgba(243,243,239,.45); font-family:var(--font-en-mono); font-size:11px; }
+  .mb-align-pop { min-width:auto; }
+  .mb-align-row { display:flex; gap:7px; }
+  .mb-align-choice { width:38px; height:34px; border:0; border-radius:9px; background:transparent; color:rgba(243,243,239,.78); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .mb-align-choice:hover,.mb-align-choice.active { background:rgba(126,140,247,.2); color:#fff; }
+  .mb-align-choice svg,.mb-align-icon { width:15px; height:15px; }
+  .mb-size-pop { min-width:190px; padding:11px; }
+  .mb-size-inline { display:grid; grid-template-columns:34px 1fr 34px; gap:7px; align-items:center; margin-bottom:10px; }
+  .mb-size-step { height:32px; border:1px solid rgba(243,243,239,.1); border-radius:9px; background:rgba(243,243,239,.05); color:rgba(243,243,239,.76); cursor:pointer; font-family:var(--font-en-mono); font-size:16px; }
+  .mb-size-step:hover { background:rgba(126,140,247,.16); color:#fff; border-color:rgba(126,140,247,.35); }
   .mb-prop-btn[data-tip]::after,.mb-prop-select-wrap[data-tip]::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 11px); left:50%; transform:translateX(-50%); padding:6px 10px; border-radius:7px; border:1px solid rgba(243,243,239,.12); background:rgba(20,20,22,.98); color:rgba(243,243,239,.78); font-family:var(--font-en-mono); font-size:9px; letter-spacing:.04em; opacity:0; pointer-events:none; transition:opacity .12s; box-shadow:0 6px 20px rgba(0,0,0,.5); z-index:999; }
   .mb-prop-btn[data-tip]::before,.mb-prop-select-wrap[data-tip]::before { content:""; position:absolute; bottom:calc(100% + 5px); left:50%; transform:translateX(-50%) rotate(45deg); width:8px; height:8px; background:rgba(20,20,22,.98); border-right:1px solid rgba(243,243,239,.12); border-bottom:1px solid rgba(243,243,239,.12); opacity:0; pointer-events:none; transition:opacity .12s; z-index:998; }
   .mb-prop-btn[data-tip]:hover::after,.mb-prop-btn[data-tip]:hover::before,.mb-prop-select-wrap[data-tip]:hover::after,.mb-prop-select-wrap[data-tip]:hover::before { opacity:1; }
@@ -10056,6 +10089,15 @@
       return TEXT_FACES[textFaceKey(d)] || TEXT_FACES.simple;
     }
 
+    function alignIcon(align) {
+      var lines = align === 'right'
+        ? ['M4 4h7','M2 7h9','M5 10h6']
+        : align === 'center'
+          ? ['M3 4h8','M2 7h10','M4 10h6']
+          : ['M2 4h7','M2 7h10','M2 10h6'];
+      return '<svg class="mb-align-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="'+lines.join('"/><path d="')+'"/></svg>';
+    }
+
     /* ── Element rendering ──────────────────────────────── */
     function renderEl(id, d) {
       /* Recover an orphaned DOM node (in canvas but not in _elDoms) to avoid duplicates. */
@@ -11127,27 +11169,37 @@
         var firstSize = firstText && (firstText.fontSize || (firstText.type==='sticky'?12:16));
         var firstAlign = (firstText && firstText.align) || 'left';
         var firstClr = firstText ? (firstText.type==='sticky' ? (firstText.textColor || 'rgba(10,10,11,.85)') : (firstText.color || '#f3f3ef')) : '#f3f3ef';
-        html += '<button class="mb-prop-swatch active" style="background:'+firstClr+';" data-textcolor="'+escAttr(firstClr)+'" data-tip="Text color" title="Text color"></button>';
-        html += '<span class="mb-prop-select-wrap" data-tip="Typeface"><select class="mb-prop-select" id="mbFontFace">';
-        Object.keys(TEXT_FACES).forEach(function(k){ html += '<option value="'+k+'"'+(firstFace===k?' selected':'')+'>'+TEXT_FACES[k].label+'</option>'; });
-        html += '</select></span>';
-        html += '<span class="mb-prop-select-wrap" data-tip="Size preset"><select class="mb-prop-select" id="mbFontSizePreset">';
-        TEXT_SIZE_PRESETS.forEach(function(s){ html += '<option value="'+s.value+'"'+(firstSize===s.value?' selected':'')+'>'+s.label+' · '+s.value+'</option>'; });
-        html += '</select></span>';
-        html += '<input class="mb-prop-size-input" id="mbFontSize" type="number" min="8" max="220" value="'+firstSize+'" title="Font size">';
-        html += '<input class="mb-prop-size-range" id="mbFontSizeRange" type="range" min="8" max="160" value="'+Math.min(firstSize,160)+'" title="Font size">';
+        html += '<span class="mb-pop-wrap">';
+        html += '<button class="mb-prop-btn mb-pop-toggle" data-pop="textColor" data-tip="Text color"><span class="mb-prop-current-dot" style="background:'+firstClr+';"></span><span class="mb-prop-caret"></span></button>';
+        html += '<span class="mb-popover"><span class="mb-pop-grid">';
+        STROKE_COLORS.concat(['#ffffff','#111111','#ff8fa3','#b7f7d4','#b9dcff','#f4ccff']).forEach(function(c){
+          html += '<button class="mb-pop-swatch'+(c===firstClr?' active':'')+'" style="--sw:'+c+';" data-textcolor="'+escAttr(c)+'" title="'+escAttr(c)+'"></button>';
+        });
+        html += '</span></span></span>';
+        html += '<span class="mb-pop-wrap">';
+        html += '<button class="mb-prop-btn mb-pop-toggle" data-pop="fontFace" data-tip="Typeface"><span class="mb-prop-icon-label">Aa</span><span class="mb-prop-caret"></span></button>';
+        html += '<span class="mb-popover"><span class="mb-pop-list">';
+        Object.keys(TEXT_FACES).forEach(function(k){ html += '<button class="mb-pop-option'+(firstFace===k?' active':'')+'" data-fontface="'+k+'"><span style="font-family:'+TEXT_FACES[k].family+';font-style:'+TEXT_FACES[k].style+';">'+TEXT_FACES[k].label+'</span></button>'; });
+        html += '</span></span></span>';
+        html += '<span class="mb-pop-wrap">';
+        html += '<button class="mb-prop-btn mb-pop-toggle" data-pop="sizePreset" data-tip="Size preset"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4V2h10v2M7 2v10M4.5 12h5"/></svg><span class="mb-prop-caret"></span></button>';
+        html += '<span class="mb-popover"><span class="mb-pop-list">';
+        TEXT_SIZE_PRESETS.forEach(function(s){ html += '<button class="mb-pop-option'+(firstSize===s.value?' active':'')+'" data-fontpreset="'+s.value+'"><span>'+s.label+'</span><small>'+s.value+'</small></button>'; });
+        html += '</span></span></span>';
+        html += '<span class="mb-pop-wrap">';
+        html += '<button class="mb-prop-btn mb-pop-toggle mb-size-trigger" data-pop="fontSize" data-tip="Font size"><span class="mb-size-trigger-num">'+firstSize+'</span><span class="mb-size-trigger-stepper"><span></span><span></span></span></button>';
+        html += '<span class="mb-popover mb-size-pop"><span class="mb-size-inline"><button class="mb-size-step" data-fontstep="-1">-</button><input class="mb-prop-size-input" id="mbFontSize" type="number" min="8" max="220" value="'+firstSize+'" title="Font size"><button class="mb-size-step" data-fontstep="1">+</button></span><input class="mb-prop-size-range" id="mbFontSizeRange" type="range" min="8" max="160" value="'+Math.min(firstSize,160)+'" title="Font size"></span>';
+        html += '</span>';
         html += '<div class="mb-prop-sep"></div>';
         html += '<button class="mb-prop-btn'+(firstText&&firstText.bold?' active':'')+'" data-textprop="bold" data-tip="Bold"><b>B</b></button>';
         html += '<button class="mb-prop-btn'+(firstText&&firstText.strike?' active':'')+'" data-textprop="strike" data-tip="Strikethrough"><span style="text-decoration:line-through">S</span></button>';
         html += '<button class="mb-prop-btn" data-textact="link" data-tip="Create link"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5.8 8.2 8.2 5.8"/><path d="M6.5 3.4 7.4 2.5a2.4 2.4 0 0 1 3.4 3.4l-1 1"/><path d="M7.5 10.6l-.9.9a2.4 2.4 0 0 1-3.4-3.4l1-1"/></svg></button>';
         html += '<button class="mb-prop-btn" data-textact="bullets" data-tip="Bulleted list"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M5 4h7M5 7h7M5 10h7"/><circle cx="2" cy="4" r=".7" fill="currentColor" stroke="none"/><circle cx="2" cy="7" r=".7" fill="currentColor" stroke="none"/><circle cx="2" cy="10" r=".7" fill="currentColor" stroke="none"/></svg></button>';
-        html += '<span class="mb-prop-select-wrap" data-tip="Text alignment"><select class="mb-prop-select" id="mbTextAlign">';
-        [['left','Left'],['center','Center'],['right','Right']].forEach(function(a){ html += '<option value="'+a[0]+'"'+(firstAlign===a[0]?' selected':'')+'>'+a[1]+'</option>'; });
-        html += '</select></span>';
-        html += '<div class="mb-prop-sep"></div>';
-        STROKE_COLORS.slice(0,6).forEach(function(c){
-          html += '<button class="mb-prop-swatch'+(c===firstClr?' active':'')+'" style="background:'+c+';" data-textcolor="'+c+'" title="'+c+'"></button>';
-        });
+        html += '<span class="mb-pop-wrap">';
+        html += '<button class="mb-prop-btn mb-pop-toggle" data-pop="textAlign" data-tip="Text alignment">'+alignIcon(firstAlign)+'<span class="mb-prop-caret"></span></button>';
+        html += '<span class="mb-popover mb-align-pop"><span class="mb-align-row">';
+        ['left','center','right'].forEach(function(a){ html += '<button class="mb-align-choice'+(firstAlign===a?' active':'')+'" data-align="'+a+'" title="'+a+'">'+alignIcon(a)+'</button>'; });
+        html += '</span></span></span>';
       }
       /* Shape fill */
       if (types.some(function(t){return t==='rect'||t==='circle'||t==='diamond';})) {
@@ -11170,6 +11222,24 @@
 
       propbar.innerHTML = html;
       propbar.classList.add('show');
+
+      function closePropPopovers(except) {
+        propbar.querySelectorAll('.mb-pop-wrap.open').forEach(function(wrap){
+          if (wrap !== except) wrap.classList.remove('open');
+        });
+      }
+      propbar.querySelectorAll('[data-pop]').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+          e.stopPropagation();
+          var wrap = btn.closest('.mb-pop-wrap');
+          var open = wrap && wrap.classList.contains('open');
+          closePropPopovers(wrap);
+          if (wrap) wrap.classList.toggle('open', !open);
+        });
+      });
+      propbar.addEventListener('click', function(e){
+        if (!e.target.closest('.mb-pop-wrap')) closePropPopovers();
+      });
 
       /* ── Propbar event helpers ────────────────────────────────────────────
          _propSnap(keys)  → builds [{id, before:{keys…}}] for selected elements.
@@ -11290,24 +11360,24 @@
         });
       }
       var fsEl = propbar.querySelector('#mbFontSize');
+      var applyFontSize = function(after){
+        after = Math.max(8, Math.min(220, parseInt(after)||16));
+        _propFontSize = after;
+        if (fsEl) fsEl.value = after;
+        if (fsRange) fsRange.value = Math.min(after,160);
+        _selected.forEach(function(id){ var t=_elements[id]&&_elements[id].type; if(t==='text'||t==='sticky')scheduleElUpdate(id,{fontSize:after}); });
+        if (_fsUndoBefore && _fsUndoBefore.fontSize !== after) {
+          var items = _fsUndoBefore.ids.filter(function(id){ var t=_elements[id]&&_elements[id].type; return t==='text'||t==='sticky'; }).map(function(id){
+            return { id:id, before:{fontSize:_fsUndoBefore.fontSize}, after:{fontSize:after} };
+          });
+          if (items.length) pushUndo({ type:'patch', items:items });
+        }
+        _fsUndoBefore = null;
+      };
       if (fsEl) {
         fsEl.addEventListener('mousedown', function(){
           _fsUndoBefore = { fontSize: _propFontSize, ids: _selected.slice() };
         });
-        var applyFontSize = function(after){
-          after = Math.max(8, Math.min(220, parseInt(after)||16));
-          _propFontSize = after;
-          fsEl.value = after;
-          if (fsRange) fsRange.value = Math.min(after,160);
-          _selected.forEach(function(id){ var t=_elements[id]&&_elements[id].type; if(t==='text'||t==='sticky')scheduleElUpdate(id,{fontSize:after}); });
-          if (_fsUndoBefore && _fsUndoBefore.fontSize !== after) {
-            var items = _fsUndoBefore.ids.filter(function(id){ var t=_elements[id]&&_elements[id].type; return t==='text'||t==='sticky'; }).map(function(id){
-              return { id:id, before:{fontSize:_fsUndoBefore.fontSize}, after:{fontSize:after} };
-            });
-            if (items.length) pushUndo({ type:'patch', items:items });
-          }
-          _fsUndoBefore = null;
-        };
         fsEl.addEventListener('change', function(){ applyFontSize(fsEl.value); });
       }
       var fsRange = propbar.querySelector('#mbFontSizeRange');
@@ -11334,6 +11404,42 @@
           _fsUndoBefore = null;
         });
       }
+      propbar.querySelectorAll('[data-fontstep]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          _fsUndoBefore = { fontSize: _propFontSize, ids: _selected.slice() };
+          applyFontSize((parseInt(fsEl && fsEl.value ? fsEl.value : _propFontSize) || 16) + parseInt(btn.dataset.fontstep));
+        });
+      });
+      propbar.querySelectorAll('[data-fontpreset]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var presetSize = parseInt(btn.dataset.fontpreset);
+          var items = _selected.filter(function(id){ var t=_elements[id]&&_elements[id].type; return t==='text'||t==='sticky'; }).map(function(id){ return { id:id, before:{fontSize:_elements[id].fontSize}, after:{fontSize:presetSize} }; });
+          if (fsEl) fsEl.value = presetSize;
+          if (fsRange) fsRange.value = Math.min(presetSize,160);
+          _propFontSize = presetSize;
+          items.forEach(function(it){ scheduleElUpdate(it.id,{fontSize:presetSize}); });
+          if (items.some(function(it){ return it.before.fontSize !== it.after.fontSize; })) pushUndo({ type:'patch', items:items });
+          updatePropbar();
+        });
+      });
+      propbar.querySelectorAll('[data-fontface]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var face = btn.dataset.fontface;
+          var items = _selected.filter(function(id){ var t=_elements[id]&&_elements[id].type; return t==='text'||t==='sticky'; }).map(function(id){ return { id:id, before:{fontFace:_elements[id].fontFace}, after:{fontFace:face} }; });
+          items.forEach(function(it){ scheduleElUpdate(it.id,{fontFace:face}); });
+          if (items.length) pushUndo({ type:'patch', items:items });
+          updatePropbar();
+        });
+      });
+      propbar.querySelectorAll('[data-align]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var align = btn.dataset.align;
+          var items = _selected.filter(function(id){ var t=_elements[id]&&_elements[id].type; return t==='text'||t==='sticky'; }).map(function(id){ return { id:id, before:{align:_elements[id].align}, after:{align:align} }; });
+          items.forEach(function(it){ scheduleElUpdate(it.id,{align:align}); });
+          if (items.length) pushUndo({ type:'patch', items:items });
+          updatePropbar();
+        });
+      });
       var fsPreset = propbar.querySelector('#mbFontSizePreset');
       if (fsPreset) fsPreset.addEventListener('change', function(){
         var presetSize = parseInt(fsPreset.value);
