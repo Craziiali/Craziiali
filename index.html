@@ -5799,32 +5799,63 @@
     border-color:var(--ink-soft);
   }
   .mb-new-board-btn:active { transform:translateY(1px); transition-duration:.06s; }
-  /* Grid: 12px gap for a tighter, more editorial rhythm */
-  .mb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
-  /* Board card: 2px radius matching home page tool cards.
-     ::before = top-edge hairline sweep (like tool-card)
-     ::after  = ambient radial glow from top edge (like tool-card) */
-  .mb-card { position:relative; border:1px solid var(--rule); border-radius:2px; overflow:hidden; cursor:pointer; background:#0d0d10; transition:border-color .25s,background .25s,transform .22s cubic-bezier(.16,1,.3,1); display:flex; flex-direction:column; user-select:none; }
-  .mb-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent 0%,rgba(243,243,239,.55) 50%,transparent 100%); opacity:0; transition:opacity .3s; pointer-events:none; z-index:1; }
-  .mb-card::after  { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 120% 50% at 50% 0%,rgba(243,243,239,.04) 0%,transparent 100%); opacity:0; transition:opacity .35s; pointer-events:none; }
-  .mb-card:hover { border-color:rgba(243,243,239,.26); background:#0e0e12; transform:translateY(-2px); }
-  .mb-card:hover::before { opacity:1; }
-  .mb-card:hover::after  { opacity:1; }
-  /* Press: snap back with brighter border — tactile physical push */
+  .mb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; }
+  .mb-card {
+    position:relative;
+    border:1px solid var(--rule);
+    border-radius:4px;
+    overflow:hidden;
+    cursor:pointer;
+    background:transparent;
+    transition:border-color .25s,background .25s,transform .22s cubic-bezier(.16,1,.3,1);
+    display:flex;
+    flex-direction:column;
+    user-select:none;
+  }
+  .mb-card:hover {
+    border-color:rgba(243,243,239,.26);
+    background:rgba(243,243,239,.018);
+    transform:translateY(-2px);
+  }
   .mb-card:active { transform:translateY(0); border-color:rgba(243,243,239,.44); transition-duration:.07s; }
-  /* Hairline between thumb and info adds structure without weight */
-  .mb-card-thumb { width:100%; aspect-ratio:16/9; background:#111116; overflow:hidden; position:relative; flex-shrink:0; border-bottom:1px solid var(--rule); }
-  .mb-card-thumb canvas,.mb-card-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
-  .mb-card-thumb-empty { width:100%; height:100%; display:flex; align-items:center; justify-content:center; opacity:.15; }
-  .mb-card-thumb-empty svg { width:36px; height:36px; color:var(--ink); }
-  /* Info: 2px extra padding for breathing room */
-  .mb-card-info { padding:16px 18px 18px; flex:1; display:flex; flex-direction:column; gap:6px; }
-  /* Name: 17px (up from 16) for a touch more presence */
-  .mb-card-name { font-family:var(--font-en-display); font-style:italic; font-size:17px; font-weight:400; color:var(--ink); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .mb-card-meta { font-family:var(--font-en-mono); font-size:8px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); opacity:.85; }
-  /* Menu button: square corners (3px) consistent with sharp card language;
-     z-index:2 paints it above the ::after pseudo-element */
-  .mb-card-menu-btn { position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:3px; background:rgba(11,11,12,.85); border:1px solid rgba(243,243,239,.1); color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s,background .2s,border-color .18s; backdrop-filter:blur(6px); z-index:2; }
+  .mb-card-thumb {
+    width:100%;
+    aspect-ratio:16/9;
+    background:#0a0a0b;
+    overflow:hidden;
+    position:relative;
+    flex-shrink:0;
+    border-bottom:1px solid var(--rule);
+  }
+  .mb-card-thumb::after {
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:linear-gradient(180deg,rgba(243,243,239,.025),rgba(0,0,0,.16));
+  }
+  .mb-card-thumb canvas,
+  .mb-card-thumb img {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    filter:saturate(.72) contrast(.92) brightness(.82);
+    opacity:.82;
+    transition:filter .25s,opacity .25s,transform .35s cubic-bezier(.16,1,.3,1);
+  }
+  .mb-card:hover .mb-card-thumb canvas,
+  .mb-card:hover .mb-card-thumb img {
+    filter:saturate(.86) contrast(.96) brightness(.9);
+    opacity:.95;
+    transform:scale(1.015);
+  }
+  .mb-card-thumb-empty { width:100%; height:100%; display:flex; align-items:center; justify-content:center; opacity:.12; }
+  .mb-card-thumb-empty svg { width:34px; height:34px; color:var(--ink); }
+  .mb-card-info { padding:14px 16px 15px; flex:1; display:flex; flex-direction:column; gap:5px; }
+  .mb-card-name { font-family:var(--font-en-display); font-style:italic; font-size:18px; font-weight:400; color:var(--ink); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mb-card-meta { font-family:var(--font-en-mono); font-size:7.8px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-dim); opacity:.72; }
+  .mb-card-menu-btn { position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:100px; background:rgba(10,10,11,.72); border:1px solid rgba(243,243,239,.11); color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s,background .2s,border-color .18s,color .18s; backdrop-filter:blur(8px); z-index:2; }
   .mb-card:hover .mb-card-menu-btn { opacity:1; }
   .mb-card-menu-btn:hover { background:rgba(30,30,36,.92); color:var(--ink); border-color:rgba(243,243,239,.22); }
   .mb-card-menu-btn svg { width:13px; height:13px; }
@@ -12080,9 +12111,9 @@
       var c = document.createElement('canvas');
       c.width = 280; c.height = 158;
       var ctx = c.getContext('2d');
-      ctx.fillStyle = '#0b0b0c'; ctx.fillRect(0,0,280,158);
+      ctx.fillStyle = '#0a0a0b'; ctx.fillRect(0,0,280,158);
       /* Dot pattern */
-      ctx.fillStyle = 'rgba(243,243,239,.12)';
+      ctx.fillStyle = 'rgba(243,243,239,.09)';
       for (var gx=14; gx<280; gx+=28) for (var gy=14; gy<158; gy+=28) { ctx.beginPath(); ctx.arc(gx,gy,1,0,Math.PI*2); ctx.fill(); }
       /* Compute scale to fit all elements */
       var els = Object.values(_elements);
