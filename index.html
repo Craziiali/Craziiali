@@ -5004,7 +5004,7 @@
   }
   body.ptr-home-pulling #viewHome,
   body.ptr-home-refreshing #viewHome {
-    transition: transform .05s linear;
+    transition: none;
   }
   body.ptr-home-pulling .pull-refresh-indicator {
     opacity: 1;
@@ -7752,7 +7752,8 @@
         document.body.style.removeProperty('--ptr-pull');
         document.body.style.removeProperty('--ptr-scale');
         document.body.style.removeProperty('--ptr-rot');
-        document.body.style.removeProperty('--ptr-home-shift');
+        document.body.style.setProperty('--ptr-home-shift', '0px');
+        setTimeout(function(){ if (!state) document.body.style.removeProperty('--ptr-home-shift'); }, 260);
       }
       var _origShowView = window.showView;
       window.showView = function(name){
@@ -7767,7 +7768,7 @@
         if (!e.touches || e.touches.length !== 1) return false;
         if (window.scrollY > 0 || document.documentElement.scrollTop > 0) return false;
         var t = e.target;
-        if (t && t.closest && t.closest('button, a, input, textarea, select, [contenteditable="true"], .auth-user-bar, .czteam-panel, .czchat-win')) return false;
+        if (t && t.closest && t.closest('input, textarea, select, [contenteditable="true"], .auth-user-bar, .czteam-panel, .czchat-win')) return false;
         return true;
       }
       document.addEventListener('touchstart', function(e){
@@ -7780,7 +7781,7 @@
         if (dy <= 0) { resetPull(); return; }
         if (window.scrollY > 0 || document.documentElement.scrollTop > 0) { resetPull(); return; }
         if (dy > 5) e.preventDefault();
-        var pull = Math.min(102, Math.pow(dy, .86));
+        var pull = Math.min(112, dy * 0.58);
         state.pull = pull;
         state.ready = pull >= threshold;
         document.body.classList.add('ptr-home-pulling');
@@ -7788,7 +7789,7 @@
         document.body.style.setProperty('--ptr-pull', pull + 'px');
         document.body.style.setProperty('--ptr-scale', String(Math.min(.18, pull / 520)));
         document.body.style.setProperty('--ptr-rot', Math.min(300, pull * 3.2) + 'deg');
-        document.body.style.setProperty('--ptr-home-shift', Math.min(46, pull * .46) + 'px');
+        document.body.style.setProperty('--ptr-home-shift', pull + 'px');
       }, { passive:false });
       document.addEventListener('touchend', function(){
         if (!state) return;
