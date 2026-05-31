@@ -4,10 +4,15 @@ echo.
 echo Installing the alarm agent dependencies...
 echo.
 
-REM Check Python is available
-python --version >nul 2>&1
+REM --- Find the real Python (avoid the Windows Store stub) ---
+set "PYEXE="
+for /d %%D in ("%LOCALAPPDATA%\Programs\Python\Python3*") do if exist "%%D\python.exe" set "PYEXE=%%D\python.exe"
+if not defined PYEXE for /d %%D in ("%PROGRAMFILES%\Python3*") do if exist "%%D\python.exe" set "PYEXE=%%D\python.exe"
+if not defined PYEXE set "PYEXE=python"
+
+"%PYEXE%" --version >nul 2>&1
 if errorlevel 1 (
-  echo [!] Python is not installed or not on PATH.
+  echo [!] Python was not found.
   echo     Install Python 3 from https://www.python.org/downloads/
   echo     IMPORTANT: tick "Add python.exe to PATH" during install.
   echo.
@@ -15,8 +20,8 @@ if errorlevel 1 (
   exit /b 1
 )
 
-python -m pip install --upgrade pip
-python -m pip install -r "%~dp0requirements.txt"
+"%PYEXE%" -m pip install --upgrade pip
+"%PYEXE%" -m pip install -r "%~dp0requirements.txt"
 
 echo.
 echo ============================================================
