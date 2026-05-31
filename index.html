@@ -5785,7 +5785,7 @@
   .mb-el.locked { cursor:not-allowed; }
   .mb-sticky { border-radius:14px; padding:14px 14px 30px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,.4),0 2px 8px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.18),0 0 0 1px rgba(0,0,0,.08); min-width:140px; min-height:100px; transition:box-shadow .2s,transform .15s; }
   .mb-el:hover .mb-sticky { box-shadow:0 16px 48px rgba(0,0,0,.5),0 4px 14px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2),0 0 0 1px rgba(0,0,0,.1); transform:translateY(-1px); }
-  .mb-sticky-text { flex:1; background:transparent; border:none; outline:none; resize:none; font-family:var(--font-en-mono); font-size:12px; line-height:1.65; color:rgba(10,10,11,.85); width:100%; min-height:0; overflow:hidden; word-break:break-word; cursor:inherit; caret-color:rgba(10,10,11,.85); margin:0; padding:0; display:block; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  .mb-sticky-text { flex:0 0 auto; background:transparent; border:none; outline:none; resize:none; font-family:var(--font-en-mono); font-size:12px; line-height:1.65; color:rgba(10,10,11,.85); width:100%; min-height:24px; max-height:100%; overflow:hidden; word-break:break-word; cursor:text; caret-color:rgba(10,10,11,.85); margin:0; padding:0; display:block; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
   .mb-sticky-text::placeholder { color:rgba(10,10,11,.38); }
   .mb-sticky-text:focus { cursor:text; outline:none; }
   .mb-textblock { min-width:100px; min-height:30px; padding:4px 6px; border-radius:2px; outline:none; background:transparent; word-break:break-word; }
@@ -9993,6 +9993,12 @@
       if (vid.readyState >= 3) setTimeout(reveal, 0);
     }
 
+    function autosizeStickyText(ta) {
+      if (!ta) return;
+      ta.style.height = 'auto';
+      ta.style.height = Math.max(24, ta.scrollHeight) + 'px';
+    }
+
     /* ── Element rendering ──────────────────────────────── */
     function renderEl(id, d) {
       /* Recover an orphaned DOM node (in canvas but not in _elDoms) to avoid duplicates. */
@@ -10070,11 +10076,10 @@
           ta.placeholder = 'Write something…';
           ta.readOnly = !canEdit();
           ta.addEventListener('input', function(){
+            autosizeStickyText(ta);
             scheduleElUpdate(id, { content: ta.value });
           });
-          ta.addEventListener('mousedown', function(e){
-            if (_tool !== 'select' || e.detail >= 2 || e.altKey) e.stopPropagation();
-          });
+          ta.addEventListener('mousedown', function(e){ e.stopPropagation(); });
           ta.addEventListener('dblclick', function(e){ e.stopPropagation(); ta.focus(); });
           /* Undo tracking: snapshot on focus, push undo entry on blur if text changed */
           var _taSnap = '';
@@ -10084,6 +10089,7 @@
               pushUndo({ type:'patch', items:[{ id:id, before:{content:_taSnap}, after:{content:ta.value} }] });
           });
           el.appendChild(ta);
+          requestAnimationFrame(function(){ autosizeStickyText(ta); });
         } else if (d.type === 'text') {
           el.className = 'mb-el';
           var tb = document.createElement('div');
@@ -10194,7 +10200,10 @@
         if (d.type === 'sticky') {
           el.style.background = d.color || '#ffd66e';
           var ta2 = el.querySelector('.mb-sticky-text');
-          if (ta2 && document.activeElement !== ta2) ta2.value = d.content || '';
+          if (ta2) {
+            if (document.activeElement !== ta2) ta2.value = d.content || '';
+            autosizeStickyText(ta2);
+          }
         } else if (d.type === 'text') {
           var tb2 = el.querySelector('.mb-textblock');
           if (tb2) {
