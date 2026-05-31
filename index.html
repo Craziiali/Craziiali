@@ -7775,6 +7775,36 @@
       }
     }
 
+    function initDesktopWheelScrollBridge(){
+      if (!window.matchMedia || !window.matchMedia('(pointer: fine)').matches) return;
+      function nearestScrollable(node){
+        while (node && node !== document.body && node !== document.documentElement) {
+          if (node.nodeType === 1) {
+            var st = getComputedStyle(node);
+            if (/(auto|scroll)/.test(st.overflowY) && node.scrollHeight > node.clientHeight + 1) return node;
+          }
+          node = node.parentNode;
+        }
+        return null;
+      }
+      function scrollElement(el, deltaY){
+        if (!el) return false;
+        var before = el.scrollTop;
+        el.scrollTop += deltaY;
+        return el.scrollTop !== before;
+      }
+      document.addEventListener('wheel', function(e){
+        if (e.defaultPrevented || e.ctrlKey || e.metaKey || document.body.dataset.view === 'moodboardCanvas') return;
+        var t = e.target;
+        if (t && t.closest && t.closest('.shoot-time, .shoot-date, .mb-stage, .mb-toolbar, .mb-propbar')) return;
+        var local = nearestScrollable(t);
+        var target = local || (current === 'invoice' ? document.scrollingElement : OVERLAYS[current]);
+        if (!target) return;
+        if (scrollElement(target, e.deltaY)) e.preventDefault();
+      }, { passive:false, capture:true });
+    }
+    initDesktopWheelScrollBridge();
+
     function showView(name){
       if(name === current){
         if(name === 'invoice') releaseDocumentScrollLocks();
@@ -8237,23 +8267,10 @@
         inp.addEventListener('touchend', function(){ ty = null; acc = 0; }, {passive:true});
       })();
 
-      /* Focus scroll — capture document wheel so user can scroll from anywhere */
-      function onDocTime(e){
-        /* Self-heal: remove listener if input is no longer active */
-        if(document.activeElement !== inp){
-          document.removeEventListener('wheel', onDocTime, {capture:true});
-          return;
-        }
-        if(e.target === inp || inp.contains(e.target)) return;
-        e.preventDefault();
-        applyTime(e.deltaY);
-      }
       inp.addEventListener('focus', function(){
         acc = 0;
-        document.addEventListener('wheel', onDocTime, {passive:false, capture:true});
       });
       inp.addEventListener('blur', function(){
-        document.removeEventListener('wheel', onDocTime, {capture:true});
         acc = 0;
         var p = getP(); if(!p) return;
         var parsed = parse12(inp.value);
@@ -8305,23 +8322,10 @@
         inp.addEventListener('touchend', function(){ ty = null; acc = 0; }, {passive:true});
       })();
 
-      /* Focus scroll */
-      function onDocDate(e){
-        /* Self-heal: remove listener if input is no longer active */
-        if(document.activeElement !== inp){
-          document.removeEventListener('wheel', onDocDate, {capture:true});
-          return;
-        }
-        if(e.target === inp || inp.contains(e.target)) return;
-        e.preventDefault();
-        applyDate(e.deltaY);
-      }
       inp.addEventListener('focus', function(){
         acc = 0;
-        document.addEventListener('wheel', onDocDate, {passive:false, capture:true});
       });
       inp.addEventListener('blur', function(){
-        document.removeEventListener('wheel', onDocDate, {capture:true});
         acc = 0;
         var p = getP(); if(!p) return;
         p.date = inp.value;
