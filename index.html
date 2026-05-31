@@ -5605,44 +5605,117 @@
     .planner-filters::-webkit-scrollbar { display: none; }
     .p-filter { flex-shrink: 0; }
 
-    /* ─ Shoot row: 6 tight columns ─────────────────────────── */
+    /* ─ Shoot row: mobile card-like stack ───────────────────── */
     .shoot-main {
-      grid-template-columns: 10px 1fr 62px 50px 40px 28px 36px;
-      gap: 10px 10px;
+      grid-template-columns: 10px minmax(0, 1fr) 34px 34px;
+      grid-template-areas:
+        "dot info cal del"
+        ". desc desc desc"
+        ". date time time"
+        ". prio prio prio"
+        ". loc loc loc";
+      gap: 8px 10px;
+      align-items: center;
+      padding: 18px 0 14px;
     }
     /* Hide index only — desc and loc restored on rows 2 & 3 */
     .shoot-idx { display: none; }
-
-    /* ─ Description: second row, spans col 2 → end ───────────── */
-    .shoot-desc {
-      display: block !important;   /* unhide */
-      grid-column: 2 / -1;
-      grid-row: 2;
-      width: 100% !important;      /* override JS pixel width */
-      max-width: none !important;
-      padding: 0 0 4px;
-      opacity: .6;
-      font-size: 11px;
+    .shoot-dot {
+      grid-area: dot;
+      align-self: start;
+      margin-top: 8px;
+    }
+    .shoot-info {
+      grid-area: info;
+      min-width: 0;
+      gap: 5px;
+      padding-right: 4px;
+    }
+    .shoot-name {
+      font-size: 14px;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .shoot-client {
+      font-size: 8.5px;
+      line-height: 1.25;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    /* ─ Location: third row, spans col 2 → end ──────────────── */
+    /* ─ Description: second row, starts after status dot ─────── */
+    .shoot-desc {
+      display: block !important;   /* unhide */
+      grid-area: desc;
+      width: 100% !important;      /* override JS pixel width */
+      max-width: none !important;
+      padding: 2px 0 0;
+      opacity: .55;
+      font-size: 10.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .shoot-date {
+      grid-area: date;
+      width: 88px;
+    }
+    .shoot-time {
+      grid-area: time;
+      width: 58px;
+    }
+    .shoot-date,
+    .shoot-time {
+      align-self: center;
+      font-size: 9px;
+      color: rgba(243,243,239,.82);
+      background: rgba(243,243,239,.035);
+      border: 1px solid rgba(243,243,239,.075);
+      border-radius: 7px;
+      padding: 5px 7px;
+      min-height: 28px;
+    }
+    .shoot-prio {
+      grid-area: prio;
+      justify-self: start;
+      align-self: center;
+      padding: 5px 8px;
+      min-height: 28px;
+      max-width: 96px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .shoot-cal {
+      grid-area: cal;
+      justify-self: center;
+    }
+    .shoot-del {
+      grid-area: del;
+      justify-self: end;
+    }
+
+    /* ─ Location: final row, aligned under text block ────────── */
     .loc-wrap {
       display: flex !important;    /* unhide */
-      grid-column: 2 / -1;
-      grid-row: 3;
-      padding: 0 0 8px;
+      grid-area: loc;
+      padding: 1px 0 6px;
       min-width: 0;
+    }
+    .shoot-loc {
+      font-size: 9px;
+      color: rgba(243,243,239,.58);
     }
 
     /* Expand panel: taller on mobile to fit 2 rows of status btns */
     .shoot-row.open .shoot-expand { max-height: 150px; }
 
     /* Enlarge tap targets for action buttons */
-    .shoot-del { min-height: 36px; min-width: 36px; }
-    .shoot-cal { min-height: 36px; min-width: 28px; }
+    .shoot-del { min-height: 34px; min-width: 34px; }
+    .shoot-cal { min-height: 34px; min-width: 34px; }
 
     /* ─ Expand panel indent ─────────────────────────────────── */
     .shoot-expand-inner { padding-left: 20px; }
