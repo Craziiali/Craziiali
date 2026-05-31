@@ -7833,7 +7833,10 @@
         }
       }, { passive:false, capture:true });
       document.addEventListener('touchend', function(){
-        if (state) resetElastic();
+        if (!state) return;
+        var shouldRefresh = state.mode === 'top' && document.body.classList.contains('elastic-page-ready');
+        resetElastic();
+        if (shouldRefresh) setTimeout(function(){ window.location.reload(); }, 80);
       }, { passive:true, capture:true });
       document.addEventListener('touchcancel', resetElastic, { passive:true, capture:true });
     }
