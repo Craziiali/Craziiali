@@ -5348,6 +5348,8 @@
 
   /* ── Planner entrance ────────────────────────────────────────── */
   .planner-entering .planner-bar      { animation: focusIn .60s cubic-bezier(.16,1,.3,1) both; animation-delay:  80ms; }
+  .planner-entering .auth-user-profile { animation: focusIn .62s cubic-bezier(.16,1,.3,1) both; animation-delay: 130ms; }
+  .planner-entering .czteam-trigger    { animation: focusIn .62s cubic-bezier(.16,1,.3,1) both; animation-delay: 210ms; }
   .planner-entering .planner-hero     { animation: focusIn .65s cubic-bezier(.16,1,.3,1) both; animation-delay: 160ms; }
   .planner-entering .planner-controls { animation: focusIn .65s cubic-bezier(.16,1,.3,1) both; animation-delay: 230ms; }
   .planner-entering .shoot-row            { animation: focusIn .60s cubic-bezier(.16,1,.3,1) both; animation-delay: 558ms; }
@@ -6352,7 +6354,7 @@
 
   /* ── Team panel ──────────────────────────────────────────── */
   .czteam-panel {
-    position: fixed; bottom: 86px; right: 24px; z-index: 3999;
+    position: fixed; bottom: 76px; right: 24px; z-index: 3999;
     width: 236px;
     background: rgba(8,8,9,.94);
     border: 1px solid rgba(243,243,239,.09);
@@ -6360,12 +6362,16 @@
     backdrop-filter: blur(28px) saturate(1.3);
     overflow: hidden;
     transform-origin: bottom right;
-    transform: scale(.88) translateY(10px);
+    transform: scale(.94) translateY(24px);
     opacity: 0; pointer-events: none;
-    transition: transform .26s cubic-bezier(.16,1,.3,1), opacity .2s ease;
+    filter: blur(8px);
+    transition:
+      transform .58s cubic-bezier(.16,1,.3,1),
+      opacity .38s ease,
+      filter .42s ease;
     box-shadow: 0 24px 64px rgba(0,0,0,.55);
   }
-  .czteam-panel.open { transform: scale(1) translateY(0); opacity: 1; pointer-events: all; }
+  .czteam-panel.open { transform: scale(1) translateY(0); opacity: 1; filter: blur(0); pointer-events: all; }
   body:not([data-view="planner"]) .czteam-panel { display: none !important; }
   body:not(.role-admin):not(.role-viewer) .czteam-panel { display: none !important; }
 
@@ -6400,9 +6406,15 @@
   .czteam-member {
     display: flex; align-items: center; gap: 9px;
     padding: 7px 12px; cursor: pointer;
-    transition: background .14s;
+    transition: background .14s, opacity .34s ease, transform .46s cubic-bezier(.16,1,.3,1);
     position: relative;
   }
+  .czteam-panel.open .czteam-member { animation: focusIn .48s cubic-bezier(.16,1,.3,1) both; }
+  .czteam-panel.open .czteam-member:nth-child(1) { animation-delay: 90ms; }
+  .czteam-panel.open .czteam-member:nth-child(2) { animation-delay: 125ms; }
+  .czteam-panel.open .czteam-member:nth-child(3) { animation-delay: 160ms; }
+  .czteam-panel.open .czteam-member:nth-child(4) { animation-delay: 195ms; }
+  .czteam-panel.open .czteam-member:nth-child(5) { animation-delay: 230ms; }
   .czteam-member:hover { background: rgba(243,243,239,.04); }
 
   .czteam-av {
@@ -6448,7 +6460,7 @@
 
   /* ── Chat window ─────────────────────────────────────────── */
   .czchat-win {
-    position: fixed; bottom: 86px; right: 24px; z-index: 4100;
+    position: fixed; bottom: 72px; right: 24px; z-index: 4100;
     width: 318px; height: 450px;
     background: rgba(8,8,9,.97);
     border: 1px solid rgba(243,243,239,.1);
@@ -6456,12 +6468,16 @@
     backdrop-filter: blur(32px) saturate(1.4);
     display: flex; flex-direction: column; overflow: hidden;
     transform-origin: bottom right;
-    transform: scale(.9) translateY(18px);
+    transform: scale(.94) translateY(26px);
     opacity: 0; pointer-events: none;
-    transition: transform .3s cubic-bezier(.16,1,.3,1), opacity .22s ease;
+    filter: blur(9px);
+    transition:
+      transform .62s cubic-bezier(.16,1,.3,1),
+      opacity .42s ease,
+      filter .46s ease;
     box-shadow: 0 28px 72px rgba(0,0,0,.65);
   }
-  .czchat-win.open { transform: scale(1) translateY(0); opacity: 1; pointer-events: all; }
+  .czchat-win.open { transform: scale(1) translateY(0); opacity: 1; filter: blur(0); pointer-events: all; }
 
   .czchat-hd {
     display: flex; align-items: center; gap: 9px;
