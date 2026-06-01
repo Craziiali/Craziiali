@@ -6110,9 +6110,9 @@
 
   /* Authoritative planner account placement. This deliberately comes after the
      responsive rules so the profile pill cannot drift under the header line. */
-  body[data-view="planner"] #authUserBar {
+  body.planner-view-active #authUserBar {
     position: fixed !important;
-    top: 0 !important;
+    top: -18px !important;
     right: 48px !important;
     height: 70px !important;
     transform: none !important;
@@ -6122,7 +6122,7 @@
     gap: 0 !important;
     max-width: min(360px, calc(100vw - 96px)) !important;
   }
-  body[data-view="planner"] #authUserProfile {
+  body.planner-view-active #authUserProfile {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
@@ -6132,45 +6132,45 @@
     padding: 0 2px 0 9px !important;
     border-radius: 999px !important;
   }
-  body[data-view="planner"] #authUserName {
+  body.planner-view-active #authUserName {
     display: inline-block !important;
     order: 1 !important;
     max-width: 92px !important;
     font-size: 7.5px !important;
     letter-spacing: .07em !important;
   }
-  body[data-view="planner"] #authAvatar {
+  body.planner-view-active #authAvatar {
     order: 2 !important;
     width: 30px !important;
     height: 30px !important;
   }
-  body[data-view="planner"] .auth-profile-menu {
+  body.planner-view-active .auth-profile-menu {
     top: 51px !important;
   }
-  body.role-preview[data-view="planner"] #authUserBar {
+  body.role-preview.planner-view-active #authUserBar {
     display: none !important;
   }
 
   @media (max-width: 600px) and (pointer: coarse) {
-    body[data-view="planner"] #authUserBar {
+    body.planner-view-active #authUserBar {
       top: 10px !important;
       right: 20px !important;
       height: 32px !important;
       max-width: calc(100vw - 40px) !important;
     }
-    body[data-view="planner"] #authUserProfile {
+    body.planner-view-active #authUserProfile {
       height: 32px !important;
       padding: 0 !important;
       gap: 0 !important;
     }
-    body[data-view="planner"] #authUserName {
+    body.planner-view-active #authUserName {
       display: none !important;
     }
-    body[data-view="planner"] #authAvatar {
+    body.planner-view-active #authAvatar {
       width: 32px !important;
       height: 32px !important;
     }
-    body[data-view="planner"] .auth-profile-menu {
+    body.planner-view-active .auth-profile-menu {
       top: 40px !important;
       right: 0 !important;
     }
@@ -8332,6 +8332,7 @@
 
     function showView(name){
       if(name === current){
+        document.body.classList.toggle('planner-view-active', name === 'planner');
         if(name === 'invoice') releaseDocumentScrollLocks();
         updateRoute(name, false);
         return;
@@ -8344,6 +8345,7 @@
 
       var prev = current; current = name;
       document.body.dataset.view = name;
+      document.body.classList.toggle('planner-view-active', name === 'planner');
       localStorage.setItem('cz_view', name);
 
       /* Sweep the thin top loading bar on every section change — gives the
@@ -8590,6 +8592,7 @@
       if (_adminBoardId) window._pendingStartupBoard = _adminBoardId;
       else if (_startView === 'moodboardCanvas') _startView = 'moodboards';
       document.body.dataset.view = _startView;
+      document.body.classList.toggle('planner-view-active', _startView === 'planner');
       current = _startView;
       if (OVERLAYS[_startView]) {
         OVERLAYS[_startView].classList.remove('v-hidden', 'v-gone');
@@ -8599,6 +8602,7 @@
       /* Viewer: show planner immediately (no auth overlay needed — firebase
          will confirm, and applyRole handles stale-hint cleanup)            */
       document.body.dataset.view = 'planner';
+      document.body.classList.add('planner-view-active');
       current = 'planner';
       if (viewPlanner) viewPlanner.classList.remove('v-hidden', 'v-gone');
       updateRoute('planner', true);
@@ -8611,6 +8615,7 @@
       if (_publicBoardId) window._pendingStartupBoard = _publicBoardId;
       else if (_publicStartView === 'moodboardCanvas') _publicStartView = 'moodboards';
       document.body.dataset.view = _publicStartView;
+      document.body.classList.toggle('planner-view-active', _publicStartView === 'planner');
       current = _publicStartView;
       if (OVERLAYS[_publicStartView]) OVERLAYS[_publicStartView].classList.remove('v-hidden', 'v-gone');
       updateRoute(_publicStartView, true);
@@ -8626,6 +8631,7 @@
       updateRoute('home', false);
       if (!viewHome.classList.contains('v-gone')) return; /* already visible */
       document.body.dataset.view = 'home';
+      document.body.classList.remove('planner-view-active');
       current = 'home';
       viewHome.classList.remove('v-hidden', 'v-gone');
       requestAnimationFrame(function(){
@@ -8644,6 +8650,7 @@
     window._showPlanner = function() {
       updateRoute('planner', false);
       document.body.dataset.view = 'planner';
+      document.body.classList.add('planner-view-active');
       current = 'planner';
       if (!viewPlanner.classList.contains('v-gone')) return; /* already real-visible */
       viewPlanner.classList.remove('v-gone');
