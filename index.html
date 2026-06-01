@@ -6108,6 +6108,74 @@
     }
   }
 
+  /* Authoritative planner account placement. This deliberately comes after the
+     responsive rules so the profile pill cannot drift under the header line. */
+  body[data-view="planner"] #authUserBar {
+    position: fixed !important;
+    top: 0 !important;
+    right: 48px !important;
+    height: 70px !important;
+    transform: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 0 !important;
+    max-width: min(360px, calc(100vw - 96px)) !important;
+  }
+  body[data-view="planner"] #authUserProfile {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    height: 32px !important;
+    box-sizing: border-box !important;
+    padding: 0 2px 0 9px !important;
+    border-radius: 999px !important;
+  }
+  body[data-view="planner"] #authUserName {
+    display: inline-block !important;
+    order: 1 !important;
+    max-width: 92px !important;
+    font-size: 7.5px !important;
+    letter-spacing: .07em !important;
+  }
+  body[data-view="planner"] #authAvatar {
+    order: 2 !important;
+    width: 30px !important;
+    height: 30px !important;
+  }
+  body[data-view="planner"] .auth-profile-menu {
+    top: 51px !important;
+  }
+  body.role-preview[data-view="planner"] #authUserBar {
+    display: none !important;
+  }
+
+  @media (max-width: 600px) and (pointer: coarse) {
+    body[data-view="planner"] #authUserBar {
+      top: 10px !important;
+      right: 20px !important;
+      height: 32px !important;
+      max-width: calc(100vw - 40px) !important;
+    }
+    body[data-view="planner"] #authUserProfile {
+      height: 32px !important;
+      padding: 0 !important;
+      gap: 0 !important;
+    }
+    body[data-view="planner"] #authUserName {
+      display: none !important;
+    }
+    body[data-view="planner"] #authAvatar {
+      width: 32px !important;
+      height: 32px !important;
+    }
+    body[data-view="planner"] .auth-profile-menu {
+      top: 40px !important;
+      right: 0 !important;
+    }
+  }
+
   /* ═══════════════════════════════════════════════════════════
      TEAM PANEL + CHAT SYSTEM
      ═══════════════════════════════════════════════════════════ */
@@ -7926,8 +7994,8 @@
     <div class="auth-bar-sep" aria-hidden="true"></div>
     <!-- Avatar + display name (rightmost) -->
     <div class="auth-user-profile" id="authUserProfile" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">
-      <div class="auth-avatar" id="authAvatar"><span id="authAvatarLetter"></span></div>
       <span class="auth-user-name" id="authUserName"></span>
+      <div class="auth-avatar" id="authAvatar"><span id="authAvatarLetter"></span></div>
     </div>
     <div class="auth-profile-menu" id="authProfileMenu" role="menu" aria-label="Account menu">
       <button class="auth-menu-item auth-menu-backup" id="authMenuBackup" type="button" role="menuitem">
