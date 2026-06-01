@@ -5884,6 +5884,31 @@
     .ne-body  { min-height: 180px; font-size: 14px; }
   }
 
+  /* Narrow desktop windows can hit the phone width breakpoint. Keep the account
+     controls centered in the desktop planner bar when the device has a mouse. */
+  @media (max-width: 600px) and (hover: hover) and (pointer: fine) {
+    body[data-view="planner"] .auth-user-bar {
+      top: 0;
+      right: 48px;
+      height: 70px;
+      align-items: center;
+      gap: 10px;
+      max-width: min(360px, calc(100vw - 96px));
+    }
+    body[data-view="planner"] .auth-signout-btn,
+    body[data-view="planner"] .auth-signin-trigger {
+      min-height: 34px;
+      padding: 0 13px;
+      font-size: 8.5px;
+      letter-spacing: .14em;
+    }
+    body[data-view="planner"] .auth-backup-btn,
+    body[data-view="planner"] .auth-avatar {
+      width: 34px;
+      height: 34px;
+    }
+  }
+
   /* ═══════════════════════════════════════════════════════════
      TEAM PANEL + CHAT SYSTEM
      ═══════════════════════════════════════════════════════════ */
