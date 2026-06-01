@@ -6215,6 +6215,59 @@
   body:not([data-view="planner"]) .czteam-trigger { display: none !important; }
   body:not(.role-admin):not(.role-viewer) .czteam-trigger { display: none !important; }
 
+  body.chat-tune-active .czteam-trigger {
+    bottom: var(--chat-tune-bottom, 32px) !important;
+    right: var(--chat-tune-right, 24px) !important;
+    width: var(--chat-tune-size, 42px) !important;
+    height: var(--chat-tune-size, 42px) !important;
+    border-radius: var(--chat-tune-radius, 50%) !important;
+    background: rgba(243,243,239,var(--chat-tune-bg, .05)) !important;
+    border-color: rgba(243,243,239,var(--chat-tune-border, .11)) !important;
+    color: rgba(243,243,239,var(--chat-tune-icon-opacity, .72)) !important;
+  }
+  body.chat-tune-active .czteam-trigger svg {
+    width: var(--chat-tune-icon, 17px) !important;
+    height: var(--chat-tune-icon, 17px) !important;
+  }
+
+  .chat-tune-panel {
+    position: fixed; right: 24px; bottom: 88px; z-index: 99020;
+    width: 248px; padding: 12px; border-radius: 14px;
+    background: rgba(8,8,9,.86);
+    border: 1px solid rgba(243,243,239,.14);
+    box-shadow: 0 18px 58px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.06);
+    backdrop-filter: blur(22px) saturate(.8); -webkit-backdrop-filter: blur(22px) saturate(.8);
+    color: var(--ink-dim); font-family: var(--font-en-mono);
+    display: none; gap: 9px; flex-direction: column;
+  }
+  body.chat-tune-active .chat-tune-panel { display: flex; }
+  body.chat-tune-active:not([data-view="planner"]) .chat-tune-panel { display: none; }
+  .chat-tune-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:2px; }
+  .chat-tune-title { font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink); }
+  .chat-tune-mini { font-size:7px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft); }
+  .chat-tune-row { display:grid; grid-template-columns: 72px 1fr 42px; align-items:center; gap:8px; }
+  .chat-tune-row label { font-size:8px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft); }
+  .chat-tune-row input[type="range"] { width:100%; accent-color: rgba(243,243,239,.75); }
+  .chat-tune-row input[type="number"] {
+    width:42px; box-sizing:border-box; border-radius:7px;
+    border:1px solid rgba(243,243,239,.14); background:rgba(0,0,0,.22);
+    color:var(--ink); font:inherit; font-size:8px; padding:5px 4px; text-align:center;
+  }
+  .chat-tune-actions { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px; margin-top:3px; }
+  .chat-tune-actions button {
+    border:1px solid rgba(243,243,239,.14); border-radius:8px;
+    background:rgba(243,243,239,.04); color:var(--ink-dim);
+    font:inherit; font-size:7px; letter-spacing:.11em; text-transform:uppercase;
+    padding:7px 6px; cursor:pointer; transition:background .16s,color .16s,border-color .16s;
+  }
+  .chat-tune-actions button:hover { background:rgba(243,243,239,.08); color:var(--ink); border-color:rgba(243,243,239,.28); }
+  .chat-tune-values {
+    display:none; white-space:pre-wrap; word-break:break-word;
+    border-top:1px solid rgba(243,243,239,.08); padding-top:8px;
+    font-size:8px; line-height:1.6; color:var(--ink-soft);
+  }
+  .chat-tune-values.show { display:block; }
+
   .czteam-badge {
     position: absolute; top: -4px; right: -4px;
     min-width: 16px; height: 16px; padding: 0 3px;
@@ -8176,6 +8229,27 @@
     </svg>
     <span class="czteam-badge" id="czTeamBadge" aria-hidden="true"></span>
   </button>
+
+  <div class="chat-tune-panel" id="chatTunePanel" aria-label="Chat tune panel">
+    <div class="chat-tune-head">
+      <span class="chat-tune-title">Chat Tune</span>
+      <span class="chat-tune-mini">temporary</span>
+    </div>
+    <div class="chat-tune-row"><label>Right</label><input data-chat-tune="right" type="range" min="0" max="120" step="1"><input data-chat-tune-num="right" type="number"></div>
+    <div class="chat-tune-row"><label>Bottom</label><input data-chat-tune="bottom" type="range" min="0" max="160" step="1"><input data-chat-tune-num="bottom" type="number"></div>
+    <div class="chat-tune-row"><label>Size</label><input data-chat-tune="size" type="range" min="28" max="76" step="1"><input data-chat-tune-num="size" type="number"></div>
+    <div class="chat-tune-row"><label>Icon</label><input data-chat-tune="icon" type="range" min="10" max="34" step="1"><input data-chat-tune-num="icon" type="number"></div>
+    <div class="chat-tune-row"><label>Radius</label><input data-chat-tune="radius" type="range" min="4" max="50" step="1"><input data-chat-tune-num="radius" type="number"></div>
+    <div class="chat-tune-row"><label>Fill</label><input data-chat-tune="bg" type="range" min="0" max="0.24" step="0.01"><input data-chat-tune-num="bg" type="number" step="0.01"></div>
+    <div class="chat-tune-row"><label>Border</label><input data-chat-tune="border" type="range" min="0" max="0.45" step="0.01"><input data-chat-tune-num="border" type="number" step="0.01"></div>
+    <div class="chat-tune-row"><label>Opacity</label><input data-chat-tune="iconOpacity" type="range" min="0.25" max="1" step="0.01"><input data-chat-tune-num="iconOpacity" type="number" step="0.01"></div>
+    <div class="chat-tune-actions">
+      <button id="chatTuneSave" type="button">Save</button>
+      <button id="chatTuneReset" type="button">Reset</button>
+      <button id="chatTuneCopy" type="button">Copy</button>
+    </div>
+    <div class="chat-tune-values" id="chatTuneValues"></div>
+  </div>
 
   <div id="czChatWin" class="czchat-win" role="dialog" aria-label="Chat" aria-modal="false">
     <div class="czchat-hd">
@@ -10689,6 +10763,91 @@
   /* ══════════════════════════════════════════════════════════════════
      TEAM PANEL + CHAT SYSTEM
      ══════════════════════════════════════════════════════════════════ */
+  (function(){
+    'use strict';
+    var KEY = 'cz_chat_trigger_tune_v1';
+    var defaults = { right:24, bottom:32, size:42, icon:17, radius:50, bg:.05, border:.11, iconOpacity:.72 };
+    var panel = document.getElementById('chatTunePanel');
+    if (!panel) return;
+    var valuesBox = document.getElementById('chatTuneValues');
+    var fields = ['right','bottom','size','icon','radius','bg','border','iconOpacity'];
+    var state = {};
+
+    function readSaved(){
+      try {
+        var saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+        fields.forEach(function(k){ state[k] = saved[k] != null ? +saved[k] : defaults[k]; });
+      } catch(e) {
+        fields.forEach(function(k){ state[k] = defaults[k]; });
+      }
+    }
+    function radiusValue(){ return state.radius >= 50 ? '50%' : state.radius + 'px'; }
+    function cssNumber(v){ return Math.round(v * 100) / 100; }
+    function apply(){
+      document.body.style.setProperty('--chat-tune-right', state.right + 'px');
+      document.body.style.setProperty('--chat-tune-bottom', state.bottom + 'px');
+      document.body.style.setProperty('--chat-tune-size', state.size + 'px');
+      document.body.style.setProperty('--chat-tune-icon', state.icon + 'px');
+      document.body.style.setProperty('--chat-tune-radius', radiusValue());
+      document.body.style.setProperty('--chat-tune-bg', cssNumber(state.bg));
+      document.body.style.setProperty('--chat-tune-border', cssNumber(state.border));
+      document.body.style.setProperty('--chat-tune-icon-opacity', cssNumber(state.iconOpacity));
+      fields.forEach(function(k){
+        var r = panel.querySelector('[data-chat-tune="'+k+'"]');
+        var n = panel.querySelector('[data-chat-tune-num="'+k+'"]');
+        if (r && document.activeElement !== r) r.value = state[k];
+        if (n && document.activeElement !== n) n.value = state[k];
+      });
+      if (valuesBox && valuesBox.classList.contains('show')) valuesBox.textContent = exportText();
+    }
+    function exportText(){
+      return [
+        'chat-trigger-tune',
+        'right: ' + state.right + 'px',
+        'bottom: ' + state.bottom + 'px',
+        'size: ' + state.size + 'px',
+        'icon: ' + state.icon + 'px',
+        'radius: ' + radiusValue(),
+        'fill opacity: ' + cssNumber(state.bg),
+        'border opacity: ' + cssNumber(state.border),
+        'icon opacity: ' + cssNumber(state.iconOpacity)
+      ].join('\n');
+    }
+    function setActiveForRole(role){
+      document.body.classList.toggle('chat-tune-active', role === 'admin');
+    }
+    fields.forEach(function(k){
+      panel.querySelectorAll('[data-chat-tune="'+k+'"],[data-chat-tune-num="'+k+'"]').forEach(function(input){
+        input.addEventListener('input', function(){
+          state[k] = +input.value;
+          apply();
+        });
+      });
+    });
+    var saveBtn = document.getElementById('chatTuneSave');
+    var resetBtn = document.getElementById('chatTuneReset');
+    var copyBtn = document.getElementById('chatTuneCopy');
+    if (saveBtn) saveBtn.addEventListener('click', function(){
+      localStorage.setItem(KEY, JSON.stringify(state));
+      if (valuesBox) { valuesBox.textContent = 'Saved locally.\n\n' + exportText(); valuesBox.classList.add('show'); }
+    });
+    if (resetBtn) resetBtn.addEventListener('click', function(){
+      localStorage.removeItem(KEY);
+      fields.forEach(function(k){ state[k] = defaults[k]; });
+      apply();
+      if (valuesBox) { valuesBox.textContent = 'Reset to defaults.'; valuesBox.classList.add('show'); }
+    });
+    if (copyBtn) copyBtn.addEventListener('click', function(){
+      var txt = exportText();
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).catch(function(){});
+      if (valuesBox) { valuesBox.textContent = txt; valuesBox.classList.add('show'); }
+    });
+    readSaved();
+    apply();
+    setActiveForRole(window._appRole);
+    document.addEventListener('cz-role', function(e){ setActiveForRole(e.detail.role); });
+  })();
+
   (function(){
     'use strict';
 
