@@ -5012,8 +5012,8 @@
   .shoot-expand {
     overflow: hidden; max-height: 0;
     transition:
-      max-height .62s cubic-bezier(.16,1,.3,1),
-      opacity .34s ease;
+      max-height .95s cubic-bezier(.22,1,.22,1),
+      opacity .48s ease;
     opacity: 0;
   }
   .shoot-row.open .shoot-expand { max-height: 260px; opacity: 1; }
@@ -5034,7 +5034,7 @@
     opacity: 1;
     transform: translateY(0) scale(1);
     filter: blur(0);
-    transition-delay: 70ms;
+    transition-delay: 180ms;
   }
   /* A labelled group inside the drawer (Status / Linked) */
   .shoot-detail-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -5060,15 +5060,15 @@
     opacity: 1;
     transform: translateY(0);
   }
-  .shoot-row.open .shoot-status-sel .ss-btn:nth-child(1) { transition-delay: 130ms, 130ms, 0ms, 0ms, 0ms; }
-  .shoot-row.open .shoot-status-sel .ss-btn:nth-child(2) { transition-delay: 158ms, 158ms, 0ms, 0ms, 0ms; }
-  .shoot-row.open .shoot-status-sel .ss-btn:nth-child(3) { transition-delay: 186ms, 186ms, 0ms, 0ms, 0ms; }
-  .shoot-row.open .shoot-status-sel .ss-btn:nth-child(4) { transition-delay: 214ms, 214ms, 0ms, 0ms, 0ms; }
-  .shoot-row.open .shoot-status-sel .ss-btn:nth-child(5) { transition-delay: 242ms, 242ms, 0ms, 0ms, 0ms; }
-  .shoot-row.open .shoot-status-sel .ss-btn:nth-child(6) { transition-delay: 270ms, 270ms, 0ms, 0ms, 0ms; }
-  .shoot-row.open .shoot-links .shoot-link-chip:nth-child(1) { transition-delay: 230ms, 230ms, 0ms, 0ms, 0ms; }
-  .shoot-row.open .shoot-links .shoot-link-chip:nth-child(2) { transition-delay: 260ms, 260ms, 0ms, 0ms, 0ms; }
-  .shoot-row.open .shoot-links .shoot-link-chip:nth-child(3) { transition-delay: 290ms, 290ms, 0ms, 0ms, 0ms; }
+  .shoot-row.open .shoot-status-sel .ss-btn:nth-child(1) { transition-delay: 320ms, 320ms, 0ms, 0ms, 0ms; }
+  .shoot-row.open .shoot-status-sel .ss-btn:nth-child(2) { transition-delay: 356ms, 356ms, 0ms, 0ms, 0ms; }
+  .shoot-row.open .shoot-status-sel .ss-btn:nth-child(3) { transition-delay: 392ms, 392ms, 0ms, 0ms, 0ms; }
+  .shoot-row.open .shoot-status-sel .ss-btn:nth-child(4) { transition-delay: 428ms, 428ms, 0ms, 0ms, 0ms; }
+  .shoot-row.open .shoot-status-sel .ss-btn:nth-child(5) { transition-delay: 464ms, 464ms, 0ms, 0ms, 0ms; }
+  .shoot-row.open .shoot-status-sel .ss-btn:nth-child(6) { transition-delay: 500ms, 500ms, 0ms, 0ms, 0ms; }
+  .shoot-row.open .shoot-links .shoot-link-chip:nth-child(1) { transition-delay: 470ms, 470ms, 0ms, 0ms, 0ms; }
+  .shoot-row.open .shoot-links .shoot-link-chip:nth-child(2) { transition-delay: 512ms, 512ms, 0ms, 0ms, 0ms; }
+  .shoot-row.open .shoot-links .shoot-link-chip:nth-child(3) { transition-delay: 554ms, 554ms, 0ms, 0ms, 0ms; }
 
   /* ── Link chips (Mood Board / Note / Invoice) ─────────────────── */
   .shoot-links { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
