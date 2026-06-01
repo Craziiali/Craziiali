@@ -6224,6 +6224,8 @@
     background: rgba(243,243,239,var(--chat-tune-bg, .05)) !important;
     border-color: rgba(243,243,239,var(--chat-tune-border, .11)) !important;
     color: rgba(var(--chat-tune-icon-color, 243,243,239),var(--chat-tune-icon-opacity, .72)) !important;
+    transform: scale(var(--chat-tune-scale, 1)) !important;
+    transform-origin: 50% 50%;
     touch-action: none;
     cursor: grab !important;
   }
@@ -6234,7 +6236,7 @@
   }
 
   .chat-tune-panel {
-    position: fixed; right: 24px; bottom: 88px; z-index: 99020;
+    position: fixed; right: var(--tuner-panel-right, 24px); bottom: var(--tuner-panel-bottom, 88px); z-index: 99020;
     width: 248px; padding: 12px; border-radius: 14px;
     background: rgba(8,8,9,.86);
     border: 1px solid rgba(243,243,239,.14);
@@ -6248,14 +6250,26 @@
   .chat-tune-panel button,
   .chat-tune-panel label,
   .chat-tune-panel input[type="range"],
-  .chat-tune-panel input[type="color"] { cursor: pointer !important; }
+  .chat-tune-panel input[type="color"],
+  .chat-tune-panel select { cursor: pointer !important; }
   .chat-tune-panel input[type="number"],
   .chat-tune-panel input[type="text"] { cursor: text !important; }
   body.chat-tune-active .chat-tune-panel { display: flex; }
   body.chat-tune-active:not([data-view="planner"]) .chat-tune-panel { display: none; }
-  .chat-tune-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:2px; }
+  .chat-tune-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:2px; cursor: grab !important; user-select:none; touch-action:none; }
+  .chat-tune-head:active { cursor: grabbing !important; }
   .chat-tune-title { font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink); }
   .chat-tune-mini { font-size:7px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft); }
+  .chat-tune-target {
+    display:grid; grid-template-columns:72px 1fr; align-items:center; gap:8px;
+    border-bottom:1px solid rgba(243,243,239,.08); padding-bottom:8px; margin-bottom:1px;
+  }
+  .chat-tune-target label { font-size:8px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft); }
+  .chat-tune-target select {
+    width:100%; border:1px solid rgba(243,243,239,.14); border-radius:8px;
+    background:rgba(0,0,0,.24); color:var(--ink); font:inherit; font-size:8px;
+    letter-spacing:.1em; text-transform:uppercase; padding:7px 8px;
+  }
   .chat-tune-row { display:grid; grid-template-columns: 72px 1fr 42px; align-items:center; gap:8px; }
   .chat-tune-row label { font-size:8px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft); }
   .chat-tune-row input[type="range"] { width:100%; accent-color: rgba(243,243,239,.75); }
@@ -8263,9 +8277,16 @@
       <span class="chat-tune-title">Tuner</span>
       <span class="chat-tune-mini">detached</span>
     </div>
+    <div class="chat-tune-target">
+      <label>Element</label>
+      <select id="tunerTargetSelect" aria-label="Tuner target element">
+        <option value="chat-trigger">Element 1 · Chat</option>
+      </select>
+    </div>
     <div class="chat-tune-row"><label>Right</label><input data-chat-tune="right" type="range" min="0" max="120" step="1"><input data-chat-tune-num="right" type="number"></div>
     <div class="chat-tune-row"><label>Bottom</label><input data-chat-tune="bottom" type="range" min="0" max="160" step="1"><input data-chat-tune-num="bottom" type="number"></div>
     <div class="chat-tune-row"><label>Size</label><input data-chat-tune="size" type="range" min="28" max="76" step="1"><input data-chat-tune-num="size" type="number"></div>
+    <div class="chat-tune-row"><label>Scale</label><input data-chat-tune="scale" type="range" min="0.5" max="1.8" step="0.01"><input data-chat-tune-num="scale" type="number" step="0.01"></div>
     <div class="chat-tune-row"><label>Icon</label><input data-chat-tune="icon" type="range" min="10" max="34" step="1"><input data-chat-tune-num="icon" type="number"></div>
     <div class="chat-tune-row"><label>Radius</label><input data-chat-tune="radius" type="range" min="4" max="50" step="1"><input data-chat-tune-num="radius" type="number"></div>
     <div class="chat-tune-row"><label>Fill</label><input data-chat-tune="bg" type="range" min="0" max="0.24" step="0.01"><input data-chat-tune-num="bg" type="number" step="0.01"></div>
@@ -10796,14 +10817,17 @@
      ══════════════════════════════════════════════════════════════════ */
   (function(){
     'use strict';
-    var CHAT_TUNER_ENABLED = false;
+    var CHAT_TUNER_ENABLED = true;
     var KEY = 'cz_chat_trigger_tune_v1';
-    var defaults = { right:24, bottom:32, size:42, icon:17, radius:50, bg:.05, border:.11, iconOpacity:.72 };
+    var PANEL_KEY = 'cz_tuner_panel_position_v1';
+    var defaults = { right:45, bottom:34, size:42, scale:1, icon:17, radius:50, bg:.05, border:.11, iconOpacity:.72 };
     var panel = document.getElementById('chatTunePanel');
     if (!panel) return;
     var valuesBox = document.getElementById('chatTuneValues');
-    var fields = ['right','bottom','size','icon','radius','bg','border','iconOpacity'];
+    var targetSelect = document.getElementById('tunerTargetSelect');
+    var fields = ['right','bottom','size','scale','icon','radius','bg','border','iconOpacity'];
     var state = {};
+    var panelPos = { right: 24, bottom: 88 };
 
     function hexToRgb(hex){
       var m = String(hex || '').trim().match(/^#?([0-9a-f]{6})$/i);
@@ -10828,6 +10852,7 @@
       document.body.style.setProperty('--chat-tune-right', state.right + 'px');
       document.body.style.setProperty('--chat-tune-bottom', state.bottom + 'px');
       document.body.style.setProperty('--chat-tune-size', state.size + 'px');
+      document.body.style.setProperty('--chat-tune-scale', cssNumber(state.scale));
       document.body.style.setProperty('--chat-tune-icon', state.icon + 'px');
       document.body.style.setProperty('--chat-tune-radius', radiusValue());
       document.body.style.setProperty('--chat-tune-bg', cssNumber(state.bg));
@@ -10851,6 +10876,7 @@
         'right: ' + state.right + 'px',
         'bottom: ' + state.bottom + 'px',
         'size: ' + state.size + 'px',
+        'scale: ' + cssNumber(state.scale),
         'icon: ' + state.icon + 'px',
         'radius: ' + radiusValue(),
         'fill opacity: ' + cssNumber(state.bg),
@@ -10858,6 +10884,26 @@
         'icon color: ' + state.iconColor,
         'icon opacity: ' + cssNumber(state.iconOpacity)
       ].join('\n');
+    }
+    function readPanelPosition(){
+      try {
+        var saved = JSON.parse(localStorage.getItem(PANEL_KEY) || '{}');
+        panelPos.right = saved.right != null ? +saved.right : panelPos.right;
+        panelPos.bottom = saved.bottom != null ? +saved.bottom : panelPos.bottom;
+      } catch(e) {}
+    }
+    function applyPanelPosition(){
+      document.body.style.setProperty('--tuner-panel-right', Math.max(8, Math.round(panelPos.right)) + 'px');
+      document.body.style.setProperty('--tuner-panel-bottom', Math.max(8, Math.round(panelPos.bottom)) + 'px');
+    }
+    function saveState(){
+      localStorage.setItem(KEY, JSON.stringify(state));
+    }
+    function nudge(dx, dy, step){
+      state.right = Math.max(0, Math.round(state.right - (dx * step)));
+      state.bottom = Math.max(0, Math.round(state.bottom + (dy * step)));
+      apply();
+      saveState();
     }
     function setActiveForRole(role){
       document.body.classList.toggle('chat-tune-active', CHAT_TUNER_ENABLED && role === 'admin');
@@ -10881,7 +10927,7 @@
     var resetBtn = document.getElementById('chatTuneReset');
     var copyBtn = document.getElementById('chatTuneCopy');
     if (saveBtn) saveBtn.addEventListener('click', function(){
-      localStorage.setItem(KEY, JSON.stringify(state));
+      saveState();
       if (valuesBox) { valuesBox.textContent = 'Saved locally.\n\n' + exportText(); valuesBox.classList.add('show'); }
     });
     if (resetBtn) resetBtn.addEventListener('click', function(){
@@ -10897,7 +10943,54 @@
       if (valuesBox) { valuesBox.textContent = txt; valuesBox.classList.add('show'); }
     });
     readSaved();
+    readPanelPosition();
     apply();
+    applyPanelPosition();
+    (function enablePanelDrag(){
+      var handle = panel.querySelector('.chat-tune-head');
+      if (!handle) return;
+      var dragging = false;
+      var startX = 0;
+      var startY = 0;
+      var startRight = 0;
+      var startBottom = 0;
+      function clampPanel(){
+        var rect = panel.getBoundingClientRect();
+        panelPos.right = Math.min(Math.max(8, panelPos.right), Math.max(8, window.innerWidth - rect.width - 8));
+        panelPos.bottom = Math.min(Math.max(8, panelPos.bottom), Math.max(8, window.innerHeight - rect.height - 8));
+      }
+      handle.addEventListener('pointerdown', function(e){
+        dragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startRight = panelPos.right;
+        startBottom = panelPos.bottom;
+        handle.setPointerCapture && handle.setPointerCapture(e.pointerId);
+        e.preventDefault();
+      });
+      handle.addEventListener('pointermove', function(e){
+        if (!dragging) return;
+        panelPos.right = startRight - (e.clientX - startX);
+        panelPos.bottom = startBottom - (e.clientY - startY);
+        clampPanel();
+        applyPanelPosition();
+        e.preventDefault();
+      });
+      handle.addEventListener('pointerup', function(){
+        if (!dragging) return;
+        dragging = false;
+        clampPanel();
+        applyPanelPosition();
+        localStorage.setItem(PANEL_KEY, JSON.stringify(panelPos));
+      });
+      handle.addEventListener('pointercancel', function(){
+        dragging = false;
+      });
+      window.addEventListener('resize', function(){
+        clampPanel();
+        applyPanelPosition();
+      });
+    })();
     (function enableDrag(){
       var trigger = document.getElementById('czTeamTrigger');
       var guideX = document.getElementById('tunerGuideX');
@@ -10997,7 +11090,7 @@
         if (!dragging) return;
         dragging = false;
         hideGuides();
-        if (moved) localStorage.setItem(KEY, JSON.stringify(state));
+        if (moved) saveState();
         e.preventDefault();
         e.stopPropagation();
       }, true);
@@ -11011,6 +11104,23 @@
         e.stopPropagation();
       }, true);
     })();
+    document.addEventListener('keydown', function(e){
+      if (!document.body.classList.contains('chat-tune-active')) return;
+      if (e.target && (e.target.closest('input, select, textarea') || e.target.isContentEditable)) return;
+      var step = e.shiftKey ? 8 : 1;
+      if (e.key === 'ArrowRight') { nudge(1, 0, step); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft') { nudge(-1, 0, step); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { nudge(0, 1, step); e.preventDefault(); }
+      else if (e.key === 'ArrowDown') { nudge(0, -1, step); e.preventDefault(); }
+    });
+    if (targetSelect) {
+      targetSelect.addEventListener('change', function(){
+        if (valuesBox) {
+          valuesBox.textContent = 'Target: ' + targetSelect.options[targetSelect.selectedIndex].text + '\nMore elements can be wired into this same tuner.';
+          valuesBox.classList.add('show');
+        }
+      });
+    }
     setActiveForRole(window._appRole);
     document.addEventListener('cz-role', function(e){ setActiveForRole(e.detail.role); });
   })();
