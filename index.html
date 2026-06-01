@@ -10887,11 +10887,19 @@
           tb.addEventListener('input', function(){
             scheduleElUpdate(id, { content: tb.innerHTML });
           });
-          tb.addEventListener('mousedown', function(e){ e.stopPropagation(); });
-          /* Undo tracking: snapshot on focus, push undo entry on blur if HTML changed */
-          var _tbSnap = '';
-          tb.addEventListener('focus', function(){ _tbSnap = tb.innerHTML; });
+          /* Single click-drag MOVES the text box like any element; DOUBLE-click edits it.
+             While NOT editing, preventDefault on mousedown stops the contenteditable from
+             grabbing focus + caret (the stray outline) and lets the parent start the drag.
+             While editing (focused), let clicks place the caret / select text normally. */
+          var _tbEditing = false, _tbSnap = '';
+          tb.addEventListener('mousedown', function(e){
+            if (_tbEditing) { e.stopPropagation(); return; }
+            e.preventDefault();
+          });
+          tb.addEventListener('dblclick', function(e){ e.stopPropagation(); tb.focus(); });
+          tb.addEventListener('focus', function(){ _tbEditing = true; _tbSnap = tb.innerHTML; });
           tb.addEventListener('blur', function(){
+            _tbEditing = false;
             if (tb.innerHTML !== _tbSnap)
               pushUndo({ type:'patch', items:[{ id:id, before:{content:_tbSnap}, after:{content:tb.innerHTML} }] });
           });
