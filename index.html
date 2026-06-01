@@ -4724,6 +4724,26 @@
   body.role-viewer .planner-back-home,
   body.role-public .planner-back-home { display: none !important; }
 
+  /* ── Breadcrumb (brand / current view) ───────────────────────── */
+  .crumb { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+  .crumb-sep {
+    font-family: var(--font-en-mono); font-size: 10px;
+    color: var(--ink-soft); opacity: .4; user-select: none; flex-shrink: 0;
+  }
+  .crumb-current {
+    font-family: var(--font-en-mono); font-size: 10px;
+    letter-spacing: .22em; text-transform: uppercase; color: var(--ink);
+    white-space: nowrap;
+  }
+  /* Invoice top-bar variant — sits beside the larger wordmark */
+  .top-bar-left { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+  .top-bar-left .crumb-sep,
+  .top-bar-left .crumb-current { font-size: 11px; letter-spacing: .18em; }
+  /* Viewers/public have no home — show the brand as a plain label, not a link */
+  body.role-viewer .crumb-brand,
+  body.role-public  .crumb-brand,
+  body.role-preview .crumb-brand { cursor: default; }
+
   /* Hero */
   .planner-hero { padding: 38px 48px 0; }
   .planner-title {
@@ -6875,15 +6895,11 @@
       <!-- Sticky top bar -->
       <div class="planner-bar">
         <div class="planner-bar-left">
-          <span class="planner-bar-brand" id="plannerBrandHome">CRAZIIALI</span>
-          <!-- Back arrow only shown to admin (viewers have no home) -->
-          <button class="back-nav planner-back-home" id="plannerBack" type="button">
-            <svg viewBox="0 0 9 9" fill="none" stroke="currentColor"
-                 stroke-width="1.2" aria-hidden="true">
-              <path d="M7 4.5H2M4 2.5l-2 2 2 2"/>
-            </svg>
-            Home
-          </button>
+          <span class="crumb">
+            <span class="planner-bar-brand crumb-brand" id="plannerBrandHome" title="Home">CRAZIIALI</span>
+            <span class="crumb-sep">/</span>
+            <span class="crumb-current">Planner</span>
+          </span>
         </div>
         <!-- Right side intentionally empty — auth bar (fixed) sits here -->
       </div>
@@ -6956,14 +6972,11 @@
       <!-- Sticky top bar -->
       <div class="notes-bar">
         <div class="notes-bar-left">
-          <span class="notes-bar-brand" id="notesBrandHome">CRAZIIALI</span>
-          <button class="back-nav" id="notesBack" type="button">
-            <svg viewBox="0 0 9 9" fill="none" stroke="currentColor"
-                 stroke-width="1.2" aria-hidden="true">
-              <path d="M7 4.5H2M4 2.5l-2 2 2 2"/>
-            </svg>
-            Home
-          </button>
+          <span class="crumb">
+            <span class="notes-bar-brand crumb-brand" id="notesBrandHome" title="Home">CRAZIIALI</span>
+            <span class="crumb-sep">/</span>
+            <span class="crumb-current">Notes</span>
+          </span>
         </div>
       </div>
 
@@ -7057,7 +7070,11 @@
 
     <!-- Top bar -->
     <header class="top-bar">
-      <span class="wordmark wordmark-link" id="invoiceWordmark" title="Home">CRAZIIALI</span>
+      <span class="top-bar-left">
+        <span class="wordmark wordmark-link" id="invoiceWordmark" title="Home">CRAZIIALI</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-current">Invoice</span>
+      </span>
       <div class="top-right">
         <button class="lang-toggle" id="langToggle" type="button" aria-label="Switch language / تبديل اللغة">
           <span class="opt" data-set="en">EN</span>
@@ -8279,11 +8296,12 @@
       showView('moodboards');
     });
     document.getElementById('mbGalleryBack').addEventListener('click', function(){ showView('home'); });
-    /* These back-to-home navigations are admin-only — viewers have no home */
-    document.getElementById('plannerBack').addEventListener('click',      function(){ if(window._appRole==='admin') showView('home'); });
-    document.getElementById('plannerBrandHome').addEventListener('click', function(){ if(window._appRole==='admin') showView('home'); });
-    document.getElementById('notesBack').addEventListener('click',        function(){ showView('home'); });
-    document.getElementById('notesBrandHome').addEventListener('click',   function(){ showView('home'); });
+    /* Breadcrumb brand → home (admin only — viewers have no home). Guarded so a
+       missing element never throws. */
+    var _pbh = document.getElementById('plannerBrandHome');
+    if(_pbh) _pbh.addEventListener('click', function(){ if(window._appRole==='admin') showView('home'); });
+    var _nbh = document.getElementById('notesBrandHome');
+    if(_nbh) _nbh.addEventListener('click', function(){ showView('home'); });
     var iwm = document.getElementById('invoiceWordmark');
     if(iwm) iwm.addEventListener('click', function(){ if(window._appRole==='admin') showView('home'); });
     window.addEventListener('popstate', function(){
