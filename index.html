@@ -10754,6 +10754,23 @@
       ta.style.height = Math.max(24, ta.scrollHeight) + 'px';
     }
 
+    /* Grow a text element's box to fit its text (height auto-fits the wrapped
+       content) so the selection border always contains the words. Width stays
+       fixed (text reflows); only height tracks the content. */
+    function autosizeTextEl(id) {
+      var el = _elDoms[id]; if (!el) return;
+      var d = _elements[id]; if (!d || d.type !== 'text') return;
+      if (_isBusy(id)) return;                 /* don't fight an active drag/resize */
+      var tb = el.querySelector('.mb-textblock'); if (!tb) return;
+      el.style.height = 'auto';                /* let the box shrink/grow to the text */
+      var h = Math.max(30, tb.offsetHeight);
+      el.style.height = h + 'px';
+      if (Math.abs((d.h || 0) - h) > 1) {
+        d.h = h;
+        if (canEdit()) scheduleElUpdate(id, { h: h });
+      }
+    }
+
     function textFaceKey(d) {
       return (d && d.fontFace && TEXT_FACES[d.fontFace]) ? d.fontFace : ((d && d.type === 'sticky') ? 'technical' : 'simple');
     }
@@ -10885,6 +10902,7 @@
           tb.style.textAlign  = d.align || 'left';
           tb.innerHTML = d.content || '';
           tb.addEventListener('input', function(){
+            autosizeTextEl(id);
             scheduleElUpdate(id, { content: tb.innerHTML });
           });
           /* Single click-drag MOVES the text box like any element; DOUBLE-click edits it.
@@ -10904,6 +10922,7 @@
               pushUndo({ type:'patch', items:[{ id:id, before:{content:_tbSnap}, after:{content:tb.innerHTML} }] });
           });
           el.appendChild(tb);
+          requestAnimationFrame(function(){ autosizeTextEl(id); });
         } else if (d.type === 'stamp') {
           el.className = 'mb-el';
           var stampInfo = STAMP_LIBRARY[d.stamp || 'star'] || STAMP_LIBRARY.star;
@@ -11044,6 +11063,7 @@
             tb2.style.textDecoration = d.strike ? 'line-through' : 'none';
             tb2.style.textAlign = d.align||'left';
             if (document.activeElement !== tb2) tb2.innerHTML = d.content||'';
+            requestAnimationFrame(function(){ autosizeTextEl(id); });
           }
         } else if (d.type === 'stamp') {
           var st2 = el.querySelector('.mb-stamp-el');
