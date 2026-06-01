@@ -4854,13 +4854,20 @@
     padding: 16px 0;
   }
 
-  /* Status dot */
+  /* Status dot — small visual, but a large invisible tap zone (::after) so it's
+     easy to hit. Toggles the detail drawer. */
   .shoot-dot {
     width: 7px; height: 7px; border-radius: 50%;
     border: 1px solid currentColor;
-    cursor: pointer; flex-shrink: 0;
-    transition: background .25s, color .25s, box-shadow .28s ease, filter .24s ease;
+    cursor: pointer; flex-shrink: 0; position: relative;
+    transition: background .25s, color .25s, box-shadow .28s ease, filter .24s ease, transform .12s ease;
   }
+  .shoot-dot::after {
+    content: ''; position: absolute; left: 50%; top: 50%;
+    width: 26px; height: 26px; transform: translate(-50%, -50%);
+    border-radius: 50%;   /* invisible, just expands the clickable area */
+  }
+  .shoot-dot:active { transform: scale(.82); }
   .shoot-dot[data-s="upcoming"]  { color:rgba(80,150,255,.85);  background:rgba(80,150,255,.22); }
   .shoot-dot[data-s="confirmed"] { color:rgba(50,200,110,.90);  background:rgba(50,200,110,.28); }
   .shoot-dot[data-s="shooting"]  { color:rgba(255,130,50,.92);  background:rgba(255,130,50,.30);
@@ -5760,8 +5767,10 @@
     }
     .shoot-idx { display: none; }
 
-    /* Line 1 */
-    .shoot-dot  { order: 1; flex: 0 0 auto; align-self: flex-start; margin-top: 7px; }
+    /* Line 1 — bigger, easier-to-tap status dot with a generous hit zone */
+    .shoot-dot  { order: 1; flex: 0 0 auto; align-self: flex-start; margin-top: 6px; margin-right: 8px;
+                  width: 11px; height: 11px; }
+    .shoot-dot::after { width: 44px; height: 44px; }
     .shoot-info { order: 2; flex: 1 1 auto; min-width: 0; gap: 3px; }
     .shoot-name   { font-size: 15px; }
     .shoot-client { font-size: 9.5px; }
