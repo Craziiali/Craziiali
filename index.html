@@ -7734,6 +7734,7 @@
     /* Cancellable transition timer — prevents stale callbacks from
        re-hiding an overlay that a subsequent navigation just revealed */
     var _viewTimer = null;
+    var _topLoadTimer = null;
     var _routeNav = false;
 
     function routeBasePath(){
@@ -7853,6 +7854,16 @@
       var prev = current; current = name;
       document.body.dataset.view = name;
       localStorage.setItem('cz_view', name);
+
+      /* Sweep the thin top loading bar on every section change — gives the
+         desktop the same polished load cue the mobile pull-to-refresh shows. */
+      if (window._startTopLoadLine) {
+        window._startTopLoadLine();
+        if (_topLoadTimer) clearTimeout(_topLoadTimer);
+        _topLoadTimer = setTimeout(function(){
+          if (window._finishTopLoadLine) window._finishTopLoadLine();
+        }, FADE);
+      }
 
       /* Going to invoice: blur any focused field first, then fade overlay out */
       if(name === 'invoice'){
