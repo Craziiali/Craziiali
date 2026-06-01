@@ -5010,13 +5010,14 @@
 
   /* Status selector expand */
   .shoot-expand {
-    overflow: hidden; max-height: 0;
+    overflow: hidden; height: 0; max-height: none;
     transition:
-      max-height .95s cubic-bezier(.22,1,.22,1),
+      height .95s cubic-bezier(.22,1,.22,1),
       opacity .48s ease;
     opacity: 0;
+    will-change: height, opacity;
   }
-  .shoot-row.open .shoot-expand { max-height: 260px; opacity: 1; }
+  .shoot-row.open .shoot-expand { opacity: 1; }
   .shoot-expand-inner {
     padding: 2px 28px 18px 60px;
     display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
@@ -5857,9 +5858,6 @@
       border-left: 1px solid var(--rule);
     }
     .shoot-loc { font-size: 11px; }
-
-    /* Expand panel: taller on mobile to fit status pills + link chips */
-    .shoot-row.open .shoot-expand { max-height: 360px; }
 
     /* ─ Expand panel: tighter indent, stack label above its controls ─ */
     .shoot-expand-inner { padding-left: 20px; padding-right: 20px; }
@@ -8568,6 +8566,10 @@
       var rl = row.querySelector('.shoot-rowlinks');               /* on-row icons */
       if (rl) rl.outerHTML = rowLinkIconsHTML(proj);
       bindRowLinks(row, pid);
+      if (row.classList.contains('open')) {
+        var drawer = row.querySelector('.shoot-expand');
+        if (drawer) drawer.style.height = drawer.scrollHeight + 'px';
+      }
     }
 
     function refreshAllPlannerLinks(){
@@ -8654,6 +8656,16 @@
     }
 
     document.addEventListener('cz-role', refreshAllPlannerLinks);
+
+    function setPlannerDrawer(row, open){
+      var drawer = row && row.querySelector('.shoot-expand');
+      if (!drawer) return;
+      drawer.style.height = drawer.offsetHeight + 'px';
+      row.classList.toggle('open', open);
+      requestAnimationFrame(function(){
+        drawer.style.height = open ? (drawer.scrollHeight + 'px') : '0px';
+      });
+    }
 
     /* ── 12-hour time helpers ──────────────────────────────────── */
     function fmt12(h24){
@@ -9360,7 +9372,7 @@
           var proj = projects.find(function(x){ return x.id===p.id; });
           if(!proj) return;
           proj.open = !proj.open;
-          row.classList.toggle('open', proj.open);
+          setPlannerDrawer(row, proj.open);
         });
 
 
@@ -9396,7 +9408,7 @@
             proj.status = btn.dataset.s;
             proj.open   = false;
             /* Close the expand panel */
-            row.classList.remove('open');
+            setPlannerDrawer(row, false);
             /* Update status dot colour */
             var dot = row.querySelector('.shoot-dot');
             if(dot) dot.dataset.s = proj.status;
@@ -9418,6 +9430,10 @@
         /* Size desc input to its content now that it's in the DOM */
         var descInp = row.querySelector('.shoot-desc');
         if(descInp) sizeDesc(descInp);
+        if (p.open) {
+          var drawer = row.querySelector('.shoot-expand');
+          if (drawer) drawer.style.height = drawer.scrollHeight + 'px';
+        }
         /* Wire up the Mood Board / Note / Invoice link chips */
         bindRowLinks(row, p.id);
       });
