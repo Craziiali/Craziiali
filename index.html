@@ -6207,13 +6207,18 @@
     color: rgba(243,243,239,.72);
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
-    transition: background .2s, border-color .2s, transform .18s;
+    transition: background .2s, border-color .2s, transform .18s, opacity .18s;
     backdrop-filter: blur(10px);
   }
   .czteam-trigger:hover { background: rgba(243,243,239,.09); border-color: rgba(243,243,239,.2); transform: scale(1.07); }
   .czteam-trigger svg { width: 17px; height: 17px; }
   body:not([data-view="planner"]) .czteam-trigger { display: none !important; }
   body:not(.role-admin):not(.role-viewer) .czteam-trigger { display: none !important; }
+  body.czteam-ui-open .czteam-trigger {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(.92);
+  }
 
   body.chat-tune-active .czteam-trigger {
     bottom: var(--chat-tune-bottom, 32px) !important;
@@ -11281,6 +11286,10 @@
     var _typTimer   = null;
     var _amTyping   = false;
 
+    function syncTriggerState() {
+      document.body.classList.toggle('czteam-ui-open', _panelOpen || _chatOpen);
+    }
+
     /* ── Avatar helpers ─────────────────────────────────────────── */
     var AV_PALETTE = ['#c8a96e','#7eb4d5','#9b87c4','#7ecba1','#d48c7e','#d4bc6e','#7eb0d5','#c490c8'];
     function avBg(uid) {
@@ -11310,16 +11319,19 @@
       if (_chatOpen) closeChat(false); /* close chat first, don't re-open panel from closeChat */
       _panelOpen = true;
       panel.classList.add('open');
+      syncTriggerState();
     }
     function closePanel() {
       _panelOpen = false;
       panel.classList.remove('open');
+      syncTriggerState();
     }
     function togglePanel() { _panelOpen ? closePanel() : openPanel(); }
 
     trigger.addEventListener('click', function(e){ e.stopPropagation(); togglePanel(); });
     document.addEventListener('click', function(e){
       if (_panelOpen && !panel.contains(e.target) && !trigger.contains(e.target)) closePanel();
+      if (_chatOpen && !chatWin.contains(e.target) && !panel.contains(e.target) && !trigger.contains(e.target)) closeChat(false);
     });
 
     /* ── Chat open / close ──────────────────────────────────────── */
@@ -11360,6 +11372,7 @@
 
       _chatOpen = true;
       chatWin.classList.add('open');
+      syncTriggerState();
       setTimeout(function(){ chatInput.focus(); }, 280);
     }
 
@@ -11372,6 +11385,7 @@
       var prev = _peer; _peer = null;
       chatMsgs.innerHTML = '';
       if (chatEmptyEl) chatEmptyEl.style.display = '';
+      syncTriggerState();
       if (reopenPanel !== false && prev) openPanel();
     }
 
