@@ -3645,6 +3645,11 @@
     /* Only show on home and planner views */
     body[data-view="home"]    .auth-user-bar,
     body[data-view="planner"] .auth-user-bar { display:flex; }
+    body[data-view="planner"] .auth-user-bar {
+      top: -12px;
+      height: 70px;
+      align-items: center;
+    }
     /* Sign-in trigger: visible only when public */
     .auth-signin-trigger{
       display:none;align-items:center;justify-content:center;gap:6px;
@@ -5934,6 +5939,32 @@
     body[data-view="home"] .auth-avatar {
       width: 32px;
       height: 32px;
+    }
+  }
+
+  /* Final desktop guard: a resized desktop browser can be very narrow and some
+     touch-capable laptops still report coarse input. Use device width to keep
+     the planner account cluster on the desktop bar center in that case. */
+  @media (max-width: 600px) and (min-device-width: 700px) {
+    body[data-view="planner"] .auth-user-bar {
+      top: -16px !important;
+      right: 48px !important;
+      height: 70px !important;
+      align-items: center !important;
+      gap: 10px !important;
+      max-width: min(360px, calc(100vw - 96px)) !important;
+    }
+    body[data-view="planner"] .auth-signin-trigger,
+    body[data-view="planner"] .auth-signout-btn {
+      height: 34px !important;
+      padding: 0 13px !important;
+      font-size: 8.5px !important;
+      letter-spacing: .14em !important;
+    }
+    body[data-view="planner"] .auth-backup-btn,
+    body[data-view="planner"] .auth-avatar {
+      width: 34px !important;
+      height: 34px !important;
     }
   }
 
