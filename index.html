@@ -6237,7 +6237,7 @@
   .mb-sticky-text::placeholder { color:rgba(10,10,11,.38); }
   .mb-sticky-text:focus { cursor:text; outline:none; }
   .mb-sticky-text,.mb-textblock,.mb-board-name-input { cursor:text !important; }
-  .mb-textblock { min-width:100px; min-height:30px; padding:4px 6px; border-radius:2px; outline:none; background:transparent; word-break:break-word; }
+  .mb-textblock { width:100%; box-sizing:border-box; min-height:30px; padding:4px 6px; border-radius:2px; outline:none; background:transparent; overflow-wrap:anywhere; }
   .mb-textblock:focus { outline:2px solid rgba(var(--accent-rgb),.4); }
   .mb-stamp-el { width:100%; height:100%; display:flex; align-items:center; justify-content:center; border-radius:20px; background:#fff; color:#141417; font-size:42px; line-height:1; filter:drop-shadow(0 4px 0 rgba(0,0,0,.18)) drop-shadow(0 12px 24px rgba(0,0,0,.3)); box-shadow:inset 0 0 0 3px rgba(255,255,255,.9),inset 0 -8px 14px rgba(0,0,0,.05); }
   .mb-comment-el { position:relative; width:100%; height:100%; border-radius:20px; background:rgba(var(--accent-rgb),.95); color:#fff; box-shadow:0 14px 32px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.28); padding:12px; box-sizing:border-box; display:flex; flex-direction:column; gap:8px; }
@@ -12096,6 +12096,24 @@
         /* Re-anchor the opposite corner for top / left handles after the ratio adjustment. */
         if (h.indexOf('w') >= 0) nx = r.origEl.x + r.origEl.w - nw;
         if (h.indexOf('n') >= 0) ny = r.origEl.y + r.origEl.h - nh;
+      }
+      /* Text boxes resize WIDTH only — the text reflows and the height always
+         auto-fits the content, so words can never spill outside the border and
+         a side handle can't accidentally drag/grow the box vertically. */
+      if (d.type === 'text') {
+        d.x = Math.round(nx); d.y = Math.round(r.origEl.y); d.w = Math.round(nw);
+        var tdom = _elDoms[r.id];
+        if (tdom) {
+          tdom.style.left = d.x + 'px';
+          tdom.style.top  = d.y + 'px';
+          tdom.style.width = d.w + 'px';
+          var tbx = tdom.querySelector('.mb-textblock');
+          tdom.style.height = 'auto';
+          var th = Math.max(30, tbx ? tbx.offsetHeight : 30);
+          tdom.style.height = th + 'px';
+          d.h = th;
+        }
+        return;
       }
       d.x=Math.round(nx); d.y=Math.round(ny); d.w=Math.round(nw); d.h=Math.round(nh);
       var dom = _elDoms[r.id];
