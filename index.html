@@ -3635,7 +3635,7 @@
     .auth-switch:hover{color:var(--ink-dim)}
     .auth-user-bar{
       display:none;align-items:center;gap:10px;
-      position:fixed;top:14px;right:48px;z-index:1100;
+      position:fixed;top:0;right:48px;height:70px;z-index:1100;
     }
     /* Thin separator between action buttons and profile */
     .auth-bar-sep{
@@ -3649,7 +3649,7 @@
     .auth-signin-trigger{
       display:none;align-items:center;justify-content:center;gap:6px;
       background:rgba(11,11,13,.42);border:1px solid rgba(243,243,239,.14);border-radius:8px;
-      min-height:34px;padding:0 13px;font-family:var(--font-en-mono);font-size:8.5px;letter-spacing:.14em;
+      height:34px;box-sizing:border-box;padding:0 13px;font-family:var(--font-en-mono);font-size:8.5px;letter-spacing:.14em;
       text-transform:uppercase;color:var(--ink-dim);cursor:pointer;transition:color .22s,border-color .22s,background .22s;white-space:nowrap;line-height:1;
     }
     .auth-signin-trigger:hover{color:var(--ink);border-color:rgba(243,243,239,.34);background:rgba(243,243,239,.035)}
@@ -3680,7 +3680,7 @@
     .auth-signout-btn{
       align-items:center;justify-content:center;
       background:rgba(11,11,13,.42);border:1px solid rgba(243,243,239,.14);border-radius:8px;
-      min-height:34px;padding:0 13px;font-family:var(--font-en-mono);font-size:8.5px;letter-spacing:.14em;
+      height:34px;box-sizing:border-box;padding:0 13px;font-family:var(--font-en-mono);font-size:8.5px;letter-spacing:.14em;
       text-transform:uppercase;color:var(--ink-dim);cursor:pointer;transition:color .22s,border-color .22s,background .22s;white-space:nowrap;line-height:1;
     }
     .auth-signout-btn:hover{color:var(--ink);border-color:rgba(243,243,239,.34);background:rgba(243,243,239,.035)}
@@ -5733,7 +5733,7 @@
     .auth-bar-sep { display: none !important; }
     .auth-signin-trigger,
     .auth-signout-btn {
-      min-height: 32px;
+      height: 32px;
       padding: 0 10px;
       font-size: 7.5px;
       letter-spacing: .1em;
@@ -5884,9 +5884,9 @@
     .ne-body  { min-height: 180px; font-size: 14px; }
   }
 
-  /* Narrow desktop windows can hit the phone width breakpoint. Keep the account
-     controls centered in the desktop planner bar when the device has a mouse. */
-  @media (max-width: 600px) and (hover: hover) and (pointer: fine) {
+  /* Small desktop windows can share the phone width, but should still align
+     like desktop. Actual touch phones override this just below. */
+  @media (max-width: 600px) {
     body[data-view="planner"] .auth-user-bar {
       top: 0;
       right: 48px;
@@ -5895,9 +5895,9 @@
       gap: 10px;
       max-width: min(360px, calc(100vw - 96px));
     }
-    body[data-view="planner"] .auth-signout-btn,
-    body[data-view="planner"] .auth-signin-trigger {
-      min-height: 34px;
+    body[data-view="planner"] .auth-signin-trigger,
+    body[data-view="planner"] .auth-signout-btn {
+      height: 34px;
       padding: 0 13px;
       font-size: 8.5px;
       letter-spacing: .14em;
@@ -5906,6 +5906,34 @@
     body[data-view="planner"] .auth-avatar {
       width: 34px;
       height: 34px;
+    }
+  }
+
+  /* Phones keep the compact top-right profile cluster. */
+  @media (max-width: 600px) and (pointer: coarse) {
+    body[data-view="planner"] .auth-user-bar,
+    body[data-view="home"] .auth-user-bar {
+      top: 10px;
+      right: 20px;
+      height: auto;
+      gap: 7px;
+      max-width: calc(100vw - 40px);
+    }
+    body[data-view="planner"] .auth-signin-trigger,
+    body[data-view="planner"] .auth-signout-btn,
+    body[data-view="home"] .auth-signin-trigger,
+    body[data-view="home"] .auth-signout-btn {
+      height: 32px;
+      padding: 0 10px;
+      font-size: 7.5px;
+      letter-spacing: .1em;
+    }
+    body[data-view="planner"] .auth-backup-btn,
+    body[data-view="planner"] .auth-avatar,
+    body[data-view="home"] .auth-backup-btn,
+    body[data-view="home"] .auth-avatar {
+      width: 32px;
+      height: 32px;
     }
   }
 
