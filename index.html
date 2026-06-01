@@ -6289,6 +6289,7 @@
     background:rgba(0,0,0,.22); cursor:pointer;
   }
   .chat-tune-actions { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px; margin-top:3px; }
+  .chat-tune-rulers { display:grid; grid-template-columns: 1fr 1fr; gap:6px; }
   .chat-tune-actions button {
     border:1px solid rgba(243,243,239,.14); border-radius:8px;
     background:rgba(243,243,239,.04); color:var(--ink-dim);
@@ -6296,6 +6297,16 @@
     padding:7px 6px; cursor:pointer; transition:background .16s,color .16s,border-color .16s;
   }
   .chat-tune-actions button:hover { background:rgba(243,243,239,.08); color:var(--ink); border-color:rgba(243,243,239,.28); }
+  .chat-tune-rulers button {
+    border:1px solid rgba(243,243,239,.14); border-radius:8px;
+    background:rgba(243,243,239,.035); color:var(--ink-dim);
+    font:inherit; font-size:7px; letter-spacing:.11em; text-transform:uppercase;
+    padding:7px 6px; transition:background .16s,color .16s,border-color .16s;
+  }
+  .chat-tune-rulers button.is-on {
+    background:rgba(243,243,239,.12); color:var(--ink);
+    border-color:rgba(243,243,239,.36);
+  }
   .chat-tune-values {
     display:none; white-space:pre-wrap; word-break:break-word;
     border-top:1px solid rgba(243,243,239,.08); padding-top:8px;
@@ -6309,6 +6320,19 @@
   }
   body.chat-tune-active.tuner-guiding-x .tuner-guide-x { display:block; top:0; bottom:0; width:1px; }
   body.chat-tune-active.tuner-guiding-y .tuner-guide-y { display:block; left:0; right:0; height:1px; }
+  .tuner-ruler {
+    position: fixed; z-index: 99018; pointer-events: auto; display: none;
+    background: rgba(255,255,255,.62);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.18), 0 0 16px rgba(243,243,239,.22);
+  }
+  body.chat-tune-active.tuner-ruler-x-on .tuner-ruler-x { display:block; top:0; bottom:0; width:1px; cursor: ew-resize !important; }
+  body.chat-tune-active.tuner-ruler-y-on .tuner-ruler-y { display:block; left:0; right:0; height:1px; cursor: ns-resize !important; }
+  .tuner-ruler::after {
+    content:""; position:absolute; border-radius:99px; background:rgba(243,243,239,.92);
+    box-shadow:0 6px 20px rgba(0,0,0,.38);
+  }
+  .tuner-ruler-x::after { width:7px; height:42px; left:-3px; top:calc(50% - 21px); }
+  .tuner-ruler-y::after { width:42px; height:7px; left:calc(50% - 21px); top:-3px; }
 
   .czteam-badge {
     position: absolute; top: -4px; right: -4px;
@@ -8293,6 +8317,10 @@
     <div class="chat-tune-row"><label>Border</label><input data-chat-tune="border" type="range" min="0" max="0.45" step="0.01"><input data-chat-tune-num="border" type="number" step="0.01"></div>
     <div class="chat-tune-row"><label>Color</label><input data-chat-tune-color="iconColor" type="color"><input data-chat-tune-text="iconColor" type="text" aria-label="Icon color"></div>
     <div class="chat-tune-row"><label>Opacity</label><input data-chat-tune="iconOpacity" type="range" min="0.25" max="1" step="0.01"><input data-chat-tune-num="iconOpacity" type="number" step="0.01"></div>
+    <div class="chat-tune-rulers">
+      <button id="tunerRulerXBtn" type="button">Vertical line</button>
+      <button id="tunerRulerYBtn" type="button">Horizontal line</button>
+    </div>
     <div class="chat-tune-actions">
       <button id="chatTuneSave" type="button">Save</button>
       <button id="chatTuneReset" type="button">Reset</button>
@@ -8302,6 +8330,8 @@
   </div>
   <div class="tuner-guide tuner-guide-x" id="tunerGuideX" aria-hidden="true"></div>
   <div class="tuner-guide tuner-guide-y" id="tunerGuideY" aria-hidden="true"></div>
+  <div class="tuner-ruler tuner-ruler-x" id="tunerRulerX" aria-hidden="true"></div>
+  <div class="tuner-ruler tuner-ruler-y" id="tunerRulerY" aria-hidden="true"></div>
 
   <div id="czChatWin" class="czchat-win" role="dialog" aria-label="Chat" aria-modal="false">
     <div class="czchat-hd">
@@ -10820,6 +10850,7 @@
     var CHAT_TUNER_ENABLED = true;
     var KEY = 'cz_chat_trigger_tune_v1';
     var PANEL_KEY = 'cz_tuner_panel_position_v1';
+    var RULER_KEY = 'cz_tuner_rulers_v1';
     var defaults = { right:45, bottom:34, size:42, scale:1, icon:17, radius:50, bg:.05, border:.11, iconOpacity:.72 };
     var panel = document.getElementById('chatTunePanel');
     if (!panel) return;
@@ -10828,6 +10859,7 @@
     var fields = ['right','bottom','size','scale','icon','radius','bg','border','iconOpacity'];
     var state = {};
     var panelPos = { right: 24, bottom: 88 };
+    var rulers = { xOn: false, yOn: false, x: Math.round(window.innerWidth / 2), y: Math.round(window.innerHeight / 2) };
 
     function hexToRgb(hex){
       var m = String(hex || '').trim().match(/^#?([0-9a-f]{6})$/i);
@@ -10896,6 +10928,32 @@
       document.body.style.setProperty('--tuner-panel-right', Math.max(8, Math.round(panelPos.right)) + 'px');
       document.body.style.setProperty('--tuner-panel-bottom', Math.max(8, Math.round(panelPos.bottom)) + 'px');
     }
+    function readRulers(){
+      try {
+        var saved = JSON.parse(localStorage.getItem(RULER_KEY) || '{}');
+        rulers.xOn = !!saved.xOn;
+        rulers.yOn = !!saved.yOn;
+        rulers.x = saved.x != null ? +saved.x : rulers.x;
+        rulers.y = saved.y != null ? +saved.y : rulers.y;
+      } catch(e) {}
+    }
+    function saveRulers(){
+      localStorage.setItem(RULER_KEY, JSON.stringify(rulers));
+    }
+    function applyRulers(){
+      var rulerX = document.getElementById('tunerRulerX');
+      var rulerY = document.getElementById('tunerRulerY');
+      var btnX = document.getElementById('tunerRulerXBtn');
+      var btnY = document.getElementById('tunerRulerYBtn');
+      rulers.x = Math.min(Math.max(0, Math.round(rulers.x)), window.innerWidth);
+      rulers.y = Math.min(Math.max(0, Math.round(rulers.y)), window.innerHeight);
+      if (rulerX) rulerX.style.left = rulers.x + 'px';
+      if (rulerY) rulerY.style.top = rulers.y + 'px';
+      document.body.classList.toggle('tuner-ruler-x-on', rulers.xOn);
+      document.body.classList.toggle('tuner-ruler-y-on', rulers.yOn);
+      if (btnX) btnX.classList.toggle('is-on', rulers.xOn);
+      if (btnY) btnY.classList.toggle('is-on', rulers.yOn);
+    }
     function saveState(){
       localStorage.setItem(KEY, JSON.stringify(state));
     }
@@ -10944,8 +11002,10 @@
     });
     readSaved();
     readPanelPosition();
+    readRulers();
     apply();
     applyPanelPosition();
+    applyRulers();
     (function enablePanelDrag(){
       var handle = panel.querySelector('.chat-tune-head');
       if (!handle) return;
@@ -10989,7 +11049,54 @@
       window.addEventListener('resize', function(){
         clampPanel();
         applyPanelPosition();
+        applyRulers();
       });
+    })();
+    (function enableRulers(){
+      var rulerX = document.getElementById('tunerRulerX');
+      var rulerY = document.getElementById('tunerRulerY');
+      var btnX = document.getElementById('tunerRulerXBtn');
+      var btnY = document.getElementById('tunerRulerYBtn');
+      function toggle(axis){
+        if (axis === 'x') rulers.xOn = !rulers.xOn;
+        else rulers.yOn = !rulers.yOn;
+        applyRulers();
+        saveRulers();
+      }
+      function dragRuler(node, axis){
+        if (!node) return;
+        var dragging = false;
+        node.addEventListener('pointerdown', function(e){
+          if (!document.body.classList.contains('chat-tune-active')) return;
+          dragging = true;
+          node.setPointerCapture && node.setPointerCapture(e.pointerId);
+          e.preventDefault();
+          e.stopPropagation();
+        }, true);
+        node.addEventListener('pointermove', function(e){
+          if (!dragging) return;
+          if (axis === 'x') rulers.x = e.clientX;
+          else rulers.y = e.clientY;
+          applyRulers();
+          e.preventDefault();
+        }, true);
+        node.addEventListener('pointerup', function(e){
+          if (!dragging) return;
+          dragging = false;
+          applyRulers();
+          saveRulers();
+          e.preventDefault();
+          e.stopPropagation();
+        }, true);
+        node.addEventListener('pointercancel', function(){
+          dragging = false;
+          applyRulers();
+        }, true);
+      }
+      if (btnX) btnX.addEventListener('click', function(){ toggle('x'); });
+      if (btnY) btnY.addEventListener('click', function(){ toggle('y'); });
+      dragRuler(rulerX, 'x');
+      dragRuler(rulerY, 'y');
     })();
     (function enableDrag(){
       var trigger = document.getElementById('czTeamTrigger');
@@ -11030,6 +11137,8 @@
         addRectTargets(document.getElementById('czTeamPanel'), xTargets, yTargets);
         addRectTargets(document.getElementById('czChatWin'), xTargets, yTargets);
         addRectTargets(panel, xTargets, yTargets);
+        if (rulers.xOn) xTargets.push(rulers.x);
+        if (rulers.yOn) yTargets.push(rulers.y);
         return { x: xTargets, y: yTargets };
       }
 
