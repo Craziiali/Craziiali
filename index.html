@@ -4940,12 +4940,16 @@
   .shoot-del svg    { width: 10px; height: 10px; display: block; }
 
   /* Description — inline in the bar, between name and date columns */
+  /* Multi-line, auto-growing description (textarea). Wraps and grows downward
+     as you type instead of running off to the right — JS sizeDesc() sets the
+     height to fit the content. */
   .shoot-desc {
     font-family: var(--font-en-body);
-    font-size: 10.5px; font-weight: 300; color: var(--ink-dim);
+    font-size: 10.5px; font-weight: 300; line-height: 1.5; color: var(--ink-dim);
     background: transparent; border: none; outline: none;
-    padding: 0; width: 20px; max-width: 100%;  /* JS sets exact content width */
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    padding: 0; margin: 0; width: 100%; box-sizing: border-box;
+    display: block; resize: none; overflow: hidden;
+    white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
     cursor: text;
     opacity: 1;
   }
@@ -5634,20 +5638,23 @@
     .shoot-cal  { order: 4; flex: 0 0 auto; min-height: 34px; min-width: 30px; opacity: .6; }
     .shoot-del  { order: 5; flex: 0 0 auto; min-height: 34px; min-width: 30px; }
 
-    /* Line 2 — description, full width, hung under the name */
+    /* Line 2 — description: own line, wraps and grows downward as you type */
     .shoot-desc {
       display: block !important;
       order: 6;
-      flex: 1 1 100%;
-      width: 100% !important;
+      flex: 1 1 calc(100% - 16px);   /* basis < 100% incl. indent → forces own line, no overflow */
+      width: auto !important;
       max-width: none !important;
       margin-left: 16px;
+      box-sizing: border-box;
       padding: 0;
-      opacity: .55;
+      opacity: .6;
       font-size: 11px;
-      white-space: nowrap;
+      line-height: 1.5;
+      white-space: pre-wrap;
       overflow: hidden;
-      text-overflow: ellipsis;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
 
     /* Line 3 — date │ time │ location, divided by hairlines */
@@ -7910,7 +7917,12 @@
       requestAnimationFrame(function(){
         requestAnimationFrame(function(){ nextEl.classList.remove('v-hidden'); });
       });
-      if(name === 'planner') updateStats();
+      if(name === 'planner') {
+        updateStats();
+        /* Re-fit every description textarea now the planner is visible (heights
+           can't be measured while the view is display:none). */
+        if (window._resizePlannerDescs) requestAnimationFrame(window._resizePlannerDescs);
+      }
       if(name === 'notes' && window._renderNotes) window._renderNotes();
 
       _viewTimer = setTimeout(function(){
@@ -8221,9 +8233,15 @@
     })();
 
     function sizeDesc(inp){
-      _descMeasure.textContent = inp.value || '';
-      inp.style.width = Math.max(20, _descMeasure.offsetWidth + 2) + 'px';
+      /* Auto-grow the description textarea's HEIGHT to fit its wrapped text. */
+      if (!inp) return;
+      inp.style.height = 'auto';
+      inp.style.height = Math.max(16, inp.scrollHeight) + 'px';
     }
+    /* Re-fit all description textareas (called when the planner becomes visible). */
+    window._resizePlannerDescs = function(){
+      document.querySelectorAll('#plannerList .shoot-desc').forEach(sizeDesc);
+    };
 
     function mkProject(d){
       /* Preserve d.id when hydrating from saved/remote data;
@@ -8835,9 +8853,9 @@
                      ' value="'+esc(p.client)+'" data-field="client">'+
             '</div>'+
 
-            '<input class="shoot-desc" type="text"'+
+            '<textarea class="shoot-desc" rows="1"'+
                    ' placeholder="Description…"'+
-                   ' value="'+esc(p.notes)+'" data-field="notes">'+
+                   ' data-field="notes">'+esc(p.notes)+'</textarea>'+
 
             '<input class="shoot-date" type="text" placeholder="YYYY.MM.DD"'+
                    ' value="'+esc(p.date)+'" data-field="date"'+
