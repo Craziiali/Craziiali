@@ -3701,7 +3701,7 @@
     body[data-view="home"]    .auth-user-bar,
     body[data-view="planner"] .auth-user-bar { display:flex; }
     body[data-view="planner"] .auth-user-bar {
-      top: 0;
+      top: -4px;
       height: 70px;
       align-items: center;
     }
@@ -3756,6 +3756,10 @@
       background:rgba(243,243,239,.035);
       border-color:rgba(243,243,239,.12);
     }
+    .auth-user-bar.profile-menu-open .auth-user-profile {
+      border-bottom-color:rgba(255,255,255,.08);
+      border-bottom-right-radius:10px;
+    }
     .auth-avatar {
       width:34px;height:34px;border-radius:50%;flex-shrink:0;
       display:flex;align-items:center;justify-content:center;
@@ -3797,8 +3801,8 @@
     .auth-user-bar > .auth-backup-btn,
     .auth-user-bar > .auth-bar-sep { display:none !important; }
     .auth-profile-menu {
-      position:absolute; top:calc(100% - 10px); right:0; min-width:178px;
-      padding:6px; border-radius:12px;
+      position:absolute; top:calc(50% + 18px); right:0; min-width:178px;
+      padding:6px; border-radius:12px 0 12px 12px;
       background:linear-gradient(135deg, rgba(5,5,6,.72), rgba(18,18,18,.46));
       border:1px solid rgba(255,255,255,.16);
       box-shadow:0 18px 52px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.12);
@@ -3810,14 +3814,6 @@
     }
     .auth-user-bar.profile-menu-open .auth-profile-menu {
       opacity:1; transform:translateY(0) scale(1); pointer-events:auto;
-    }
-    .auth-profile-menu::before {
-      content:""; position:absolute; top:-5px; right:24px; width:9px; height:9px;
-      transform:rotate(45deg);
-      background:linear-gradient(135deg, rgba(5,5,6,.72), rgba(18,18,18,.46));
-      border-left:1px solid rgba(255,255,255,.18); border-top:1px solid rgba(255,255,255,.18);
-      backdrop-filter:blur(20px) brightness(.82) saturate(.72);
-      -webkit-backdrop-filter:blur(20px) brightness(.82) saturate(.72);
     }
     .auth-menu-item {
       width:100%; display:flex; align-items:center; gap:9px;
@@ -6026,7 +6022,7 @@
      like desktop. Actual touch phones override this just below. */
   @media (max-width: 600px) {
     body[data-view="planner"] .auth-user-bar {
-      top: 0;
+      top: -4px;
       right: 48px;
       height: 70px;
       align-items: center;
@@ -6084,7 +6080,7 @@
      the planner account cluster on the desktop bar center in that case. */
   @media (max-width: 600px) and (min-device-width: 700px) {
     body[data-view="planner"] .auth-user-bar {
-      top: 0 !important;
+      top: -4px !important;
       right: 48px !important;
       height: 70px !important;
       align-items: center !important;
