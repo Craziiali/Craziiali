@@ -4744,6 +4744,27 @@
   body.role-public  .crumb-brand,
   body.role-preview .crumb-brand { cursor: default; }
 
+  /* ── Custom hover tooltip (desktop) — our own bubble, not the browser's ─ */
+  .cz-tip {
+    position: fixed; z-index: 200002; pointer-events: none;
+    transform: translate(-50%, calc(-100% - 9px));
+    background: rgba(13,13,17,.97); color: var(--ink);
+    border: 1px solid rgba(243,243,239,.13); border-radius: 7px;
+    padding: 5px 10px; font-family: var(--font-en-mono); font-size: 9px;
+    letter-spacing: .06em; white-space: nowrap; max-width: 300px;
+    overflow: hidden; text-overflow: ellipsis;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    opacity: 0; transition: opacity .14s ease, transform .14s cubic-bezier(.16,1,.3,1);
+  }
+  .cz-tip::after {
+    content: ""; position: absolute; top: 100%; left: 50%;
+    transform: translateX(-50%) rotate(45deg); margin-top: -4px;
+    width: 7px; height: 7px; background: rgba(13,13,17,.97);
+    border-right: 1px solid rgba(243,243,239,.13); border-bottom: 1px solid rgba(243,243,239,.13);
+  }
+  .cz-tip.show { opacity: 1; transform: translate(-50%, calc(-100% - 11px)); }
+
   /* Hero */
   .planner-hero { padding: 38px 48px 0; }
   .planner-title {
@@ -4827,8 +4848,8 @@
 
   .shoot-main {
     display: grid;
-    /* dot | idx | name+client | notes | date | time | location | priority | cal | del */
-    grid-template-columns: 10px 26px minmax(120px,220px) 1fr 90px 64px 110px 72px 24px 28px;
+    /* dot | idx | name+client | notes | date | time | location | links | cal | del */
+    grid-template-columns: 10px 26px minmax(120px,220px) 1fr 90px 64px 110px 78px 24px 28px;
     gap: 16px; align-items: center;
     padding: 16px 0;
   }
@@ -4935,18 +4956,22 @@
   .loc-chip-edit:hover { opacity: 1; }
   .loc-chip-edit svg { width: 7px; height: 7px; }
 
-  /* Priority pill — colored per level */
-  .shoot-prio {
-    font-family: var(--font-en-mono);
-    font-size: 7.5px; letter-spacing: .14em; text-transform: uppercase;
-    border-radius: 100px; border: 1px solid currentColor;
-    padding: 3px 9px; background: transparent; cursor: pointer;
-    transition: opacity .2s; justify-self: start; white-space: nowrap;
+  /* On-row link icons (Mood Board / Note / Invoice) — replace the old priority pill */
+  .shoot-rowlinks { display: inline-flex; align-items: center; gap: 3px; justify-self: start; }
+  .shoot-rl {
+    width: 24px; height: 24px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid transparent; border-radius: 7px;
+    cursor: pointer; transition: color .18s, background .18s, border-color .18s, transform .12s;
   }
-  .shoot-prio[data-p="high"]   { color: #d96b6b; }   /* muted red    */
-  .shoot-prio[data-p="medium"] { color: #c49a40; }   /* muted amber  */
-  .shoot-prio[data-p="low"]    { color: #52a870; }   /* muted green  */
-  .shoot-prio:hover { opacity: .75; }
+  .shoot-rl svg { width: 13px; height: 13px; }
+  /* Empty: faint, lifts slightly on hover */
+  .shoot-rl.empty { color: var(--ink-soft); opacity: .5; }
+  .shoot-rl.empty:hover { opacity: 1; color: var(--ink-dim); background: rgba(243,243,239,.06); }
+  /* Linked: accent blue, gently tinted */
+  .shoot-rl.linked { color: var(--accent-soft); opacity: 1; background: rgba(var(--accent-rgb),.1); border-color: rgba(var(--accent-rgb),.32); }
+  .shoot-rl.linked:hover { background: rgba(var(--accent-rgb),.18); border-color: rgba(var(--accent-rgb),.6); }
+  .shoot-rl:active { transform: translateY(1px); }
 
   /* Delete — recessive but always visible; turns red on hover */
   .shoot-del {
@@ -5740,7 +5765,9 @@
     .shoot-info { order: 2; flex: 1 1 auto; min-width: 0; gap: 3px; }
     .shoot-name   { font-size: 15px; }
     .shoot-client { font-size: 9.5px; }
-    .shoot-prio { order: 3; flex: 0 0 auto; }
+    /* On mobile the labeled chips in the drawer serve the links; hide the tiny
+       on-row icons so line 1 stays clean (name + calendar + delete). */
+    .shoot-rowlinks { display: none; }
     .shoot-cal  { order: 4; flex: 0 0 auto; min-height: 34px; min-width: 30px; opacity: .6; }
     .shoot-del  { order: 5; flex: 0 0 auto; min-height: 34px; min-width: 30px; }
 
@@ -8428,17 +8455,42 @@
              '</button>';
     }
 
+    /* Compact link icons that sit on the row itself (replacing the old priority
+       pill). Faint when empty, accent when linked; hover shows a custom tooltip. */
+    function rowLinkIconsHTML(p){
+      var links = p.links || {};
+      return '<div class="shoot-rowlinks">'+
+        ['board','note','invoice'].map(function(t){
+          var cfg = LINK_TYPES[t], id = links[t], nm = links[t+'Name'];
+          var tip = id ? (cfg.label + ': ' + (nm || '')) : ('Link a ' + cfg.label);
+          return '<button class="shoot-rl '+(id?'linked':'empty')+'" type="button"'+
+                 ' data-rowlink="'+t+'" data-cztip="'+esc(tip)+'" aria-label="'+esc(tip)+'">'+ cfg.ico +'</button>';
+        }).join('')+
+      '</div>';
+    }
+
     function refreshRowLinks(pid){
       var proj = projects.find(function(x){ return x.id === pid; });
       var row  = document.querySelector('#plannerList .shoot-row[data-id="'+pid+'"]');
       if (!proj || !row) return;
-      var box = row.querySelector('.shoot-links');
-      if (!box) return;
-      box.innerHTML = linkChipHTML('board', proj) + linkChipHTML('note', proj) + linkChipHTML('invoice', proj);
+      var box = row.querySelector('.shoot-links');                 /* drawer chips */
+      if (box) box.innerHTML = linkChipHTML('board', proj) + linkChipHTML('note', proj) + linkChipHTML('invoice', proj);
+      var rl = row.querySelector('.shoot-rowlinks');               /* on-row icons */
+      if (rl) rl.outerHTML = rowLinkIconsHTML(proj);
       bindRowLinks(row, pid);
     }
 
     function bindRowLinks(row, pid){
+      /* On-row icons: linked → jump to it, empty → open the picker */
+      row.querySelectorAll('[data-rowlink]').forEach(function(b){
+        b.addEventListener('click', function(e){
+          e.stopPropagation();
+          var t = b.dataset.rowlink;
+          var proj = projects.find(function(x){ return x.id === pid; });
+          if (proj && proj.links && proj.links[t]) LINK_TYPES[t].open(proj.links[t]);
+          else openLinkPicker(t, pid);
+        });
+      });
       row.querySelectorAll('[data-link-add]').forEach(function(b){
         b.addEventListener('click', function(e){ e.stopPropagation(); openLinkPicker(b.dataset.linkAdd, pid); });
       });
@@ -9071,7 +9123,7 @@
         row.innerHTML =
           /* ── Main 8-column row ── */
           '<div class="shoot-main">'+
-            '<span class="shoot-dot" data-s="'+p.status+'" title="Click to cycle status"></span>'+
+            '<span class="shoot-dot" data-s="'+p.status+'" data-cztip="Status &amp; links"></span>'+
             '<span class="shoot-idx">'+String(i+1).padStart(2,'0')+'</span>'+
 
             '<div class="shoot-info">'+
@@ -9101,14 +9153,14 @@
                      ' placeholder="Location"'+
                      ' value="'+esc(p.location)+'" autocomplete="off" spellcheck="false">'+
               '<a class="loc-chip" href="#" target="_blank" rel="noopener"'+
-                 ' title="Open in Maps" style="display:none">'+
+                 ' data-cztip="Open in Maps" style="display:none">'+
                 '<svg class="loc-pin" viewBox="0 0 9 9" fill="none"'+
                      ' stroke="currentColor" stroke-width="1.2" stroke-linecap="round">'+
                   '<path d="M4.5 8.5C4.5 8.5 1.5 5.5 1.5 3.5a3 3 0 0 1 6 0c0 2-3 5-3 5Z"/>'+
                   '<circle cx="4.5" cy="3.5" r=".8" fill="currentColor" stroke="none"/>'+
                 '</svg>'+
                 'Maps'+
-                '<button class="loc-chip-edit" type="button" title="Edit link">'+
+                '<button class="loc-chip-edit" type="button" data-cztip="Edit link">'+
                   '<svg viewBox="0 0 8 8" fill="none" stroke="currentColor"'+
                        ' stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">'+
                     '<path d="M5.5 1.5L6.5 2.5 2 7H1V6Z"/>'+
@@ -9117,14 +9169,12 @@
               '</a>'+
             '</div>'+
 
-            '<button class="shoot-prio" data-p="'+p.priority+'" title="Click to cycle priority">'+
-              PLABELS[p.priority]+
-            '</button>'+
+            rowLinkIconsHTML(p)+
 
-            '<button class="shoot-cal" type="button" title="Add to Google Calendar">'+
+            '<button class="shoot-cal" type="button" data-cztip="Add to Google Calendar">'+
               '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.8" width="11" height="9.7" rx="1.5"/><path d="M1.5 5.6h11M4.3 1.3v2.4M9.7 1.3v2.4M7 7.4v3M5.5 8.9h3"/></svg>'+
             '</button>'+
-            '<button class="shoot-del" title="Remove">'+
+            '<button class="shoot-del" data-cztip="Remove shoot">'+
               '<svg viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.2">'+
                 '<path d="M1.5 1.5l6 6M7.5 1.5l-6 6"/>'+
               '</svg>'+
@@ -9202,18 +9252,6 @@
           row.classList.toggle('open', proj.open);
         });
 
-        /* ── Bind: priority pill ── */
-        row.querySelector('.shoot-prio').addEventListener('click', function(e){
-          e.stopPropagation();
-          var proj = projects.find(function(x){ return x.id===p.id; });
-          if(!proj) return;
-          proj.priority = PRIOS[(PRIOS.indexOf(proj.priority)+1)%PRIOS.length];
-          /* Update only this button in-place — no full re-render so any
-             in-progress field edits in this row are never lost */
-          this.dataset.p   = proj.priority;
-          this.textContent = PLABELS[proj.priority];
-          savePlanner();
-        });
 
         /* ── Bind: delete ── */
         row.querySelector('.shoot-del').addEventListener('click', function(e){
@@ -10134,6 +10172,47 @@
 
     /* Suppress the browser's native right-click context menu everywhere */
     document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+    /* ── Custom hover tooltip (desktop only) ──────────────────────────────
+       Shows our own styled bubble for any element with a data-cztip attribute,
+       replacing the browser's plain native title bubble. Pointer-fine only, so
+       it never interferes with touch. */
+    (function(){
+      if (!window.matchMedia || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+      var tip = document.createElement('div');
+      tip.className = 'cz-tip';
+      tip.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(tip);
+      var current = null, hideT = null;
+      function place(el){
+        var r = el.getBoundingClientRect();
+        var x = Math.round(r.left + r.width / 2);
+        var y = Math.round(r.top);
+        /* keep the bubble within the viewport horizontally */
+        x = Math.max(48, Math.min(x, window.innerWidth - 48));
+        tip.style.left = x + 'px';
+        tip.style.top  = y + 'px';
+      }
+      function show(el){
+        var txt = el.getAttribute('data-cztip');
+        if (!txt) return;
+        current = el;
+        tip.textContent = txt;
+        place(el);
+        tip.classList.add('show');
+      }
+      function hide(){ current = null; tip.classList.remove('show'); }
+      document.addEventListener('mouseover', function(e){
+        var el = e.target.closest && e.target.closest('[data-cztip]');
+        if (el) { clearTimeout(hideT); show(el); }
+      });
+      document.addEventListener('mouseout', function(e){
+        var el = e.target.closest && e.target.closest('[data-cztip]');
+        if (el && el === current) { hideT = setTimeout(hide, 50); }
+      });
+      /* If the element moves/leaves via click, hide immediately */
+      document.addEventListener('mousedown', hide, true);
+    })();
 
     /* ── "→ Planner" / "Planner" buttons: event delegation so timing never matters ── */
     document.addEventListener('click', function(e){
