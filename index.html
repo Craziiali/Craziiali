@@ -5348,8 +5348,8 @@
 
   /* ── Planner entrance ────────────────────────────────────────── */
   .planner-entering .planner-bar      { animation: focusIn .60s cubic-bezier(.16,1,.3,1) both; animation-delay:  80ms; }
-  .planner-entering .auth-user-profile { animation: focusIn .62s cubic-bezier(.16,1,.3,1) both; animation-delay: 130ms; }
-  .planner-entering .czteam-trigger    { animation: focusIn .62s cubic-bezier(.16,1,.3,1) both; animation-delay: 210ms; }
+  body.planner-ui-entering #authUserProfile { animation: focusIn .72s cubic-bezier(.16,1,.3,1) both; animation-delay: 130ms; }
+  body.planner-ui-entering #czTeamTrigger   { animation: focusIn .72s cubic-bezier(.16,1,.3,1) both; animation-delay: 230ms; }
   .planner-entering .planner-hero     { animation: focusIn .65s cubic-bezier(.16,1,.3,1) both; animation-delay: 160ms; }
   .planner-entering .planner-controls { animation: focusIn .65s cubic-bezier(.16,1,.3,1) both; animation-delay: 230ms; }
   .planner-entering .shoot-row            { animation: focusIn .60s cubic-bezier(.16,1,.3,1) both; animation-delay: 558ms; }
@@ -6069,6 +6069,20 @@
 
   /* Phones keep the compact top-right profile cluster. */
   @media (max-width: 600px) and (pointer: coarse) {
+    body[data-view="home"] #authUserName,
+    body.planner-view-active #authUserName {
+      display: inline-block !important;
+      max-width: 88px !important;
+      font-size: 8px !important;
+      letter-spacing: .14em !important;
+    }
+    body[data-view="home"] #authUserProfile,
+    body.planner-view-active #authUserProfile {
+      min-width: 0 !important;
+      height: 28px !important;
+      padding: 0 12px !important;
+      gap: 0 !important;
+    }
     body[data-view="home"] .auth-user-bar {
       top: 10px;
       right: 20px;
@@ -8422,6 +8436,7 @@
     var _viewTimer = null;
     var _topLoadTimer = null;
     var _routeNav = false;
+    var _plannerUiEnterTimer = null;
 
     function routeBasePath(){
       var p = window.location.pathname || '/';
@@ -8465,6 +8480,7 @@
       } catch(e) {}
     }
     function triggerEntrance(name){
+      if (name === 'planner') triggerPlannerFixedEntrance();
       if (name === 'invoice') {
         var inv = document.querySelector('main.invoice');
         if (inv) {
@@ -8480,6 +8496,22 @@
       void el.offsetWidth;
       el.classList.add(cls);
     }
+    function triggerPlannerFixedEntrance(){
+      if (_plannerUiEnterTimer) clearTimeout(_plannerUiEnterTimer);
+      document.body.classList.remove('planner-ui-entering');
+      void document.body.offsetWidth;
+      document.body.classList.add('planner-ui-entering');
+      _plannerUiEnterTimer = setTimeout(function(){
+        document.body.classList.remove('planner-ui-entering');
+        _plannerUiEnterTimer = null;
+      }, 1250);
+    }
+    window._triggerPlannerFixedEntrance = triggerPlannerFixedEntrance;
+    document.addEventListener('cz-role', function(){
+      if (document.body.classList.contains('planner-view-active')) {
+        requestAnimationFrame(function(){ triggerPlannerFixedEntrance(); });
+      }
+    });
 
     function isMobileElasticViewport(){
       if (!window.matchMedia) return false;
@@ -8528,6 +8560,7 @@
     function showView(name){
       if(name === current){
         document.body.classList.toggle('planner-view-active', name === 'planner');
+        if(name === 'planner') triggerPlannerFixedEntrance();
         if(name === 'invoice') releaseDocumentScrollLocks();
         updateRoute(name, false);
         return;
@@ -8847,6 +8880,7 @@
       document.body.dataset.view = 'planner';
       document.body.classList.add('planner-view-active');
       current = 'planner';
+      triggerPlannerFixedEntrance();
       if (!viewPlanner.classList.contains('v-gone')) return; /* already real-visible */
       viewPlanner.classList.remove('v-gone');
       requestAnimationFrame(function(){
