@@ -8402,8 +8402,8 @@
         priority:    (d&&d.priority)    || 'medium',
         status:      (d&&d.status)      || 'upcoming',
         notes:       (d&&d.notes)       || '',
-        /* { board, boardName, note, noteName, invoice, invoiceName } — id + cached
-           display name for each linked item so chips render without a cross-module lookup */
+        /* { board, boardName, boardBy, note, noteName, noteBy, invoice,
+           invoiceName, invoiceBy } — id, cached display name, and link owner. */
         links:       (d&&d.links && typeof d.links==='object') ? d.links : {},
         open:        false
       };
@@ -8416,9 +8416,8 @@
     }
 
     /* ══ Planner ↔ Mood Board / Note / Invoice links ════════════════════
-       Each shoot stores links: { board, boardName, note, noteName, invoice,
-       invoiceName }. Chips live in the detail drawer (status panel). An empty
-       chip opens a picker; a linked chip jumps to the item; the × unlinks. */
+       Links are owned by the user who adds them. Admins can see all links;
+       non-admin users only see the links they personally created. */
     var LINK_TYPES = {
       board: {
         label: 'Mood Board',
@@ -8447,8 +8446,48 @@
       }
     };
 
+    function plannerCurrentUser(){
+      return window.fb && window.fb.currentUser ? (window.fb.currentUser() || null) : null;
+    }
+
+    function plannerCurrentUid(){
+      var u = plannerCurrentUser();
+      return (u && u.uid) || '';
+    }
+
+    function plannerCurrentName(){
+      var u = plannerCurrentUser();
+      return (u && (u.displayName || u.email)) || '';
+    }
+
+    function isPlannerAdmin(){
+      return window._appRole === 'admin' || document.body.classList.contains('role-admin');
+    }
+
+    function plannerLinkOwner(links, type){
+      return (links && (links[type + 'By'] || links[type + 'Owner'] || links[type + 'Uid'])) || '';
+    }
+
+    function canSeePlannerLink(p, type){
+      var links = (p && p.links) || {};
+      if (!links[type]) return true;
+      if (isPlannerAdmin()) return true;
+      var owner = plannerLinkOwner(links, type);
+      return !!owner && owner === plannerCurrentUid();
+    }
+
+    function clearPlannerLink(links, type){
+      delete links[type];
+      delete links[type + 'Name'];
+      delete links[type + 'By'];
+      delete links[type + 'ByName'];
+      delete links[type + 'Owner'];
+      delete links[type + 'Uid'];
+    }
+
     function linkChipHTML(type, p){
       var cfg = LINK_TYPES[type], links = p.links || {}, id = links[type], nm = links[type + 'Name'];
+      if (id && !canSeePlannerLink(p, type)) return '';
       if (id) {
         return '<span class="shoot-link-chip linked" data-link="'+type+'">'+
                  '<button class="slc-go" type="button" data-link-go="'+type+'" title="Open '+cfg.label+'">'+
@@ -8471,6 +8510,7 @@
       return '<div class="shoot-rowlinks">'+
         ['board','note','invoice'].map(function(t){
           var cfg = LINK_TYPES[t], id = links[t], nm = links[t+'Name'];
+          if (id && !canSeePlannerLink(p, t)) return '';
           var tip = id ? (cfg.label + ': ' + (nm || '')) : ('Link a ' + cfg.label);
           return '<button class="shoot-rl '+(id?'linked':'empty')+'" type="button"'+
                  ' data-rowlink="'+t+'" data-cztip="'+esc(tip)+'" aria-label="'+esc(tip)+'">'+ cfg.ico +'</button>';
@@ -8479,7 +8519,7 @@
     }
 
     function refreshRowLinks(pid){
-      var proj = projects.find(function(x){ return x.id === pid; });
+      var proj = projects.find(function(x){ return String(x.id) === String(pid); });
       var row  = document.querySelector('#plannerList .shoot-row[data-id="'+pid+'"]');
       if (!proj || !row) return;
       var box = row.querySelector('.shoot-links');                 /* drawer chips */
@@ -8489,14 +8529,21 @@
       bindRowLinks(row, pid);
     }
 
+    function refreshAllPlannerLinks(){
+      document.querySelectorAll('#plannerList .shoot-row[data-id]').forEach(function(row){
+        refreshRowLinks(row.dataset.id);
+      });
+    }
+
     function bindRowLinks(row, pid){
       /* On-row icons: linked → jump to it, empty → open the picker */
       row.querySelectorAll('[data-rowlink]').forEach(function(b){
         b.addEventListener('click', function(e){
           e.stopPropagation();
           var t = b.dataset.rowlink;
-          var proj = projects.find(function(x){ return x.id === pid; });
-          if (proj && proj.links && proj.links[t]) LINK_TYPES[t].open(proj.links[t]);
+          var proj = projects.find(function(x){ return String(x.id) === String(pid); });
+          if (proj && proj.links && proj.links[t] && canSeePlannerLink(proj, t)) LINK_TYPES[t].open(proj.links[t]);
+          else if (proj && proj.links && proj.links[t]) return;
           else openLinkPicker(t, pid);
         });
       });
@@ -8506,17 +8553,21 @@
       row.querySelectorAll('[data-link-go]').forEach(function(b){
         b.addEventListener('click', function(e){
           e.stopPropagation();
-          var proj = projects.find(function(x){ return x.id === pid; });
+          var proj = projects.find(function(x){ return String(x.id) === String(pid); });
           var t = b.dataset.linkGo;
-          if (proj && proj.links && proj.links[t]) LINK_TYPES[t].open(proj.links[t]);
+          if (proj && proj.links && proj.links[t] && canSeePlannerLink(proj, t)) LINK_TYPES[t].open(proj.links[t]);
         });
       });
       row.querySelectorAll('[data-link-x]').forEach(function(b){
         b.addEventListener('click', function(e){
           e.stopPropagation();
           var t = b.dataset.linkX;
-          var proj = projects.find(function(x){ return x.id === pid; });
-          if (proj && proj.links) { delete proj.links[t]; delete proj.links[t+'Name']; savePlanner(); refreshRowLinks(pid); }
+          var proj = projects.find(function(x){ return String(x.id) === String(pid); });
+          if (proj && proj.links && canSeePlannerLink(proj, t)) {
+            clearPlannerLink(proj.links, t);
+            savePlanner();
+            refreshRowLinks(pid);
+          }
         });
       });
     }
@@ -8546,11 +8597,13 @@
       modal.querySelector('.slm-close').addEventListener('click', close);
       modal.querySelectorAll('.slm-item').forEach(function(btn){
         btn.addEventListener('click', function(){
-          var proj = projects.find(function(x){ return x.id === pid; });
+          var proj = projects.find(function(x){ return String(x.id) === String(pid); });
           if (proj) {
             if (!proj.links) proj.links = {};
             proj.links[type] = btn.dataset.id;
             proj.links[type+'Name'] = btn.dataset.name;
+            proj.links[type+'By'] = plannerCurrentUid();
+            proj.links[type+'ByName'] = plannerCurrentName();
             savePlanner();
             refreshRowLinks(pid);
           }
@@ -8558,6 +8611,8 @@
         });
       });
     }
+
+    document.addEventListener('cz-role', refreshAllPlannerLinks);
 
     /* ── 12-hour time helpers ──────────────────────────────────── */
     function fmt12(h24){
@@ -8844,6 +8899,12 @@
             prioBtn.dataset.p   = p.priority;
             prioBtn.textContent = PLABELS[p.priority];
           }
+        }
+
+        /* Linked board / note / invoice chips can change without row structure
+           changing, so refresh this small area surgically. */
+        if (!old || JSON.stringify(old.links || {}) !== JSON.stringify(p.links || {})) {
+          refreshRowLinks(p.id);
         }
       });
 
