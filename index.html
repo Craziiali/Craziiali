@@ -5608,44 +5608,68 @@
     .planner-filters::-webkit-scrollbar { display: none; }
     .p-filter { flex-shrink: 0; }
 
-    /* ─ Shoot row: 6 tight columns ─────────────────────────── */
+    /* ─ Shoot row → clean stacked card (flex + order, no HTML change) ──
+       Desktop crams 7 fields into one grid row; on a phone that makes the
+       date/time collide with the project name. Here each shoot becomes three
+       tidy lines:
+         1) dot · name/client (grows) · priority · calendar · delete
+         2) description
+         3) date │ time │ location                                        */
     .shoot-main {
-      grid-template-columns: 10px 1fr 62px 50px 40px 28px 36px;
-      gap: 10px 10px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      column-gap: 9px;
+      row-gap: 9px;
+      padding: 16px 0;
     }
-    /* Hide index only — desc and loc restored on rows 2 & 3 */
     .shoot-idx { display: none; }
 
-    /* ─ Description: second row, spans col 2 → end ───────────── */
+    /* Line 1 */
+    .shoot-dot  { order: 1; flex: 0 0 auto; align-self: flex-start; margin-top: 7px; }
+    .shoot-info { order: 2; flex: 1 1 auto; min-width: 0; gap: 3px; }
+    .shoot-name   { font-size: 15px; }
+    .shoot-client { font-size: 9.5px; }
+    .shoot-prio { order: 3; flex: 0 0 auto; }
+    .shoot-cal  { order: 4; flex: 0 0 auto; min-height: 34px; min-width: 30px; opacity: .6; }
+    .shoot-del  { order: 5; flex: 0 0 auto; min-height: 34px; min-width: 30px; }
+
+    /* Line 2 — description, full width, hung under the name */
     .shoot-desc {
-      display: block !important;   /* unhide */
-      grid-column: 2 / -1;
-      grid-row: 2;
-      width: 100% !important;      /* override JS pixel width */
+      display: block !important;
+      order: 6;
+      flex: 1 1 100%;
+      width: 100% !important;
       max-width: none !important;
-      padding: 0 0 4px;
-      opacity: .6;
+      margin-left: 16px;
+      padding: 0;
+      opacity: .55;
       font-size: 11px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    /* ─ Location: third row, spans col 2 → end ──────────────── */
-    .loc-wrap {
-      display: flex !important;    /* unhide */
-      grid-column: 2 / -1;
-      grid-row: 3;
-      padding: 0 0 8px;
-      min-width: 0;
+    /* Line 3 — date │ time │ location, divided by hairlines */
+    .shoot-date {
+      order: 7; flex: 0 0 auto; width: 86px; margin-left: 16px;
+      font-size: 11px;
     }
+    .shoot-time {
+      order: 8; flex: 0 0 auto; width: 64px;
+      font-size: 11px;
+      border-left: 1px solid var(--rule); padding-left: 9px;
+    }
+    .loc-wrap {
+      display: flex !important;
+      order: 9; flex: 1 1 auto; min-width: 40px;
+      padding-left: 9px;
+      border-left: 1px solid var(--rule);
+    }
+    .shoot-loc { font-size: 11px; }
 
     /* Expand panel: taller on mobile to fit 2 rows of status btns */
     .shoot-row.open .shoot-expand { max-height: 150px; }
-
-    /* Enlarge tap targets for action buttons */
-    .shoot-del { min-height: 36px; min-width: 36px; }
-    .shoot-cal { min-height: 36px; min-width: 28px; }
 
     /* ─ Expand panel indent ─────────────────────────────────── */
     .shoot-expand-inner { padding-left: 20px; }
