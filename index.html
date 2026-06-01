@@ -3701,8 +3701,9 @@
     body[data-view="home"]    .auth-user-bar,
     body[data-view="planner"] .auth-user-bar { display:flex; }
     body[data-view="planner"] .auth-user-bar {
-      top: -4px;
-      height: 70px;
+      top: 35px;
+      height: auto;
+      transform: translateY(-50%);
       align-items: center;
     }
     body[data-view="planner"] .auth-signin-trigger,
@@ -6022,9 +6023,10 @@
      like desktop. Actual touch phones override this just below. */
   @media (max-width: 600px) {
     body[data-view="planner"] .auth-user-bar {
-      top: -4px;
+      top: 35px;
       right: 48px;
-      height: 70px;
+      height: auto;
+      transform: translateY(-50%);
       align-items: center;
       gap: 10px;
       max-width: min(360px, calc(100vw - 96px));
@@ -6049,11 +6051,11 @@
 
   /* Phones keep the compact top-right profile cluster. */
   @media (max-width: 600px) and (pointer: coarse) {
-    body[data-view="planner"] .auth-user-bar,
     body[data-view="home"] .auth-user-bar {
       top: 10px;
       right: 20px;
       height: auto;
+      transform: none;
       gap: 7px;
       max-width: calc(100vw - 40px);
     }
@@ -6080,9 +6082,10 @@
      the planner account cluster on the desktop bar center in that case. */
   @media (max-width: 600px) and (min-device-width: 700px) {
     body[data-view="planner"] .auth-user-bar {
-      top: -4px !important;
+      top: 35px !important;
       right: 48px !important;
-      height: 70px !important;
+      height: auto !important;
+      transform: translateY(-50%) !important;
       align-items: center !important;
       gap: 10px !important;
       max-width: min(360px, calc(100vw - 96px)) !important;
