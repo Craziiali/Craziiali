@@ -6225,9 +6225,9 @@
     border-color: rgba(243,243,239,var(--chat-tune-border, .11)) !important;
     color: rgba(var(--chat-tune-icon-color, 243,243,239),var(--chat-tune-icon-opacity, .72)) !important;
     touch-action: none;
-    cursor: grab;
+    cursor: grab !important;
   }
-  body.chat-tune-active .czteam-trigger:active { cursor: grabbing; }
+  body.chat-tune-active .czteam-trigger:active { cursor: grabbing !important; }
   body.chat-tune-active .czteam-trigger svg {
     width: var(--chat-tune-icon, 17px) !important;
     height: var(--chat-tune-icon, 17px) !important;
@@ -6243,6 +6243,14 @@
     color: var(--ink-dim); font-family: var(--font-en-mono);
     display: none; gap: 9px; flex-direction: column;
   }
+  .chat-tune-panel,
+  .chat-tune-panel * { cursor: auto !important; }
+  .chat-tune-panel button,
+  .chat-tune-panel label,
+  .chat-tune-panel input[type="range"],
+  .chat-tune-panel input[type="color"] { cursor: pointer !important; }
+  .chat-tune-panel input[type="number"],
+  .chat-tune-panel input[type="text"] { cursor: text !important; }
   body.chat-tune-active .chat-tune-panel { display: flex; }
   body.chat-tune-active:not([data-view="planner"]) .chat-tune-panel { display: none; }
   .chat-tune-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:2px; }
@@ -6280,6 +6288,13 @@
     font-size:8px; line-height:1.6; color:var(--ink-soft);
   }
   .chat-tune-values.show { display:block; }
+  .tuner-guide {
+    position: fixed; z-index: 99019; pointer-events: none; display: none;
+    background: rgba(243,243,239,.42);
+    box-shadow: 0 0 12px rgba(243,243,239,.2);
+  }
+  body.chat-tune-active.tuner-guiding-x .tuner-guide-x { display:block; top:0; bottom:0; width:1px; }
+  body.chat-tune-active.tuner-guiding-y .tuner-guide-y { display:block; left:0; right:0; height:1px; }
 
   .czteam-badge {
     position: absolute; top: -4px; right: -4px;
@@ -8243,10 +8258,10 @@
     <span class="czteam-badge" id="czTeamBadge" aria-hidden="true"></span>
   </button>
 
-  <div class="chat-tune-panel" id="chatTunePanel" aria-label="Chat tune panel">
+  <div class="chat-tune-panel" id="chatTunePanel" aria-label="Tuner panel">
     <div class="chat-tune-head">
-      <span class="chat-tune-title">Chat Tune</span>
-      <span class="chat-tune-mini">temporary</span>
+      <span class="chat-tune-title">Tuner</span>
+      <span class="chat-tune-mini">detached</span>
     </div>
     <div class="chat-tune-row"><label>Right</label><input data-chat-tune="right" type="range" min="0" max="120" step="1"><input data-chat-tune-num="right" type="number"></div>
     <div class="chat-tune-row"><label>Bottom</label><input data-chat-tune="bottom" type="range" min="0" max="160" step="1"><input data-chat-tune-num="bottom" type="number"></div>
@@ -8264,6 +8279,8 @@
     </div>
     <div class="chat-tune-values" id="chatTuneValues"></div>
   </div>
+  <div class="tuner-guide tuner-guide-x" id="tunerGuideX" aria-hidden="true"></div>
+  <div class="tuner-guide tuner-guide-y" id="tunerGuideY" aria-hidden="true"></div>
 
   <div id="czChatWin" class="czchat-win" role="dialog" aria-label="Chat" aria-modal="false">
     <div class="czchat-hd">
@@ -10883,12 +10900,83 @@
     apply();
     (function enableDrag(){
       var trigger = document.getElementById('czTeamTrigger');
+      var guideX = document.getElementById('tunerGuideX');
+      var guideY = document.getElementById('tunerGuideY');
+      var SNAP_DISTANCE = 9;
       if (!trigger) return;
       var dragging = false;
       var moved = false;
+
+      function addRectTargets(node, xTargets, yTargets){
+        if (!node) return;
+        var rect = node.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        xTargets.push(rect.left, rect.left + rect.width / 2, rect.right);
+        yTargets.push(rect.top, rect.top + rect.height / 2, rect.bottom);
+      }
+
+      function guideTargets(){
+        var xTargets = [
+          24,
+          45,
+          48,
+          window.innerWidth / 2,
+          window.innerWidth - 45,
+          window.innerWidth - 48,
+          window.innerWidth - 24
+        ];
+        var yTargets = [
+          34,
+          48,
+          window.innerHeight / 2,
+          window.innerHeight - 48,
+          window.innerHeight - 34
+        ];
+        addRectTargets(document.querySelector('.planner-topbar'), xTargets, yTargets);
+        addRectTargets(document.querySelector('.planner-shell'), xTargets, yTargets);
+        addRectTargets(document.getElementById('czTeamPanel'), xTargets, yTargets);
+        addRectTargets(document.getElementById('czChatWin'), xTargets, yTargets);
+        addRectTargets(panel, xTargets, yTargets);
+        return { x: xTargets, y: yTargets };
+      }
+
+      function closestSnap(value, targets){
+        var best = null;
+        targets.forEach(function(target){
+          var distance = Math.abs(value - target);
+          if (distance <= SNAP_DISTANCE && (!best || distance < best.distance)) {
+            best = { value: target, distance: distance };
+          }
+        });
+        return best ? best.value : value;
+      }
+
+      function showGuide(axis, value){
+        if (axis === 'x' && guideX) {
+          guideX.style.left = Math.round(value) + 'px';
+          document.body.classList.add('tuner-guiding-x');
+        } else if (axis === 'y' && guideY) {
+          guideY.style.top = Math.round(value) + 'px';
+          document.body.classList.add('tuner-guiding-y');
+        }
+      }
+
+      function hideGuides(){
+        document.body.classList.remove('tuner-guiding-x', 'tuner-guiding-y');
+      }
+
       function updateFromPointer(e){
-        state.right = Math.max(0, Math.round(window.innerWidth - e.clientX - (state.size / 2)));
-        state.bottom = Math.max(0, Math.round(window.innerHeight - e.clientY - (state.size / 2)));
+        var half = state.size / 2;
+        var targets = guideTargets();
+        var rawX = e.clientX;
+        var rawY = e.clientY;
+        var snapX = closestSnap(rawX, targets.x);
+        var snapY = closestSnap(rawY, targets.y);
+        hideGuides();
+        if (snapX !== rawX) showGuide('x', snapX);
+        if (snapY !== rawY) showGuide('y', snapY);
+        state.right = Math.max(0, Math.round(window.innerWidth - snapX - half));
+        state.bottom = Math.max(0, Math.round(window.innerHeight - snapY - half));
         apply();
       }
       trigger.addEventListener('pointerdown', function(e){
@@ -10908,9 +10996,14 @@
       trigger.addEventListener('pointerup', function(e){
         if (!dragging) return;
         dragging = false;
+        hideGuides();
         if (moved) localStorage.setItem(KEY, JSON.stringify(state));
         e.preventDefault();
         e.stopPropagation();
+      }, true);
+      trigger.addEventListener('pointercancel', function(){
+        dragging = false;
+        hideGuides();
       }, true);
       trigger.addEventListener('click', function(e){
         if (!document.body.classList.contains('chat-tune-active')) return;
