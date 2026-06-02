@@ -5294,6 +5294,10 @@
   .planner-new-btn:hover { color: var(--ink); border-color: var(--ink-soft); }
   .planner-new-btn svg   { width: 9px; height: 9px; opacity: .8; }
 
+  /* Ghost "seed row" add affordance — desktop keeps the button, so hide it here.
+     It is revealed (and the button hidden) inside the mobile media query. */
+  .shoot-ghost { display: none; }
+
   /* Shoot rows */
   .shoot-list { display: flex; flex-direction: column; }
   @property --shoot-del-front {
@@ -6547,37 +6551,52 @@
     }
     .p-stat-num { font-size: 13px; }
 
-    /* ─ Controls: filters scroll horizontally, button stays right ─ */
+    /* ─ Controls: filters get the whole row; the inline button is hidden on
+         mobile in favour of the ghost "seed row" at the top of the list ─ */
     .planner-controls {
-      flex-wrap: nowrap;        /* single row — button is floating, not inline */
+      flex-wrap: nowrap;
       align-items: center;
       padding: 14px 0;
     }
-    /* ── New Shoot on mobile: fixed pill floating above the list ── */
-    .planner-new-btn {
-      position: fixed;
-      bottom: 28px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 300;
-      white-space: nowrap;
-      padding: 10px 22px 10px 18px;
-      background: rgba(8,8,8,.86);
-      backdrop-filter: blur(18px) saturate(1.4);
-      -webkit-backdrop-filter: blur(18px) saturate(1.4);
-      border-color: rgba(243,243,239,.24);
-      color: var(--ink-dim);
-      box-shadow: 0 8px 40px rgba(0,0,0,.58),
-                  inset 0 1px 0 rgba(255,255,255,.06);
-      /* Hidden until planner is the active view */
-      opacity: 0; pointer-events: none;
-      transition: color .22s, border-color .22s, opacity .22s;
+    .planner-new-btn { display: none; }   /* replaced by .shoot-ghost on mobile */
+
+    /* ── Ghost seed row — the perpetual top-of-list "add" affordance ──
+       It sits exactly where the next shoot will appear. Tap it and it spawns a
+       fresh editable shoot right below, while the ghost stays pinned on top. */
+    .shoot-ghost {
+      display: flex; align-items: center; gap: 14px;
+      width: 100%; text-align: left;
+      padding: 18px 2px;
+      background: transparent; border: none;
+      border-bottom: 1px solid var(--rule);
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
     }
-    body[data-view="planner"] .planner-new-btn {
-      opacity: 1; pointer-events: auto;
+    .shoot-ghost-dot {
+      width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0;
+      position: relative;
+      border: 1px dashed rgba(243,243,239,.38);
+      transition: border-color .2s, background .2s;
     }
-    .planner-new-btn:hover { color: var(--ink); border-color: rgba(243,243,239,.42); }
-    .planner-new-btn svg { width: 10px; height: 10px; opacity: 1; }
+    .shoot-ghost-dot::before,
+    .shoot-ghost-dot::after {
+      content: ''; position: absolute; left: 50%; top: 50%;
+      background: rgba(243,243,239,.55);
+      transform: translate(-50%, -50%);
+      transition: background .2s;
+    }
+    .shoot-ghost-dot::before { width: 5px; height: 1px; }
+    .shoot-ghost-dot::after  { width: 1px; height: 5px; }
+    .shoot-ghost-label {
+      font-family: var(--font-en-body);
+      font-size: 13.5px; font-weight: 300;
+      color: rgba(243,243,239,.46);
+      transition: color .2s;
+    }
+    .shoot-ghost:active { opacity: .7; }
+    .shoot-ghost:active .shoot-ghost-dot {
+      border-color: rgba(var(--accent-rgb), .9);
+      background: rgba(var(--accent-rgb), .14);
+    }
 
     .planner-filters {
       flex: 1 0 100%;          /* full row — button is no longer a sibling here */
@@ -8151,6 +8170,12 @@
               New Shoot
             </button>
           </div>
+
+          <!-- Mobile add affordance: ghost row pinned at the top of the list -->
+          <button class="shoot-ghost" id="plannerAddGhost" type="button" aria-label="New shoot">
+            <span class="shoot-ghost-dot" aria-hidden="true"></span>
+            <span class="shoot-ghost-label">New shoot</span>
+          </button>
 
           <div class="shoot-list" id="plannerList"></div>
 
@@ -11031,19 +11056,24 @@
     });
 
     /* ── Add shoot ── */
-    document.getElementById('plannerAdd').addEventListener('click', function(){
+    function addNewShoot(){
       var p = mkProject();
       p._justAdded = true;
-      projects.push(p);
+      projects.unshift(p);          /* newest shoot at the TOP of the list */
       activeFilter = 'all';
       document.querySelectorAll('.p-filter').forEach(function(b){
         b.classList.toggle('active', b.dataset.filter==='all');
       });
       renderPlanner(); updateStats(); savePlanner();
-      var inputs = document.querySelectorAll('#plannerList .shoot-name');
-      var last   = inputs[inputs.length-1];
-      if(last) setTimeout(function(){ last.focus(); }, 30);
-    });
+      var first = document.querySelector('#plannerList .shoot-name');
+      if(first) setTimeout(function(){
+        first.focus();
+        try { first.scrollIntoView({ block:'center', behavior:'smooth' }); } catch(e){}
+      }, 30);
+    }
+    document.getElementById('plannerAdd').addEventListener('click', addNewShoot);
+    var _addGhost = document.getElementById('plannerAddGhost');
+    if(_addGhost) _addGhost.addEventListener('click', addNewShoot);
 
     /* ── Year in kicker ── */
     var yr = document.getElementById('plannerYear');
@@ -11063,7 +11093,7 @@
         status: 'waiting'
       });
       p._justAdded = true;
-      projects.push(p);
+      projects.unshift(p);          /* newest at the top */
       activeFilter = 'all';
       document.querySelectorAll('.p-filter').forEach(function(b){
         b.classList.toggle('active', b.dataset.filter === 'all');
