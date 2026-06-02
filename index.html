@@ -5220,6 +5220,37 @@
     z-index: 1;
   }
 
+  /* Stats strip */
+  .planner-stats {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 16px 48px;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .p-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 0 22px 0 0;
+    font-family: var(--font-en-mono);
+    font-size: 8.5px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .p-stat + .p-stat {
+    padding-left: 22px;
+    border-left: 1px solid var(--rule);
+  }
+  .p-stat-num {
+    font-size: 15px;
+    letter-spacing: 0;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
   /* Content shell */
   .planner-content { padding: 0 48px 80px; }
 
@@ -5448,12 +5479,14 @@
     cursor: pointer;
     color: var(--ink-dim);
     user-select: none; -webkit-user-select: none;
+    caret-color: transparent;     /* no blinking text caret — it's a scrub field */
     transition: color .18s;
   }
   .shoot-date:focus, .shoot-time:focus {
-    cursor: text;
+    cursor: default;
     color: var(--ink);
-    user-select: text; -webkit-user-select: text;
+    user-select: none; -webkit-user-select: none;
+    caret-color: transparent;
   }
   /* Brief flash when a scroll-adjusted value changes */
   /* Value scrub gives no colour flicker — the field just stays white while
@@ -5781,8 +5814,7 @@
   .slm-item:hover { background: rgba(243,243,239,.06); color: var(--ink); }
   .slm-item:hover svg { opacity: 1; transform: translateX(0); }
   .slm-empty { padding: 32px 18px; text-align: center; font-family: var(--font-en-mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); opacity: .5; }
-  /* Add-to-Calendar — icon-only in the main row. Uses the same true-blue accent
-     as the mood board tools so the planner does not skew purple. */
+  /* Add-to-Calendar — icon-only in the main row. Neutral, quiet, no blue badge. */
   .shoot-cal {
     background: transparent; border: none; cursor: pointer;
     color: var(--ink-soft); opacity: 1; padding: 4px;   /* grey until added to calendar */
@@ -5791,13 +5823,13 @@
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     transition: color .18s, transform .14s, filter .18s;
   }
-  .shoot-cal:hover                       { color: rgba(var(--accent-rgb),.85); transform: translateY(-1px); }  /* blue preview on hover */
+  .shoot-cal:hover                       { color: rgba(243,243,239,.78); transform: translateY(-1px); }
   .shoot-cal:active                      { transform: translateY(0); }
   .shoot-cal svg                         { width: 14px; height: 14px; display: block; position: relative; z-index: 1; }
-  /* Added to Google Calendar → lit blue (with glow + dot) */
+  /* Added to Google Calendar → subtle ivory signal */
   .shoot-cal.is-scheduled {
-    color: var(--accent); opacity: 1;
-    filter: drop-shadow(0 0 7px rgba(var(--accent-rgb),.42));
+    color: rgba(243,243,239,.86); opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(243,243,239,.18));
   }
   .shoot-cal.is-scheduled::after {
     content: '';
@@ -5807,19 +5839,19 @@
     width: 4px;
     height: 4px;
     border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 8px rgba(var(--accent-rgb),.7);
+    background: rgba(243,243,239,.88);
+    box-shadow: 0 0 8px rgba(243,243,239,.42);
   }
   @keyframes calSignalGlow {
-    0%   { color: rgba(var(--accent-rgb),.78); filter: drop-shadow(0 0 0 rgba(var(--accent-rgb),0)); }
-    34%  { color: var(--accent-ring); filter: drop-shadow(0 0 13px rgba(var(--accent-rgb),.68)); }
-    100% { color: rgba(var(--accent-rgb),.9); filter: drop-shadow(0 0 2px rgba(var(--accent-rgb),.16)); }
+    0%   { color: rgba(243,243,239,.62); filter: drop-shadow(0 0 0 rgba(243,243,239,0)); }
+    34%  { color: rgba(243,243,239,.96); filter: drop-shadow(0 0 12px rgba(243,243,239,.42)); }
+    100% { color: rgba(243,243,239,.86); filter: drop-shadow(0 0 2px rgba(243,243,239,.12)); }
   }
   @keyframes calSignalRing {
-    0%   { opacity: 0; transform: scale(.36); border-color: rgba(var(--accent-rgb),0); filter: blur(0); }
-    16%  { opacity: .95; border-color: rgba(var(--accent-rgb),.72); }
-    58%  { opacity: .42; transform: scale(1.9); border-color: rgba(var(--accent-rgb),.32); }
-    100% { opacity: 0; transform: scale(2.65); border-color: rgba(var(--accent-rgb),0); filter: blur(3px); }
+    0%   { opacity: 0; transform: scale(.36); border-color: rgba(243,243,239,0); filter: blur(0); }
+    16%  { opacity: .85; border-color: rgba(243,243,239,.48); }
+    58%  { opacity: .34; transform: scale(1.9); border-color: rgba(243,243,239,.22); }
+    100% { opacity: 0; transform: scale(2.65); border-color: rgba(243,243,239,0); filter: blur(3px); }
   }
   @keyframes calIconPop {
     0%   { transform: scale(1) rotate(0deg); }
@@ -5828,7 +5860,7 @@
     100% { transform: scale(1) rotate(0deg); }
   }
   .shoot-cal.cal-flash {
-    color: var(--accent-ring);
+    color: rgba(243,243,239,.95);
     animation: calSignalGlow 1.08s cubic-bezier(.16,1,.3,1) both;
   }
   .shoot-cal.cal-flash::before {
@@ -5836,11 +5868,11 @@
     position: absolute;
     inset: -6px;
     border-radius: 50%;
-    border: 1px solid rgba(var(--accent-rgb),.48);
+    border: 1px solid rgba(243,243,239,.28);
     box-shadow:
-      0 0 0 1px rgba(var(--accent-rgb),.1),
-      0 0 22px rgba(var(--accent-rgb),.3),
-      inset 0 0 12px rgba(var(--accent-rgb),.16);
+      0 0 0 1px rgba(243,243,239,.06),
+      0 0 22px rgba(243,243,239,.18),
+      inset 0 0 12px rgba(243,243,239,.10);
     pointer-events: none;
     animation: calSignalRing 1.08s cubic-bezier(.16,1,.3,1) both;
   }
@@ -5921,7 +5953,13 @@
   body.planner-ui-entering.auth-profile-ready #authUserProfile { animation: focusIn .66s cubic-bezier(.16,1,.3,1) both; animation-delay: 110ms; }
   body.planner-ui-entering #czTeamTrigger   { animation: focusIn .66s cubic-bezier(.16,1,.3,1) both; animation-delay: 430ms; }
   .planner-entering .planner-hero     { animation: focusIn .65s cubic-bezier(.16,1,.3,1) both; animation-delay: 160ms; }
-  .planner-entering .planner-controls { animation: focusIn .65s cubic-bezier(.16,1,.3,1) both; animation-delay: 250ms; }
+  .planner-entering .planner-stats    { animation: focusIn .65s cubic-bezier(.16,1,.3,1) both; animation-delay: 230ms; }
+  .planner-entering .p-stat           { animation: focusIn .58s cubic-bezier(.16,1,.3,1) both; }
+  .planner-entering .p-stat:nth-child(1) { animation-delay: 290ms; }
+  .planner-entering .p-stat:nth-child(2) { animation-delay: 322ms; }
+  .planner-entering .p-stat:nth-child(3) { animation-delay: 354ms; }
+  .planner-entering .p-stat:nth-child(4) { animation-delay: 386ms; }
+  .planner-entering .planner-controls { animation: focusIn .65s cubic-bezier(.16,1,.3,1) both; animation-delay: 430ms; }
   .planner-entering .shoot-row            { animation: focusIn .60s cubic-bezier(.16,1,.3,1) both; animation-delay: 558ms; }
   .planner-entering .shoot-row:nth-child(1) { animation-delay: 500ms; }
   .planner-entering .shoot-row:nth-child(2) { animation-delay: 538ms; }
@@ -6495,45 +6533,33 @@
     }
     .planner-new-btn { display: none; }   /* replaced by .shoot-ghost on mobile */
 
-    /* ── Ghost seed row — the perpetual top-of-list "add" affordance ──
-       It sits exactly where the next shoot will appear. Tap it and it spawns a
-       fresh editable shoot right below, while the ghost stays pinned on top. */
+    /* ── Add action row — pinned at the top of the list, where the next shoot
+       lands. Clean monochrome to match the mono labels / filter tabs; bright
+       enough to read clearly, no coloured circle. ── */
     .shoot-ghost {
-      display: flex; align-items: center; gap: 17px;   /* label lines up with shoot names below */
+      display: grid;
+      grid-template-columns: 12px 1fr;
+      align-items: center;
+      column-gap: 16px;
       width: 100%; text-align: left;
-      padding: 18px 0;                                 /* flush left → dot aligns with row dots */
+      padding: 17px 0 17px 0;
       background: transparent; border: none;
       border-bottom: 1px solid var(--rule);
       cursor: pointer; -webkit-tap-highlight-color: transparent;
+      color: rgba(243,243,239,.76);
+      transition: color .18s, opacity .18s;
     }
-    .shoot-ghost-dot {
-      width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;  /* same size as row status dots */
-      position: relative;
-      border: 1px solid rgba(var(--accent-rgb), .85);
-      background: rgba(var(--accent-rgb), .16);
-      box-shadow: 0 0 9px rgba(var(--accent-rgb), .35);
-      transition: border-color .2s, background .2s, box-shadow .2s;
+    .shoot-ghost-plus {
+      width: 11px; height: 11px; flex-shrink: 0;
+      opacity: .82;
+      justify-self: center;
     }
-    .shoot-ghost-dot::before,
-    .shoot-ghost-dot::after {
-      content: ''; position: absolute; left: 50%; top: 50%;
-      background: rgba(243,243,239,.92);              /* near-white + inside the blue circle */
-      transform: translate(-50%, -50%);
-      transition: background .2s;
-    }
-    .shoot-ghost-dot::before { width: 4.5px; height: 1px; }
-    .shoot-ghost-dot::after  { width: 1px; height: 4.5px; }
     .shoot-ghost-label {
-      font-family: var(--font-en-body);
-      font-size: 13.5px; font-weight: 400;
-      color: #4f79ff;                                 /* clean blue, not lavender */
-      transition: color .2s;
+      font-family: var(--font-en-mono);
+      font-size: 9.5px; letter-spacing: .18em; text-transform: uppercase;
     }
-    .shoot-ghost:active { opacity: .7; }
-    .shoot-ghost:active .shoot-ghost-dot {
-      background: rgba(var(--accent-rgb), .3);
-      box-shadow: 0 0 14px rgba(var(--accent-rgb), .5);
-    }
+    .shoot-ghost:hover { color: rgba(243,243,239,.94); }
+    .shoot-ghost:active { opacity: .55; }
 
     .planner-filters {
       flex: 1 0 100%;          /* full row — button is no longer a sibling here */
@@ -8089,10 +8115,13 @@
             </button>
           </div>
 
-          <!-- Mobile add affordance: ghost row pinned at the top of the list -->
+          <!-- Mobile add affordance: action row pinned at the top of the list -->
           <button class="shoot-ghost" id="plannerAddGhost" type="button" aria-label="New shoot">
-            <span class="shoot-ghost-dot" aria-hidden="true"></span>
-            <span class="shoot-ghost-label">New shoot</span>
+            <svg class="shoot-ghost-plus" viewBox="0 0 11 11" fill="none"
+                 stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true">
+              <path d="M5.5 1v9M1 5.5h9"/>
+            </svg>
+            <span class="shoot-ghost-label">New Shoot</span>
           </button>
 
           <div class="shoot-list" id="plannerList"></div>
@@ -9166,6 +9195,18 @@
       document.addEventListener('wheel', function(e){
         if (e.defaultPrevented || e.ctrlKey || e.metaKey || document.body.dataset.view === 'moodboardCanvas') return;
         var t = e.target;
+        var activeScrub = document.activeElement;
+        if (
+          activeScrub &&
+          activeScrub.matches &&
+          activeScrub.matches('.shoot-time, .shoot-date') &&
+          typeof activeScrub._lgScrub === 'function'
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          activeScrub._lgScrub(e.deltaY);
+          return;
+        }
         /* A date/time field only "captures" the wheel (to scrub its value) once
            it's been clicked/focused. Otherwise the wheel scrolls the page. */
         var df = t && t.closest && t.closest('.shoot-time, .shoot-date');
@@ -9920,14 +9961,9 @@
         flash(inp); savePlanner();
       }
 
-      /* Wheel scrub — only once the field is clicked/activated (focused).
-         Otherwise the wheel falls through to scroll the page (no accidental
-         changes). The touch-swipe handlers below still work on mobile. */
-      inp.addEventListener('wheel', function(e){
-        if (document.activeElement !== inp) return;
-        e.preventDefault(); e.stopPropagation();
-        applyTime(e.deltaY);
-      }, {passive:false});
+      /* Exposed so the global wheel bridge can scrub this field from anywhere
+         on the page while it's focused (page scroll is locked until blur). */
+      inp._lgScrub = applyTime;
 
       /* Touch-swipe (mobile) — swipe up = later, swipe down = earlier */
       (function(){
@@ -9977,6 +10013,10 @@
         inp.value = p.date;
         flash(inp); savePlanner();
       }
+
+      /* Exposed so the global wheel bridge can scrub this field from anywhere
+         on the page while it's focused (page scroll is locked until blur). */
+      inp._lgScrub = applyDate;
 
       /* Wheel scrub — only once the field is clicked/activated (focused). */
       inp.addEventListener('wheel', function(e){
