@@ -5017,6 +5017,32 @@
   /* Shoot rows */
   .shoot-list { display: flex; flex-direction: column; }
   .shoot-row  { border-bottom: 1px solid var(--rule); }
+  .shoot-row.del-charging {
+    background:
+      radial-gradient(circle at calc(100% - 28px) 50%, rgba(230,70,70,.18), rgba(230,70,70,.04) 30%, transparent 62%),
+      linear-gradient(90deg, transparent 0%, rgba(230,70,70,.05) 72%, rgba(230,70,70,.12) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(230,70,70,.14),
+      inset 0 -1px 0 rgba(230,70,70,.18),
+      0 0 30px rgba(230,70,70,.08);
+  }
+  .shoot-row.del-removing {
+    min-height: 0 !important;
+    opacity: 0;
+    overflow: hidden;
+    border-color: rgba(230,70,70,0);
+    background:
+      radial-gradient(circle at calc(100% - 28px) 50%, rgba(230,70,70,.28), rgba(230,70,70,.08) 28%, transparent 66%);
+    transform: translateY(-10px) scale(.985);
+    filter: blur(8px) saturate(.7);
+    pointer-events: none;
+    transition:
+      height .86s cubic-bezier(.22,1,.22,1),
+      opacity .52s ease,
+      transform .78s cubic-bezier(.16,1,.3,1),
+      filter .7s ease,
+      border-color .54s ease;
+  }
 
   .shoot-main {
     display: grid;
@@ -5157,11 +5183,76 @@
     background: transparent; border: none; cursor: pointer;
     color: var(--ink-dim); opacity: 1; padding: 4px;
     transition: color .2s, transform .14s;
+    position: relative; isolation: isolate; border-radius: 50%;
+    touch-action: none; -webkit-user-select: none; user-select: none;
     display: flex; align-items: center; justify-content: center;
   }
   .shoot-del:hover  { color: #e36b6b; transform: translateY(-1px); }
   .shoot-del:active { transform: translateY(0); }
-  .shoot-del svg    { width: 10px; height: 10px; display: block; }
+  .shoot-del svg    { width: 10px; height: 10px; display: block; position: relative; z-index: 1; }
+  @property --shoot-del-p {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
+  }
+  .shoot-del::before {
+    content: '';
+    position: absolute;
+    inset: -7px;
+    border-radius: 50%;
+    opacity: 0;
+    transform: scale(.68);
+    --shoot-del-p: 0;
+    background:
+      conic-gradient(from -90deg, rgba(230,70,70,.95) 0turn, rgba(230,70,70,.95) calc(var(--shoot-del-p) * 1turn), rgba(243,243,239,.1) 1turn),
+      radial-gradient(circle, rgba(230,70,70,.2), transparent 64%);
+    filter: drop-shadow(0 0 0 rgba(230,70,70,0));
+    pointer-events: none;
+  }
+  .shoot-del.del-holding {
+    color: #ff7a7a;
+    transform: translateY(-1px) scale(1.04);
+  }
+  .shoot-del.del-holding::before {
+    opacity: 1;
+    animation: shootDelCharge 2s linear forwards;
+  }
+  .shoot-del.del-fired {
+    color: #ff9a9a;
+    animation: shootDelXExit .62s cubic-bezier(.16,1,.3,1) both;
+  }
+  .shoot-del.del-fired::before {
+    opacity: 1;
+    animation: shootDelBurst .72s cubic-bezier(.16,1,.3,1) both;
+  }
+  @keyframes shootDelCharge {
+    0% {
+      --shoot-del-p: 0;
+      transform: scale(.66);
+      background:
+        conic-gradient(from -90deg, rgba(230,70,70,.95) 0turn, rgba(230,70,70,.95) calc(var(--shoot-del-p) * 1turn), rgba(243,243,239,.1) 1turn),
+        radial-gradient(circle, rgba(230,70,70,.08), transparent 64%);
+      filter: drop-shadow(0 0 0 rgba(230,70,70,0));
+    }
+    100% {
+      --shoot-del-p: 1;
+      transform: scale(1.12);
+      background:
+        conic-gradient(from -90deg, rgba(230,70,70,.95) 0turn, rgba(230,70,70,.95) calc(var(--shoot-del-p) * 1turn), rgba(243,243,239,.1) 1turn),
+        radial-gradient(circle, rgba(230,70,70,.22), transparent 66%);
+      filter: drop-shadow(0 0 16px rgba(230,70,70,.46));
+    }
+  }
+  @keyframes shootDelBurst {
+    0%   { transform: scale(1.02); opacity: .9; filter: drop-shadow(0 0 12px rgba(230,70,70,.42)); }
+    55%  { transform: scale(1.9); opacity: .42; filter: drop-shadow(0 0 26px rgba(230,70,70,.38)); }
+    100% { transform: scale(2.55); opacity: 0; filter: blur(4px) drop-shadow(0 0 0 rgba(230,70,70,0)); }
+  }
+  @keyframes shootDelXExit {
+    0%   { transform: translateY(-1px) scale(1.04) rotate(0deg); opacity: 1; }
+    35%  { transform: translateY(-1px) scale(1.22) rotate(90deg); opacity: 1; }
+    100% { transform: translateY(-6px) scale(.62) rotate(180deg); opacity: 0; }
+  }
 
   /* Description — inline in the bar, between name and date columns */
   /* Multi-line, auto-growing description (textarea). Wraps and grows downward
@@ -10086,7 +10177,7 @@
               ' aria-label="'+(p.calendarAdded?'Calendar added. Click to copy message.':'Add to Google Calendar and copy message.')+'">'+
               '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.8" width="11" height="9.7" rx="1.5"/><path d="M1.5 5.6h11M4.3 1.3v2.4M9.7 1.3v2.4M7 7.4v3M5.5 8.9h3"/></svg>'+
             '</button>'+
-            '<button class="shoot-del" data-cztip="Remove shoot">'+
+            '<button class="shoot-del" type="button" data-cztip="Hold to remove shoot" aria-label="Hold to remove shoot">'+
               '<svg viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.2">'+
                 '<path d="M1.5 1.5l6 6M7.5 1.5l-6 6"/>'+
               '</svg>'+
@@ -10166,19 +10257,88 @@
 
 
         /* ── Bind: delete ── */
-        row.querySelector('.shoot-del').addEventListener('click', function(e){
-          e.stopPropagation();
-          var label = (p.name||'').trim() || 'this shoot';
-          var fn = window._plannerDelConfirm || function(l){
-            return Promise.resolve(window.confirm('Delete “'+l+'”?'));
-          };
-          fn(label).then(function(confirmed){
-            if(!confirmed) return;
-            projects = projects.filter(function(x){ return x.id!==p.id; });
-            if (window.fb && window.fb.alarms) window.fb.alarms.remove(p.id); /* cancel any laptop alarm */
-            renderPlanner(); updateStats(); savePlanner();
+        (function(pid, delRow){
+          var delBtn = delRow.querySelector('.shoot-del');
+          if(!delBtn) return;
+          var delHoldTimer = null;
+          var delHoldConsumed = false;
+          var delDeleting = false;
+          var delStart = null;
+          var HOLD_MS = 2000;
+
+          function currentDeleteProject(){
+            return projects.find(function(x){ return x.id===pid; }) || p;
+          }
+          function clearDeleteHold(){
+            clearTimeout(delHoldTimer);
+            delHoldTimer = null;
+            delBtn.classList.remove('del-holding');
+            delRow.classList.remove('del-charging');
+          }
+          function finishDelete(proj){
+            if(delDeleting || !proj) return;
+            delDeleting = true;
+            delHoldConsumed = true;
+            clearDeleteHold();
+            delRow.style.height = delRow.offsetHeight + 'px';
+            delRow.style.overflow = 'hidden';
+            delBtn.classList.add('del-fired');
+            delRow.classList.add('del-removing');
+            if(navigator.vibrate) navigator.vibrate([12, 28, 16]);
+            requestAnimationFrame(function(){
+              delRow.style.height = '0px';
+            });
+            setTimeout(function(){
+              projects = projects.filter(function(x){ return x.id!==proj.id; });
+              if (window.fb && window.fb.alarms) window.fb.alarms.remove(proj.id); /* cancel any laptop alarm */
+              renderPlanner(); updateStats(); savePlanner();
+            }, 760);
+          }
+          function startDeleteHold(e){
+            if(delDeleting) return;
+            if(e.pointerType === 'mouse' && e.button !== 0) return;
+            delStart = { x: e.clientX || 0, y: e.clientY || 0 };
+            clearDeleteHold();
+            delHoldConsumed = false;
+            delBtn.classList.add('del-holding');
+            delRow.classList.add('del-charging');
+            delHoldTimer = setTimeout(function(){
+              finishDelete(currentDeleteProject());
+            }, HOLD_MS);
+          }
+          function moveDeleteHold(e){
+            if(!delHoldTimer || !delStart) return;
+            var dx = Math.abs((e.clientX || 0) - delStart.x);
+            var dy = Math.abs((e.clientY || 0) - delStart.y);
+            if(dx > 14 || dy > 14) clearDeleteHold();
+          }
+
+          delBtn.addEventListener('pointerdown', function(e){
+            e.stopPropagation();
+            startDeleteHold(e);
           });
-        });
+          delBtn.addEventListener('pointermove', moveDeleteHold);
+          ['pointerup','pointerleave','pointercancel'].forEach(function(ev){
+            delBtn.addEventListener(ev, clearDeleteHold);
+          });
+          delBtn.addEventListener('click', function(e){
+            e.stopPropagation();
+            if(delHoldConsumed){
+              delHoldConsumed = false;
+              e.preventDefault();
+              return;
+            }
+            var proj = currentDeleteProject();
+            var label = (proj.name||'').trim() || 'this shoot';
+            var fn = window._plannerDelConfirm || function(l){
+              return Promise.resolve(window.confirm('Delete “'+l+'”?'));
+            };
+            fn(label).then(function(confirmed){
+              if(!confirmed) return;
+              finishDelete(proj);
+            });
+          });
+        })(p.id, row);
 
         /* ── Bind: Add to Calendar (opens Google Calendar in new tab) ── */
         var calBtn = row.querySelector('.shoot-cal');
