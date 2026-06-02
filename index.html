@@ -11401,8 +11401,23 @@
       }
     }, true); /* capture phase — fires before inner element handlers */
 
-    /* Suppress the browser's native right-click context menu everywhere */
-    document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    /* Suppress the browser's native right-click menu on the canvas/UI, but let
+       editable text fields keep spellcheck suggestions and text actions. */
+    function isNativeTextContextTarget(target){
+      if(!target || !target.closest) return false;
+      var editable = target.closest('textarea, [contenteditable="true"], input');
+      if(!editable) return false;
+      if(editable.matches && editable.matches('[readonly], [disabled]')) return false;
+      if(editable.tagName === 'INPUT'){
+        var type = (editable.getAttribute('type') || 'text').toLowerCase();
+        return /^(text|search|email|url|tel|number)$/.test(type);
+      }
+      return true;
+    }
+    document.addEventListener('contextmenu', function(e){
+      if(isNativeTextContextTarget(e.target)) return;
+      e.preventDefault();
+    });
 
     /* ── Custom hover tooltip (desktop only) ──────────────────────────────
        Shows our own styled bubble for any element with a data-cztip attribute,
