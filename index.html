@@ -6637,6 +6637,24 @@
       word-break: break-word;
       overflow-wrap: anywhere;
     }
+    .planner-content,
+    .shoot-main,
+    .shoot-row,
+    .shoot-cal,
+    .shoot-del,
+    .shoot-ghost {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .shoot-name,
+    .shoot-client,
+    .shoot-desc,
+    .shoot-loc {
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-touch-callout: default;
+    }
 
     /* Line 3 — date │ time │ location, divided by hairlines */
     .shoot-date {
@@ -9959,6 +9977,16 @@
     function attachTimeScroll(inp, getP){
       var acc = 0;
 
+      function isMobileScrub(){
+        return !!(window.matchMedia && window.matchMedia('(max-width: 700px)').matches && (window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0));
+      }
+      function setMobileScrubKeyboardLock(on){
+        if(!isMobileScrub()) return;
+        inp.readOnly = !!on;
+        inp.setAttribute('inputmode', 'none');
+      }
+      inp.setAttribute('inputmode', 'none');
+
       function applyTime(deltaY){
         var d = deltaY, abs = Math.abs(d), delta;
         if(abs >= 40){ delta = (abs >= 180 ? 10 : 5) * (d > 0 ? 1 : -1); }
@@ -9983,40 +10011,49 @@
       /* Touch-swipe (mobile): horizontal scrub only.
          Vertical movement is treated as page scroll and releases the field. */
       (function(){
-        var tx = null, ty = null, mode = null;
+        var tx = null, ty = null, tt = 0;
+        function applyTouch(delta, elapsed){
+          var abs = Math.abs(delta);
+          var speed = elapsed > 0 ? abs / elapsed : 0;
+          var dir = delta > 0 ? 1 : -1;
+          if(abs < 2) return;
+          if(speed > 1.25 || abs > 90) applyTime(dir * 260);
+          else if(speed > .72 || abs > 48) applyTime(dir * 140);
+          else applyTime(delta);
+        }
         inp.addEventListener('touchstart', function(e){
+          setMobileScrubKeyboardLock(true);
+          if(document.activeElement !== inp) inp.focus({ preventScroll:true });
           tx = e.touches[0].clientX;
           ty = e.touches[0].clientY;
-          mode = null;
+          tt = Date.now();
           acc = 0;
-        }, {passive:true});
+        }, {passive:false});
         inp.addEventListener('touchmove', function(e){
           if(tx === null || ty === null || document.activeElement !== inp) return;
           var x = e.touches[0].clientX;
           var y = e.touches[0].clientY;
           var dx = x - tx;
-          var dy = y - ty;
+          var dy = ty - y; /* swipe up = later, swipe down = earlier */
+          var now = Date.now();
+          var elapsed = Math.max(1, now - tt);
           var ax = Math.abs(dx), ay = Math.abs(dy);
-          if(!mode && Math.max(ax, ay) > 8) mode = ax > ay * 1.15 ? 'scrub' : 'scroll';
-          if(mode === 'scroll'){
-            inp.blur();
-            tx = ty = null;
-            return;
-          }
-          if(mode === 'scrub' && dx !== 0){
-            applyTime(dx);
+          if(Math.max(ax, ay) > 1){
+            applyTouch(ax > ay ? dx : dy, elapsed);
             tx = x;
             ty = y;
+            tt = now;
             e.preventDefault();
           }
         }, {passive:false});
-        inp.addEventListener('touchend', function(){ tx = ty = null; mode = null; acc = 0; }, {passive:true});
+        inp.addEventListener('touchend', function(){ tx = ty = null; tt = 0; acc = 0; }, {passive:true});
       })();
 
       inp.addEventListener('focus', function(){
         acc = 0;
       });
       inp.addEventListener('blur', function(){
+        setMobileScrubKeyboardLock(false);
         acc = 0;
         var p = getP(); if(!p) return;
         var parsed = parse12(inp.value);
@@ -10029,6 +10066,16 @@
     /* ── Scroll-wheel: date ────────────────────────────────────── */
     function attachDateScroll(inp, getP){
       var acc = 0;
+
+      function isMobileScrub(){
+        return !!(window.matchMedia && window.matchMedia('(max-width: 700px)').matches && (window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0));
+      }
+      function setMobileScrubKeyboardLock(on){
+        if(!isMobileScrub()) return;
+        inp.readOnly = !!on;
+        inp.setAttribute('inputmode', 'none');
+      }
+      inp.setAttribute('inputmode', 'none');
 
       function applyDate(deltaY){
         var d = deltaY, abs = Math.abs(d), delta;
@@ -10061,40 +10108,49 @@
       /* Touch-swipe (mobile): horizontal scrub only.
          Vertical movement is treated as page scroll and releases the field. */
       (function(){
-        var tx = null, ty = null, mode = null;
+        var tx = null, ty = null, tt = 0;
+        function applyTouch(delta, elapsed){
+          var abs = Math.abs(delta);
+          var speed = elapsed > 0 ? abs / elapsed : 0;
+          var dir = delta > 0 ? 1 : -1;
+          if(abs < 2) return;
+          if(speed > 1.25 || abs > 90) applyDate(dir * 220);
+          else if(speed > .72 || abs > 48) applyDate(dir * 90);
+          else applyDate(delta);
+        }
         inp.addEventListener('touchstart', function(e){
+          setMobileScrubKeyboardLock(true);
+          if(document.activeElement !== inp) inp.focus({ preventScroll:true });
           tx = e.touches[0].clientX;
           ty = e.touches[0].clientY;
-          mode = null;
+          tt = Date.now();
           acc = 0;
-        }, {passive:true});
+        }, {passive:false});
         inp.addEventListener('touchmove', function(e){
           if(tx === null || ty === null || document.activeElement !== inp) return;
           var x = e.touches[0].clientX;
           var y = e.touches[0].clientY;
           var dx = x - tx;
-          var dy = y - ty;
+          var dy = ty - y; /* swipe up = later, swipe down = earlier */
+          var now = Date.now();
+          var elapsed = Math.max(1, now - tt);
           var ax = Math.abs(dx), ay = Math.abs(dy);
-          if(!mode && Math.max(ax, ay) > 8) mode = ax > ay * 1.15 ? 'scrub' : 'scroll';
-          if(mode === 'scroll'){
-            inp.blur();
-            tx = ty = null;
-            return;
-          }
-          if(mode === 'scrub' && dx !== 0){
-            applyDate(dx);
+          if(Math.max(ax, ay) > 1){
+            applyTouch(ax > ay ? dx : dy, elapsed);
             tx = x;
             ty = y;
+            tt = now;
             e.preventDefault();
           }
         }, {passive:false});
-        inp.addEventListener('touchend', function(){ tx = ty = null; mode = null; acc = 0; }, {passive:true});
+        inp.addEventListener('touchend', function(){ tx = ty = null; tt = 0; acc = 0; }, {passive:true});
       })();
 
       inp.addEventListener('focus', function(){
         acc = 0;
       });
       inp.addEventListener('blur', function(){
+        setMobileScrubKeyboardLock(false);
         acc = 0;
         var p = getP(); if(!p) return;
         p.date = inp.value;
