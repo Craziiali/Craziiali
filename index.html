@@ -5066,7 +5066,7 @@
   }
   .shoot-row.del-charging::before {
     opacity: 1;
-    animation: shootDelRowCharge 2s linear forwards;
+    animation: shootDelRowCharge 1s linear forwards;
   }
   .shoot-row.del-confirming::before {
     opacity: 1;
@@ -5260,7 +5260,7 @@
     transform: translateY(-1px) scale(1.04);
   }
   .shoot-del.del-holding svg {
-    animation: shootDelXCharge 2s cubic-bezier(.2,.8,.2,1) forwards;
+    animation: shootDelXCharge 1s cubic-bezier(.2,.8,.2,1) forwards;
   }
   .shoot-del.del-fired {
     color: #ff9a9a;
@@ -10351,7 +10351,7 @@
           var delHoldConsumed = false;
           var delDeleting = false;
           var delStart = null;
-          var HOLD_MS = 2000;
+          var HOLD_MS = 1000;
 
           function currentDeleteProject(){
             return projects.find(function(x){ return x.id===pid; }) || p;
