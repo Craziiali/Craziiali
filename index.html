@@ -4889,40 +4889,7 @@
   ═══════════════════════════════════════════════════════════════ */
 
   /* Page shell */
-  .planner-page {
-    min-height: 100vh;
-    position: relative;
-    isolation: isolate;
-  }
-  .planner-page::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    background:
-      radial-gradient(ellipse 46% 38% at 50% 47%,
-        rgba(5,5,6,.34) 0%,
-        rgba(5,5,6,.24) 36%,
-        rgba(5,5,6,.08) 62%,
-        transparent 78%),
-      linear-gradient(90deg,
-        rgba(5,5,6,.46) 0%,
-        rgba(5,5,6,.18) 15%,
-        transparent 34%,
-        transparent 66%,
-        rgba(5,5,6,.18) 85%,
-        rgba(5,5,6,.46) 100%),
-      linear-gradient(180deg,
-        rgba(5,5,6,.24) 0%,
-        transparent 22%,
-        transparent 76%,
-        rgba(5,5,6,.28) 100%);
-  }
-  .planner-page > * {
-    position: relative;
-    z-index: 1;
-  }
+  .planner-page { min-height: 100vh; }
 
   /* Sticky top bar */
   .planner-bar {
@@ -5162,13 +5129,40 @@
   .planner-new-btn svg   { width: 9px; height: 9px; opacity: .8; }
 
   /* Shoot rows */
-  .shoot-list { display: flex; flex-direction: column; }
+  .shoot-list {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    isolation: isolate;
+  }
+  .shoot-list::before {
+    content: "";
+    position: absolute;
+    inset: 0 -48px;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg,
+        transparent 0%,
+        rgba(5,5,6,.78) 4%,
+        rgba(5,5,6,.98) 12%,
+        rgba(5,5,6,.98) 88%,
+        rgba(5,5,6,.78) 96%,
+        transparent 100%),
+      linear-gradient(180deg,
+        transparent 0,
+        rgba(5,5,6,.62) 14px,
+        rgba(5,5,6,.98) 44px,
+        rgba(5,5,6,.98) calc(100% - 44px),
+        rgba(5,5,6,.62) calc(100% - 14px),
+        transparent 100%);
+  }
   @property --shoot-del-front {
     syntax: '<percentage>';
     inherits: false;
     initial-value: 100%;
   }
-  .shoot-row  { border-bottom: 1px solid var(--rule); position: relative; isolation: isolate; }
+  .shoot-row  { border-bottom: 1px solid var(--rule); position: relative; isolation: isolate; z-index: 1; }
   .shoot-row::before {
     content: '';
     position: absolute;
