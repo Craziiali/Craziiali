@@ -2833,6 +2833,23 @@
       display: none !important;
     }
 
+    /* Touch devices (phones/tablets): never show a persistent scrollbar — content
+       still scrolls, but the styled bar is hidden so it doesn't sit on the edge. */
+    @media (pointer: coarse) {
+      ::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
+      * { scrollbar-width: none !important; }
+    }
+
+    /* When a full-screen overlay view is open (anything except the invoice), the
+       DOCUMENT must not scroll — only the overlay scrolls. This removes the
+       second/phantom scrollbar that came from the invoice page sitting behind it.
+       (On the invoice view the body scrolls normally.) */
+    html:has(body[data-view]:not([data-view="invoice"])),
+    html:has(body[data-view]:not([data-view="invoice"])) body {
+      overflow: hidden;
+      height: 100%;
+    }
+
     /* When the invoice is in Arabic mode, switch its font and direction */
     main.invoice.invoice-lang-ar {
       font-family: var(--font-ar-body);
@@ -4761,6 +4778,8 @@
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;   /* momentum scrolling on iOS */
+    scroll-behavior: smooth;
     display: flex;
     flex-direction: column;
   }
@@ -4956,8 +4975,9 @@
      SHOOT PLANNER — FULL BUILD
   ═══════════════════════════════════════════════════════════════ */
 
-  /* Page shell */
-  .planner-page { min-height: 100vh; }
+  /* Page shell — fill the overlay exactly (flex) so a short page shows no
+     scrollbar, and only overflows (→ scrollbar) when content is genuinely taller. */
+  .planner-page { flex: 1 0 auto; }
 
   /* Sticky top bar */
   .planner-bar {
@@ -6135,7 +6155,7 @@
   /* ═══════════════════════════════════════════════════════════════
      NOTES — FULL BUILD
   ═══════════════════════════════════════════════════════════════ */
-  .notes-page { min-height: 100vh; }
+  .notes-page { flex: 1 0 auto; }
 
   /* Sticky top bar */
   .notes-bar {
