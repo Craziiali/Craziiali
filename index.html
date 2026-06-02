@@ -9980,19 +9980,37 @@
          on the page while it's focused (page scroll is locked until blur). */
       inp._lgScrub = applyTime;
 
-      /* Touch-swipe (mobile) — swipe up = later, swipe down = earlier */
+      /* Touch-swipe (mobile): horizontal scrub only.
+         Vertical movement is treated as page scroll and releases the field. */
       (function(){
-        var ty = null;
+        var tx = null, ty = null, mode = null;
         inp.addEventListener('touchstart', function(e){
-          ty = e.touches[0].clientY; acc = 0;
+          tx = e.touches[0].clientX;
+          ty = e.touches[0].clientY;
+          mode = null;
+          acc = 0;
         }, {passive:true});
         inp.addEventListener('touchmove', function(e){
-          if(ty === null) return;
-          var dy = ty - e.touches[0].clientY; /* positive = swiped up */
-          ty = e.touches[0].clientY;
-          if(dy !== 0){ applyTime(dy); e.preventDefault(); }
+          if(tx === null || ty === null || document.activeElement !== inp) return;
+          var x = e.touches[0].clientX;
+          var y = e.touches[0].clientY;
+          var dx = x - tx;
+          var dy = y - ty;
+          var ax = Math.abs(dx), ay = Math.abs(dy);
+          if(!mode && Math.max(ax, ay) > 8) mode = ax > ay * 1.15 ? 'scrub' : 'scroll';
+          if(mode === 'scroll'){
+            inp.blur();
+            tx = ty = null;
+            return;
+          }
+          if(mode === 'scrub' && dx !== 0){
+            applyTime(dx);
+            tx = x;
+            ty = y;
+            e.preventDefault();
+          }
         }, {passive:false});
-        inp.addEventListener('touchend', function(){ ty = null; acc = 0; }, {passive:true});
+        inp.addEventListener('touchend', function(){ tx = ty = null; mode = null; acc = 0; }, {passive:true});
       })();
 
       inp.addEventListener('focus', function(){
@@ -10040,19 +10058,37 @@
         applyDate(e.deltaY);
       }, {passive:false});
 
-      /* Touch-swipe (mobile) — swipe up = later, swipe down = earlier */
+      /* Touch-swipe (mobile): horizontal scrub only.
+         Vertical movement is treated as page scroll and releases the field. */
       (function(){
-        var ty = null;
+        var tx = null, ty = null, mode = null;
         inp.addEventListener('touchstart', function(e){
-          ty = e.touches[0].clientY; acc = 0;
+          tx = e.touches[0].clientX;
+          ty = e.touches[0].clientY;
+          mode = null;
+          acc = 0;
         }, {passive:true});
         inp.addEventListener('touchmove', function(e){
-          if(ty === null) return;
-          var dy = ty - e.touches[0].clientY; /* positive = swiped up */
-          ty = e.touches[0].clientY;
-          if(dy !== 0){ applyDate(dy); e.preventDefault(); }
+          if(tx === null || ty === null || document.activeElement !== inp) return;
+          var x = e.touches[0].clientX;
+          var y = e.touches[0].clientY;
+          var dx = x - tx;
+          var dy = y - ty;
+          var ax = Math.abs(dx), ay = Math.abs(dy);
+          if(!mode && Math.max(ax, ay) > 8) mode = ax > ay * 1.15 ? 'scrub' : 'scroll';
+          if(mode === 'scroll'){
+            inp.blur();
+            tx = ty = null;
+            return;
+          }
+          if(mode === 'scrub' && dx !== 0){
+            applyDate(dx);
+            tx = x;
+            ty = y;
+            e.preventDefault();
+          }
         }, {passive:false});
-        inp.addEventListener('touchend', function(){ ty = null; acc = 0; }, {passive:true});
+        inp.addEventListener('touchend', function(){ tx = ty = null; mode = null; acc = 0; }, {passive:true});
       })();
 
       inp.addEventListener('focus', function(){
@@ -10071,6 +10107,20 @@
       void el.offsetWidth;
       el.classList.add('scroll-bump');
     }
+
+    function releasePlannerScrubField(target){
+      var ae = document.activeElement;
+      if(!ae || !ae.matches || !ae.matches('.shoot-time, .shoot-date')) return;
+      if(target === ae) return;
+      ae.blur();
+    }
+    document.addEventListener('touchstart', function(e){
+      releasePlannerScrubField(e.target);
+    }, { passive:true, capture:true });
+    document.addEventListener('pointerdown', function(e){
+      if(e.pointerType === 'touch') return;
+      releasePlannerScrubField(e.target);
+    }, true);
 
     /* ── Location: paste-to-link ──────────────────────────────── */
     function isUrl(s){ return /^https?:\/\//i.test((s||'').trim()); }
