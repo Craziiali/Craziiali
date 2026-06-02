@@ -5823,6 +5823,10 @@
     isolation: isolate;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     transition: color .18s, transform .14s, filter .18s;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
   .shoot-cal:hover                       { color: rgba(var(--accent-rgb),.85); transform: translateY(-1px); }  /* blue preview on hover */
   .shoot-cal:active                      { transform: translateY(0); }
@@ -5859,6 +5863,27 @@
     24%  { transform: scale(1.24) rotate(-7deg); }
     54%  { transform: scale(.92) rotate(4deg); }
     100% { transform: scale(1) rotate(0deg); }
+  }
+  @keyframes calHoldCharge {
+    from { opacity: .24; transform: scale(.72); border-color: rgba(var(--accent-rgb),.18); filter: blur(.2px); }
+    to   { opacity: .92; transform: scale(1.72); border-color: rgba(var(--accent-rgb),.64); filter: blur(0); }
+  }
+  .shoot-cal.cal-holding {
+    color: var(--accent-ring);
+    transform: translateY(-1px) scale(1.04);
+  }
+  .shoot-cal.cal-holding::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px solid rgba(var(--accent-rgb),.36);
+    box-shadow:
+      0 0 0 1px rgba(var(--accent-rgb),.08),
+      0 0 18px rgba(var(--accent-rgb),.24),
+      inset 0 0 10px rgba(var(--accent-rgb),.14);
+    pointer-events: none;
+    animation: calHoldCharge .5s linear both;
   }
   .shoot-cal.cal-flash {
     color: var(--accent-ring);
@@ -11044,40 +11069,58 @@
           var calHoldConsumed = false;
           var CAL_HOLD_MS = 500;
           function currentCalProject(){ return projects.find(function(x){ return x.id===p.id; }) || p; }
+          function clearCalHold(){
+            clearTimeout(calHoldTimer);
+            calHoldTimer = null;
+            calBtn.classList.remove('cal-holding');
+          }
           function triggerCalHoldResend(){
             calHoldConsumed = true;
+            clearCalHold();
             if(navigator.vibrate) navigator.vibrate(12);
             openShootInGCal(currentCalProject(), calBtn, { forceCalendar:true });
           }
           calBtn.addEventListener('click', function(e){
             e.stopPropagation();
+            clearCalHold();
             if(calHoldConsumed){ calHoldConsumed = false; return; }
             openShootInGCal(currentCalProject(), calBtn);
           });
           calBtn.addEventListener('contextmenu', function(e){
             e.preventDefault();
             e.stopPropagation();
-            clearTimeout(calHoldTimer);
+            clearCalHold();
             calHoldConsumed = false;
             if(!isPlannerAdmin()) return;
             showPlannerCalMenu(currentCalProject(), calBtn);
           });
           calBtn.addEventListener('mousedown', function(e){
             if(e.button !== 0) return;
-            clearTimeout(calHoldTimer);
+            clearCalHold();
             calHoldConsumed = false;
+            calBtn.classList.add('cal-holding');
             calHoldTimer = setTimeout(triggerCalHoldResend, CAL_HOLD_MS);
           });
           ['mouseup','mouseleave','pointercancel'].forEach(function(ev){
-            calBtn.addEventListener(ev, function(){ clearTimeout(calHoldTimer); });
+            calBtn.addEventListener(ev, clearCalHold);
           });
           calBtn.addEventListener('touchstart', function(e){
-            clearTimeout(calHoldTimer);
+            e.preventDefault();
+            e.stopPropagation();
+            clearCalHold();
             calHoldConsumed = false;
+            calBtn.classList.add('cal-holding');
             calHoldTimer = setTimeout(triggerCalHoldResend, CAL_HOLD_MS);
-          }, { passive:true });
+          }, { passive:false });
           ['touchend','touchcancel'].forEach(function(ev){
-            calBtn.addEventListener(ev, function(){ clearTimeout(calHoldTimer); }, { passive:true });
+            calBtn.addEventListener(ev, function(e){
+              e.preventDefault();
+              e.stopPropagation();
+              clearCalHold();
+              if(calHoldConsumed){
+                setTimeout(function(){ calHoldConsumed = false; }, 420);
+              }
+            }, { passive:false });
           });
         }
 
