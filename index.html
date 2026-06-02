@@ -4935,7 +4935,78 @@
     width: 7px; height: 7px; background: rgba(13,13,17,.97);
     border-right: 1px solid rgba(243,243,239,.13); border-bottom: 1px solid rgba(243,243,239,.13);
   }
-  .cz-tip.show { opacity: 1; transform: translate(-50%, calc(-100% - 11px)); }
+    .cz-tip.show { opacity: 1; transform: translate(-50%, calc(-100% - 11px)); }
+
+    .spell-glass-menu {
+      position: fixed;
+      z-index: 200003;
+      min-width: 190px;
+      max-width: min(280px, calc(100vw - 24px));
+      padding: 7px;
+      border-radius: 13px;
+      border: 1px solid rgba(243,243,239,.13);
+      background: rgba(12,12,15,.72);
+      color: var(--ink);
+      box-shadow:
+        0 22px 58px rgba(0,0,0,.62),
+        0 6px 18px rgba(0,0,0,.36),
+        inset 0 1px 0 rgba(255,255,255,.07);
+      backdrop-filter: blur(22px) saturate(.92);
+      -webkit-backdrop-filter: blur(22px) saturate(.92);
+      opacity: 0;
+      transform: translateY(5px) scale(.985);
+      transform-origin: top left;
+      transition: opacity .14s ease, transform .18s cubic-bezier(.16,1,.3,1);
+      pointer-events: auto;
+    }
+    .spell-glass-menu.show { opacity: 1; transform: translateY(0) scale(1); }
+    .spell-glass-head {
+      padding: 7px 9px 6px;
+      font-family: var(--font-en-mono);
+      font-size: 8px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: rgba(243,243,239,.43);
+      border-bottom: 1px solid rgba(243,243,239,.07);
+      margin-bottom: 4px;
+    }
+    .spell-glass-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: none;
+      border-radius: 9px;
+      background: transparent;
+      color: rgba(243,243,239,.82);
+      cursor: pointer;
+      padding: 9px 10px;
+      font-family: var(--font-en-body);
+      font-size: 13px;
+      text-align: left;
+      transition: background .14s ease, color .14s ease, transform .14s ease;
+    }
+    .spell-glass-item:hover {
+      background: rgba(243,243,239,.075);
+      color: var(--ink);
+      transform: translateX(1px);
+    }
+    .spell-glass-item small {
+      font-family: var(--font-en-mono);
+      font-size: 7px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(243,243,239,.34);
+    }
+    .spell-glass-muted {
+      padding: 12px 10px;
+      font-family: var(--font-en-mono);
+      font-size: 8px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(243,243,239,.42);
+    }
 
   /* Hero */
   .planner-hero { padding: 38px 48px 0; }
@@ -11401,8 +11472,9 @@
       }
     }, true); /* capture phase — fires before inner element handlers */
 
-    /* Suppress the browser's native right-click menu on the canvas/UI, but let
-       editable text fields keep spellcheck suggestions and text actions. */
+    /* Custom frosted spell menu for editable text. Browsers do not expose their
+       native spellcheck suggestions to JS, so we query a lightweight spelling
+       service and keep the visual language inside our own UI. */
     function isNativeTextContextTarget(target){
       if(!target || !target.closest) return false;
       var editable = target.closest('textarea, [contenteditable="true"], input');
@@ -11410,12 +11482,178 @@
       if(editable.matches && editable.matches('[readonly], [disabled]')) return false;
       if(editable.tagName === 'INPUT'){
         var type = (editable.getAttribute('type') || 'text').toLowerCase();
-        return /^(text|search|email|url|tel|number)$/.test(type);
+        return /^(text|search|email|url|tel)$/.test(type);
       }
       return true;
     }
+    var spellMenu = null;
+    function closeSpellMenu(){
+      if(spellMenu) spellMenu.remove();
+      spellMenu = null;
+      document.removeEventListener('mousedown', closeSpellMenu, true);
+      document.removeEventListener('touchstart', closeSpellMenu, true);
+      document.removeEventListener('keydown', closeSpellMenu, true);
+    }
+    function charIsSpellWord(ch){
+      return !!ch && /[\p{L}\p{N}'’-]/u.test(ch);
+    }
+    function wordBoundsInText(text, index){
+      index = Math.max(0, Math.min(text.length, index || 0));
+      if(index > 0 && !charIsSpellWord(text[index]) && charIsSpellWord(text[index - 1])) index--;
+      while(index < text.length && !charIsSpellWord(text[index])) index++;
+      if(index >= text.length) return null;
+      var start = index, end = index;
+      while(start > 0 && charIsSpellWord(text[start - 1])) start--;
+      while(end < text.length && charIsSpellWord(text[end])) end++;
+      if(end <= start) return null;
+      return { start:start, end:end, word:text.slice(start,end) };
+    }
+    function editableTextTarget(target){
+      return target && target.closest ? target.closest('textarea, [contenteditable="true"], input') : null;
+    }
+    function getSpellContext(e){
+      var el = editableTextTarget(e.target);
+      if(!el) return null;
+      if(el.matches && el.matches('[readonly], [disabled]')) return null;
+      if(el.tagName === 'INPUT'){
+        var type = (el.getAttribute('type') || 'text').toLowerCase();
+        if(!/^(text|search|email|url|tel)$/.test(type)) return null;
+      }
+      if(el.isContentEditable){
+        var range = null;
+        if(document.caretRangeFromPoint) {
+          range = document.caretRangeFromPoint(e.clientX, e.clientY);
+        } else if(document.caretPositionFromPoint) {
+          var pos = document.caretPositionFromPoint(e.clientX, e.clientY);
+          if(pos) {
+            range = document.createRange();
+            range.setStart(pos.offsetNode, pos.offset);
+            range.collapse(true);
+          }
+        }
+        if(!range || !range.startContainer || range.startContainer.nodeType !== 3) return null;
+        var text = range.startContainer.nodeValue || '';
+        var bounds = wordBoundsInText(text, range.startOffset);
+        if(!bounds) return null;
+        return {
+          word: bounds.word,
+          replace: function(next){
+            var r = document.createRange();
+            r.setStart(range.startContainer, bounds.start);
+            r.setEnd(range.startContainer, bounds.end);
+            r.deleteContents();
+            r.insertNode(document.createTextNode(next));
+            el.dispatchEvent(new Event('input', { bubbles:true }));
+          }
+        };
+      }
+      var value = el.value || '';
+      var selStart = typeof el.selectionStart === 'number' ? el.selectionStart : 0;
+      var selEnd = typeof el.selectionEnd === 'number' ? el.selectionEnd : selStart;
+      var selected = selEnd > selStart ? value.slice(selStart, selEnd) : '';
+      var bounds = selected && /^[\p{L}\p{N}'’-]+$/u.test(selected)
+        ? { start:selStart, end:selEnd, word:selected }
+        : wordBoundsInText(value, selStart);
+      if(!bounds) return null;
+      return {
+        word: bounds.word,
+        replace: function(next){
+          el.focus();
+          if(typeof el.setRangeText === 'function') {
+            el.setSelectionRange(bounds.start, bounds.end);
+            el.setRangeText(next, bounds.start, bounds.end, 'end');
+          } else {
+            el.value = value.slice(0,bounds.start) + next + value.slice(bounds.end);
+          }
+          el.dispatchEvent(new Event('input', { bubbles:true }));
+        }
+      };
+    }
+    function placeSpellMenu(menu, x, y){
+      document.body.appendChild(menu);
+      var r = menu.getBoundingClientRect();
+      menu.style.left = Math.min(window.innerWidth - r.width - 10, Math.max(10, x)) + 'px';
+      menu.style.top = Math.min(window.innerHeight - r.height - 10, Math.max(10, y)) + 'px';
+      requestAnimationFrame(function(){ menu.classList.add('show'); });
+    }
+    function spellEsc(value){
+      return String(value == null ? '' : value)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+    function showSpellMenuShell(e, word){
+      closeSpellMenu();
+      spellMenu = document.createElement('div');
+      spellMenu.className = 'spell-glass-menu';
+      spellMenu.innerHTML = '<div class="spell-glass-head">Spelling</div><div class="spell-glass-muted">Checking "'+spellEsc(word)+'"</div>';
+      spellMenu.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
+      spellMenu.addEventListener('touchstart', function(ev){ ev.stopPropagation(); }, { passive:true });
+      placeSpellMenu(spellMenu, e.clientX, e.clientY);
+      setTimeout(function(){
+        document.addEventListener('mousedown', closeSpellMenu, true);
+        document.addEventListener('touchstart', closeSpellMenu, true);
+        document.addEventListener('keydown', closeSpellMenu, true);
+      }, 0);
+      return spellMenu;
+    }
+    function fetchSpellSuggestions(word){
+      var body = new URLSearchParams({ text: word, language: 'en-US' });
+      return fetch('https://api.languagetool.org/v2/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString()
+      }).then(function(res){
+        if(!res.ok) throw new Error('spellcheck failed');
+        return res.json();
+      }).then(function(data){
+        var seen = {};
+        var suggestions = [];
+        ((data && data.matches) || []).forEach(function(match){
+          ((match && match.replacements) || []).forEach(function(rep){
+            var value = rep && rep.value;
+            if(value && !seen[value] && value.toLowerCase() !== word.toLowerCase()) {
+              seen[value] = true;
+              suggestions.push(value);
+            }
+          });
+        });
+        return suggestions.slice(0, 5);
+      });
+    }
+    function openSpellMenu(e){
+      var ctx = getSpellContext(e);
+      if(!ctx || !ctx.word || ctx.word.length < 2) return false;
+      var menu = showSpellMenuShell(e, ctx.word);
+      fetchSpellSuggestions(ctx.word).then(function(suggestions){
+        if(!spellMenu || spellMenu !== menu) return;
+        if(!suggestions.length) {
+          menu.innerHTML = '<div class="spell-glass-head">Spelling</div><div class="spell-glass-muted">No suggestions</div>';
+          return;
+        }
+        menu.innerHTML = '<div class="spell-glass-head">Replace "'+spellEsc(ctx.word)+'"</div>' +
+          suggestions.map(function(s){
+            return '<button class="spell-glass-item" type="button" data-word="'+spellEsc(s)+'"><span>'+spellEsc(s)+'</span><small>Replace</small></button>';
+          }).join('');
+        menu.querySelectorAll('.spell-glass-item').forEach(function(btn){
+          btn.addEventListener('click', function(ev){
+            ev.stopPropagation();
+            ctx.replace(btn.dataset.word || btn.textContent.trim());
+            closeSpellMenu();
+          });
+        });
+      }).catch(function(){
+        if(spellMenu === menu) menu.innerHTML = '<div class="spell-glass-head">Spelling</div><div class="spell-glass-muted">Could not check</div>';
+      });
+      return true;
+    }
     document.addEventListener('contextmenu', function(e){
-      if(isNativeTextContextTarget(e.target)) return;
+      if(isNativeTextContextTarget(e.target) && openSpellMenu(e)) {
+        e.preventDefault();
+        return;
+      }
       e.preventDefault();
     });
 
