@@ -1573,9 +1573,6 @@
         } else {
           avatarEl.innerHTML = '<span>' + letter + '</span>';
         }
-        if (displayName && document.body.classList.contains('planner-view-active') && window._triggerPlannerFixedEntrance) {
-          requestAnimationFrame(function(){ window._triggerPlannerFixedEntrance(); });
-        }
       }
 
       function hydrateCachedProfileLabel() {
@@ -2796,7 +2793,7 @@
     /* Disable the browser's NATIVE pull-to-refresh everywhere so it never draws
        its own spinner on top of our custom .elastic-refresh-indicator (the
        "two circles" bug). `none` (not `contain`) is what actually suppresses it. */
-    html, body { overscroll-behavior-y: none; }
+    html, body { overscroll-behavior-y: none; overflow-x: hidden; }
 
     body {
       position: relative;
@@ -4712,6 +4709,7 @@
     pointer-events: auto;
     transition: opacity .55s cubic-bezier(.4,0,.2,1);
     overflow-y: auto;
+    overflow-x: hidden;
     overscroll-behavior: none;
     display: flex;
     flex-direction: column;
@@ -4801,6 +4799,14 @@
     -webkit-user-select: none;
     transition: border-color .25s, background .25s, transform .22s cubic-bezier(.16,1,.3,1);
   }
+  .tool-card {
+    background:
+      radial-gradient(ellipse 74% 58% at 50% 50%,
+        rgba(10,10,11,.92) 0%,
+        rgba(10,10,11,.72) 34%,
+        rgba(10,10,11,.28) 68%,
+        transparent 100%);
+  }
   /* Top-edge accent: thin light sweep that sharpens the card boundary on hover */
   .tool-card::before {
     content: '';
@@ -4824,7 +4830,13 @@
   }
   .tool-card:hover {
     border-color: rgba(243,243,239,.26);
-    background: rgba(243,243,239,.022);
+    background:
+      radial-gradient(ellipse 74% 58% at 50% 50%,
+        rgba(10,10,11,.94) 0%,
+        rgba(10,10,11,.74) 34%,
+        rgba(10,10,11,.30) 68%,
+        transparent 100%),
+      rgba(243,243,239,.022);
     transform: translateY(-2px);
   }
   .tool-card:hover::before { opacity: 1; }
@@ -4832,7 +4844,13 @@
   /* Press: snap back, slight border pop */
   .tool-card:active {
     border-color: rgba(243,243,239,.44);
-    background: rgba(243,243,239,.038);
+    background:
+      radial-gradient(ellipse 74% 58% at 50% 50%,
+        rgba(10,10,11,.96) 0%,
+        rgba(10,10,11,.76) 34%,
+        rgba(10,10,11,.32) 68%,
+        transparent 100%),
+      rgba(243,243,239,.038);
     transform: translateY(0);
     transition-duration: .08s;
   }
@@ -5070,11 +5088,12 @@
   .planner-sheet {
     position: relative;
     isolation: isolate;
+    overflow: clip;
   }
   .planner-sheet::before {
     content: "";
     position: absolute;
-    inset: 0 -48px -28px;
+    inset: 0;
     z-index: 0;
     pointer-events: none;
     background: var(--bg);
@@ -6137,7 +6156,12 @@
     text-align: left;
     padding: 20px 20px 16px;
     border: 1px solid var(--rule); border-radius: 4px;
-    background: transparent;
+    background:
+      radial-gradient(ellipse 76% 58% at 50% 50%,
+        rgba(10,10,11,.92) 0%,
+        rgba(10,10,11,.70) 36%,
+        rgba(10,10,11,.24) 70%,
+        transparent 100%);
     cursor: pointer; overflow: hidden;
     transition: border-color .3s ease, transform .3s cubic-bezier(.16,1,.3,1);
   }
@@ -7159,7 +7183,12 @@
     border-radius:4px;
     overflow:hidden;
     cursor:pointer;
-    background:transparent;
+    background:
+      radial-gradient(ellipse 76% 58% at 50% 50%,
+        rgba(10,10,11,.92) 0%,
+        rgba(10,10,11,.70) 36%,
+        rgba(10,10,11,.24) 70%,
+        transparent 100%);
     transition:border-color .25s,background .25s,transform .22s cubic-bezier(.16,1,.3,1);
     display:flex;
     flex-direction:column;
@@ -7167,7 +7196,13 @@
   }
   .mb-card:hover {
     border-color:rgba(243,243,239,.26);
-    background:rgba(243,243,239,.018);
+    background:
+      radial-gradient(ellipse 76% 58% at 50% 50%,
+        rgba(10,10,11,.94) 0%,
+        rgba(10,10,11,.72) 36%,
+        rgba(10,10,11,.26) 70%,
+        transparent 100%),
+      rgba(243,243,239,.018);
     transform:translateY(-2px);
   }
   .mb-card:active { transform:translateY(0); border-color:rgba(243,243,239,.44); transition-duration:.07s; }
@@ -8912,6 +8947,7 @@
     var _topLoadTimer = null;
     var _routeNav = false;
     var _plannerUiEnterTimer = null;
+    var _plannerUiEnterLast = 0;
 
     function routeBasePath(){
       var p = window.location.pathname || '/';
@@ -8970,8 +9006,14 @@
       el.classList.remove(cls);
       void el.offsetWidth;
       el.classList.add(cls);
+      setTimeout(function(){
+        el.classList.remove(cls);
+      }, 1450);
     }
     function triggerPlannerFixedEntrance(){
+      var now = Date.now();
+      if(now - _plannerUiEnterLast < 900) return;
+      _plannerUiEnterLast = now;
       if (_plannerUiEnterTimer) clearTimeout(_plannerUiEnterTimer);
       document.body.classList.remove('planner-ui-entering');
       void document.body.offsetWidth;
