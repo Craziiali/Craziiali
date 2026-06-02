@@ -10464,6 +10464,7 @@
         if(calBtn) {
           var calHoldTimer = null;
           var calHoldConsumed = false;
+          var CAL_HOLD_MS = 1000;
           function currentCalProject(){ return projects.find(function(x){ return x.id===p.id; }) || p; }
           function triggerCalHoldResend(){
             calHoldConsumed = true;
@@ -10487,7 +10488,7 @@
             if(e.button !== 0) return;
             clearTimeout(calHoldTimer);
             calHoldConsumed = false;
-            calHoldTimer = setTimeout(triggerCalHoldResend, 620);
+            calHoldTimer = setTimeout(triggerCalHoldResend, CAL_HOLD_MS);
           });
           ['mouseup','mouseleave','pointercancel'].forEach(function(ev){
             calBtn.addEventListener(ev, function(){ clearTimeout(calHoldTimer); });
@@ -10495,7 +10496,7 @@
           calBtn.addEventListener('touchstart', function(e){
             clearTimeout(calHoldTimer);
             calHoldConsumed = false;
-            calHoldTimer = setTimeout(triggerCalHoldResend, 620);
+            calHoldTimer = setTimeout(triggerCalHoldResend, CAL_HOLD_MS);
           }, { passive:true });
           ['touchend','touchcancel'].forEach(function(ev){
             calBtn.addEventListener(ev, function(){ clearTimeout(calHoldTimer); }, { passive:true });
