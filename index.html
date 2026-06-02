@@ -5067,6 +5067,63 @@
   }
   .planner-kicker-sep { opacity: .45; }
 
+  .planner-sheet {
+    position: relative;
+    isolation: isolate;
+  }
+  .planner-sheet::before {
+    content: "";
+    position: absolute;
+    inset: 0 -48px -28px;
+    z-index: 0;
+    pointer-events: none;
+    background: rgba(5,5,6,.72);
+    -webkit-mask-image:
+      linear-gradient(90deg,
+        transparent 0%,
+        rgba(0,0,0,.16) 7%,
+        rgba(0,0,0,.72) 16%,
+        #000 28%,
+        #000 72%,
+        rgba(0,0,0,.72) 84%,
+        rgba(0,0,0,.16) 93%,
+        transparent 100%),
+      linear-gradient(180deg,
+        transparent 0,
+        rgba(0,0,0,.28) 22px,
+        rgba(0,0,0,.82) 58px,
+        #000 96px,
+        #000 calc(100% - 96px),
+        rgba(0,0,0,.82) calc(100% - 58px),
+        rgba(0,0,0,.28) calc(100% - 22px),
+        transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(90deg,
+        transparent 0%,
+        rgba(0,0,0,.16) 7%,
+        rgba(0,0,0,.72) 16%,
+        #000 28%,
+        #000 72%,
+        rgba(0,0,0,.72) 84%,
+        rgba(0,0,0,.16) 93%,
+        transparent 100%),
+      linear-gradient(180deg,
+        transparent 0,
+        rgba(0,0,0,.28) 22px,
+        rgba(0,0,0,.82) 58px,
+        #000 96px,
+        #000 calc(100% - 96px),
+        rgba(0,0,0,.82) calc(100% - 58px),
+        rgba(0,0,0,.28) calc(100% - 22px),
+        transparent 100%);
+    mask-composite: intersect;
+  }
+  .planner-sheet > * {
+    position: relative;
+    z-index: 1;
+  }
+
   /* Stats strip */
   .planner-stats {
     display: flex; align-items: center;
@@ -5129,34 +5186,7 @@
   .planner-new-btn svg   { width: 9px; height: 9px; opacity: .8; }
 
   /* Shoot rows */
-  .shoot-list {
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    isolation: isolate;
-  }
-  .shoot-list::before {
-    content: "";
-    position: absolute;
-    inset: 0 -48px;
-    z-index: 0;
-    pointer-events: none;
-    background:
-      linear-gradient(90deg,
-        transparent 0%,
-        rgba(5,5,6,.78) 4%,
-        rgba(5,5,6,.98) 12%,
-        rgba(5,5,6,.98) 88%,
-        rgba(5,5,6,.78) 96%,
-        transparent 100%),
-      linear-gradient(180deg,
-        transparent 0,
-        rgba(5,5,6,.62) 14px,
-        rgba(5,5,6,.98) 44px,
-        rgba(5,5,6,.98) calc(100% - 44px),
-        rgba(5,5,6,.62) calc(100% - 14px),
-        transparent 100%);
-  }
+  .shoot-list { display: flex; flex-direction: column; }
   @property --shoot-del-front {
     syntax: '<percentage>';
     inherits: false;
@@ -7886,7 +7916,9 @@
           <span class="planner-kicker-sep">/</span>
           <span id="plannerYear"></span>
         </p>
+      </div>
 
+      <div class="planner-sheet">
         <!-- Stats strip -->
         <div class="planner-stats">
           <div class="p-stat">
@@ -7906,35 +7938,35 @@
             <span>Done</span>
           </div>
         </div>
-      </div>
 
-      <!-- Controls + list -->
-      <div class="planner-content">
+        <!-- Controls + list -->
+        <div class="planner-content">
 
-        <div class="planner-controls">
-          <div class="planner-filters">
-            <button class="p-filter active" data-filter="all"       type="button">All</button>
-            <button class="p-filter"        data-filter="upcoming"  type="button">Upcoming</button>
-            <button class="p-filter"        data-filter="confirmed" type="button">Confirmed</button>
-            <button class="p-filter"        data-filter="done"      type="button">Done</button>
-            <button class="p-filter"        data-filter="waiting"   type="button">Waiting</button>
+          <div class="planner-controls">
+            <div class="planner-filters">
+              <button class="p-filter active" data-filter="all"       type="button">All</button>
+              <button class="p-filter"        data-filter="upcoming"  type="button">Upcoming</button>
+              <button class="p-filter"        data-filter="confirmed" type="button">Confirmed</button>
+              <button class="p-filter"        data-filter="done"      type="button">Done</button>
+              <button class="p-filter"        data-filter="waiting"   type="button">Waiting</button>
+            </div>
+            <button class="planner-new-btn" id="plannerAdd" type="button">
+              <svg viewBox="0 0 9 9" fill="none" stroke="currentColor"
+                   stroke-width="1.2" aria-hidden="true">
+                <path d="M4.5 1v7M1 4.5h7"/>
+              </svg>
+              New Shoot
+            </button>
           </div>
-          <button class="planner-new-btn" id="plannerAdd" type="button">
-            <svg viewBox="0 0 9 9" fill="none" stroke="currentColor"
-                 stroke-width="1.2" aria-hidden="true">
-              <path d="M4.5 1v7M1 4.5h7"/>
-            </svg>
-            New Shoot
-          </button>
+
+          <div class="shoot-list" id="plannerList"></div>
+
+          <div class="planner-empty" id="plannerEmpty" style="display:none">
+            <p class="planner-empty-ttl">No shoots yet.</p>
+            <p class="planner-empty-sub">— plan your first —</p>
+          </div>
+
         </div>
-
-        <div class="shoot-list" id="plannerList"></div>
-
-        <div class="planner-empty" id="plannerEmpty" style="display:none">
-          <p class="planner-empty-ttl">No shoots yet.</p>
-          <p class="planner-empty-sub">— plan your first —</p>
-        </div>
-
       </div>
     </div>
   </div>
