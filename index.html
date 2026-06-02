@@ -4564,7 +4564,7 @@
       transition: opacity .3s, width .18s ease, height .18s ease, margin .18s ease,
                   border-radius .18s ease, border-color .22s ease, background .22s ease;
     }
-    .halo-core.cur-dot[data-dot-s="upcoming"]  { border-color:rgba(80,150,255,.80);  background:rgba(80,150,255,.18);  --cur-glow: rgba(80,150,255,.55); }
+    .halo-core.cur-dot[data-dot-s="upcoming"]  { border-color:rgba(var(--accent-rgb),.82);  background:rgba(var(--accent-rgb),.18);  --cur-glow: rgba(var(--accent-rgb),.55); }
     .halo-core.cur-dot[data-dot-s="confirmed"] { border-color:rgba(50,200,110,.80);  background:rgba(50,200,110,.18);  --cur-glow: rgba(50,200,110,.55); }
     .halo-core.cur-dot[data-dot-s="shooting"]  { border-color:rgba(255,130,50,.80);  background:rgba(255,130,50,.18);  --cur-glow: rgba(255,130,50,.55); }
     .halo-core.cur-dot[data-dot-s="done"]      { border-color:rgba(155,110,235,.80); background:rgba(155,110,235,.18); --cur-glow: rgba(155,110,235,.55); }
@@ -4995,7 +4995,7 @@
   .p-filter:first-child { padding-left: 0; }
   .p-filter.active      { color: var(--ink); }
   .p-filter:hover:not(.active) { color: var(--ink); }
-  .p-filter[data-filter="upcoming"].active  { color: rgba(80,150,255,.9); }
+  .p-filter[data-filter="upcoming"].active  { color: rgba(var(--accent-rgb),.92); }
   .p-filter[data-filter="confirmed"].active { color: rgba(50,200,110,.9); }
   .p-filter[data-filter="done"].active      { color: rgba(155,110,235,.9); }
   .p-filter[data-filter="waiting"].active   { color: rgba(240,180,60,.9); }
@@ -5040,7 +5040,7 @@
     border-radius: 50%;   /* invisible, just expands the clickable area */
   }
   .shoot-dot:active { transform: scale(.82); }
-  .shoot-dot[data-s="upcoming"]  { color:rgba(80,150,255,.85);  background:rgba(80,150,255,.22); }
+  .shoot-dot[data-s="upcoming"]  { color:rgba(var(--accent-rgb),.9);  background:rgba(var(--accent-rgb),.18); }
   .shoot-dot[data-s="confirmed"] { color:rgba(50,200,110,.90);  background:rgba(50,200,110,.28); }
   .shoot-dot[data-s="shooting"]  { color:rgba(255,130,50,.92);  background:rgba(255,130,50,.30);
                                     box-shadow:0 0 6px rgba(255,130,50,.40); }
@@ -5148,8 +5148,8 @@
   .shoot-rl.empty { color: var(--ink-soft); opacity: .5; }
   .shoot-rl.empty:hover { opacity: 1; color: var(--ink-dim); background: rgba(243,243,239,.06); }
   /* Linked: accent blue, gently tinted */
-  .shoot-rl.linked { color: var(--accent-soft); opacity: 1; background: rgba(var(--accent-rgb),.1); border-color: rgba(var(--accent-rgb),.32); }
-  .shoot-rl.linked:hover { background: rgba(var(--accent-rgb),.18); border-color: rgba(var(--accent-rgb),.6); }
+  .shoot-rl.linked { color: var(--accent); opacity: 1; background: rgba(var(--accent-rgb),.12); border-color: rgba(var(--accent-rgb),.42); }
+  .shoot-rl.linked:hover { color: var(--accent-ring); background: rgba(var(--accent-rgb),.2); border-color: rgba(var(--accent-rgb),.68); }
   .shoot-rl:active { transform: translateY(1px); }
 
   /* Delete — recessive but always visible; turns red on hover */
@@ -5262,7 +5262,7 @@
   /* Linked — accent-tinted, split into a "go" body + an unlink × */
   .shoot-link-chip.linked {
     padding: 0; border-color: rgba(var(--accent-rgb),.4);
-    background: rgba(var(--accent-rgb),.1); color: var(--accent-soft);
+    background: rgba(var(--accent-rgb),.12); color: var(--accent);
   }
   .shoot-link-chip.linked .slc-go {
     display: inline-flex; align-items: center; gap: 6px;
@@ -5277,7 +5277,7 @@
     transition: opacity .15s, color .15s;
   }
   .shoot-link-chip.linked .slc-x svg { width: 8px; height: 8px; }
-  .shoot-link-chip.linked:hover { border-color: rgba(var(--accent-rgb),.7); background: rgba(var(--accent-rgb),.16); }
+  .shoot-link-chip.linked:hover { color: var(--accent-ring); border-color: rgba(var(--accent-rgb),.72); background: rgba(var(--accent-rgb),.18); }
   .shoot-link-chip.linked .slc-x:hover { opacity: 1; color: #f08a8a; }
 
   /* ── Link picker modal ────────────────────────────────────────── */
@@ -5301,7 +5301,7 @@
     display: flex; align-items: center; gap: 10px;
     padding: 16px 16px 13px; border-bottom: 1px solid rgba(243,243,239,.08); flex-shrink: 0;
   }
-  .slm-ico { display: inline-flex; color: var(--accent-soft); }
+  .slm-ico { display: inline-flex; color: var(--accent); }
   .slm-ico svg { width: 14px; height: 14px; }
   .slm-title { flex: 1; font-family: var(--font-en-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-dim); }
   .slm-close { background: transparent; border: none; cursor: pointer; color: var(--ink-soft); display: flex; padding: 4px; border-radius: 6px; transition: color .18s, background .18s; }
@@ -5316,25 +5316,25 @@
     transition: background .14s, color .14s;
   }
   .slm-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .slm-item svg { width: 12px; height: 12px; flex-shrink: 0; opacity: 0; transition: opacity .14s, transform .14s; transform: translateX(-3px); color: var(--accent-soft); }
+  .slm-item svg { width: 12px; height: 12px; flex-shrink: 0; opacity: 0; transition: opacity .14s, transform .14s; transform: translateX(-3px); color: var(--accent); }
   .slm-item:hover { background: rgba(243,243,239,.06); color: var(--ink); }
   .slm-item:hover svg { opacity: 1; transform: translateX(0); }
   .slm-empty { padding: 32px 18px; text-align: center; font-family: var(--font-en-mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); opacity: .5; }
-  /* Add-to-Calendar — icon-only in the main row. Always visible (indigo accent) so
-     the action is discoverable; brightens to full accent on hover. */
+  /* Add-to-Calendar — icon-only in the main row. Uses the same true-blue accent
+     as the mood board tools so the planner does not skew purple. */
   .shoot-cal {
     background: transparent; border: none; cursor: pointer;
-    color: rgba(150,165,255,.7); opacity: 1; padding: 4px;
+    color: rgba(var(--accent-rgb),.78); opacity: 1; padding: 4px;
     position: relative;
     isolation: isolate;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     transition: color .18s, transform .14s, filter .18s;
   }
-  .shoot-cal:hover                       { color: rgba(170,182,255,1); transform: translateY(-1px); }
+  .shoot-cal:hover                       { color: var(--accent-ring); transform: translateY(-1px); }
   .shoot-cal:active                      { transform: translateY(0); }
   .shoot-cal svg                         { width: 14px; height: 14px; display: block; position: relative; z-index: 1; }
   .shoot-cal.is-scheduled {
-    color: var(--accent-soft);
+    color: var(--accent);
     filter: drop-shadow(0 0 7px rgba(var(--accent-rgb),.42));
   }
   .shoot-cal.is-scheduled::after {
@@ -5345,13 +5345,13 @@
     width: 4px;
     height: 4px;
     border-radius: 50%;
-    background: var(--accent-soft);
+    background: var(--accent);
     box-shadow: 0 0 8px rgba(var(--accent-rgb),.7);
   }
   @keyframes calSignalGlow {
-    0%   { color: rgba(150,165,255,.7); filter: drop-shadow(0 0 0 rgba(80,210,130,0)); }
+    0%   { color: rgba(var(--accent-rgb),.78); filter: drop-shadow(0 0 0 rgba(80,210,130,0)); }
     34%  { color: rgba(80,210,130,1); filter: drop-shadow(0 0 13px rgba(80,210,130,.62)); }
-    100% { color: rgba(150,165,255,.86); filter: drop-shadow(0 0 2px rgba(80,210,130,.12)); }
+    100% { color: rgba(var(--accent-rgb),.88); filter: drop-shadow(0 0 2px rgba(80,210,130,.12)); }
   }
   @keyframes calSignalRing {
     0%   { opacity: 0; transform: scale(.36); border-color: rgba(80,210,130,0); filter: blur(0); }
@@ -5441,7 +5441,7 @@
     color: var(--ink); background: rgba(243,243,239,.06);
   }
   .ss-btn:hover:not(.active) { border-color: rgba(243,243,239,.4); color: var(--ink); }
-  .ss-btn[data-s="upcoming"].active  { border-color:rgba(80,150,255,.55);  color:rgba(80,150,255,.92);  background:rgba(80,150,255,.07); }
+  .ss-btn[data-s="upcoming"].active  { border-color:rgba(var(--accent-rgb),.55);  color:rgba(var(--accent-rgb),.94);  background:rgba(var(--accent-rgb),.08); }
   .ss-btn[data-s="confirmed"].active { border-color:rgba(50,200,110,.55);  color:rgba(50,200,110,.92);  background:rgba(50,200,110,.07); }
   .ss-btn[data-s="shooting"].active  { border-color:rgba(255,130,50,.55);  color:rgba(255,130,50,.92);  background:rgba(255,130,50,.07); }
   .ss-btn[data-s="done"].active      { border-color:rgba(155,110,235,.55); color:rgba(155,110,235,.92); background:rgba(155,110,235,.07); }
