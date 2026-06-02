@@ -4919,7 +4919,7 @@
   /* ── Custom hover tooltip (desktop) — our own bubble, not the browser's ─ */
   .cz-tip {
     position: fixed; z-index: 200002; pointer-events: none;
-    transform: translate(-50%, calc(-100% - 9px));
+    transform: translateY(calc(-100% - 9px));
     background: rgba(13,13,17,.97); color: var(--ink);
     border: 1px solid rgba(243,243,239,.13); border-radius: 7px;
     padding: 5px 10px; font-family: var(--font-en-mono); font-size: 9px;
@@ -4930,12 +4930,12 @@
     opacity: 0; transition: opacity .14s ease, transform .14s cubic-bezier(.16,1,.3,1);
   }
   .cz-tip::after {
-    content: ""; position: absolute; top: 100%; left: 50%;
+    content: ""; position: absolute; top: 100%; left: var(--tip-arrow, 50%);
     transform: translateX(-50%) rotate(45deg); margin-top: -4px;
     width: 7px; height: 7px; background: rgba(13,13,17,.97);
     border-right: 1px solid rgba(243,243,239,.13); border-bottom: 1px solid rgba(243,243,239,.13);
   }
-    .cz-tip.show { opacity: 1; transform: translate(-50%, calc(-100% - 11px)); }
+    .cz-tip.show { opacity: 1; transform: translateY(calc(-100% - 11px)); }
 
     .spell-glass-menu {
       position: fixed;
@@ -4999,12 +4999,24 @@
       color: var(--ink);
       transform: translateX(1px);
     }
+    .spell-glass-item:disabled {
+      opacity: .32;
+      cursor: default;
+      transform: none;
+    }
+    .spell-glass-item:disabled,
+    .spell-glass-item:disabled * { cursor: default; }
     .spell-glass-item small {
       font-family: var(--font-en-mono);
       font-size: 7px;
       letter-spacing: .12em;
       text-transform: uppercase;
       color: rgba(243,243,239,.34);
+    }
+    .spell-glass-divider {
+      height: 1px;
+      margin: 5px 6px;
+      background: rgba(243,243,239,.07);
     }
     .spell-glass-muted {
       padding: 12px 10px;
@@ -11479,9 +11491,9 @@
       }
     }, true); /* capture phase — fires before inner element handlers */
 
-    /* Custom frosted spell menu for editable text. Browsers do not expose their
-       native spellcheck suggestions to JS, so we query a lightweight spelling
-       service and keep the visual language inside our own UI. */
+    /* Custom frosted text menu. Browsers do not expose native spellcheck
+       suggestions to JS, so replacement suggestions are fetched quietly and
+       added to the menu after the instant copy/paste actions are already open. */
     function isNativeTextContextTarget(target){
       if(!target || !target.closest) return false;
       var editable = target.closest('textarea, [contenteditable="true"], input');
@@ -11521,7 +11533,26 @@
     function editableTextTarget(target){
       return target && target.closest ? target.closest('textarea, [contenteditable="true"], input') : null;
     }
-    function getSpellContext(e){
+    function rangeFromPoint(x, y){
+      if(document.caretRangeFromPoint) return document.caretRangeFromPoint(x, y);
+      if(document.caretPositionFromPoint) {
+        var pos = document.caretPositionFromPoint(x, y);
+        if(pos) {
+          var r = document.createRange();
+          r.setStart(pos.offsetNode, pos.offset);
+          r.collapse(true);
+          return r;
+        }
+      }
+      return null;
+    }
+    function selectionInside(el){
+      var sel = window.getSelection && window.getSelection();
+      if(!sel || !sel.rangeCount) return null;
+      var r = sel.getRangeAt(0);
+      return el.contains(r.commonAncestorContainer) ? sel : null;
+    }
+    function getEditableMenuContext(e){
       var el = editableTextTarget(e.target);
       if(!el) return null;
       if(el.matches && el.matches('[readonly], [disabled]')) return null;
@@ -11529,33 +11560,100 @@
         var type = (el.getAttribute('type') || 'text').toLowerCase();
         if(!/^(text|search|email|url|tel)$/.test(type)) return null;
       }
+      var ctx = {
+        el: el,
+        selectedText: '',
+        copy: function(){},
+        cut: function(){},
+        paste: function(){},
+        selectAll: function(){}
+      };
       if(el.isContentEditable){
-        var range = null;
-        if(document.caretRangeFromPoint) {
-          range = document.caretRangeFromPoint(e.clientX, e.clientY);
-        } else if(document.caretPositionFromPoint) {
-          var pos = document.caretPositionFromPoint(e.clientX, e.clientY);
-          if(pos) {
-            range = document.createRange();
-            range.setStart(pos.offsetNode, pos.offset);
-            range.collapse(true);
+        var selected = selectionInside(el);
+        ctx.selectedText = selected ? String(selected) : '';
+        var selectedRange = selected && selected.rangeCount ? selected.getRangeAt(0).cloneRange() : null;
+        var pointRange = rangeFromPoint(e.clientX, e.clientY);
+        function insertContentEditableText(next){
+          el.focus();
+          var sel = window.getSelection && window.getSelection();
+          var r = selectionInside(el);
+          if(r && r.rangeCount) {
+            r = r.getRangeAt(0);
+          } else {
+            r = pointRange && el.contains(pointRange.startContainer) ? pointRange : document.createRange();
+            if(!pointRange || !el.contains(pointRange.startContainer)) r.selectNodeContents(el);
+            if(!pointRange || !el.contains(pointRange.startContainer)) r.collapse(false);
           }
+          r.deleteContents();
+          var node = document.createTextNode(next);
+          r.insertNode(node);
+          r.setStartAfter(node);
+          r.collapse(true);
+          if(sel) {
+            sel.removeAllRanges();
+            sel.addRange(r);
+          }
+          el.dispatchEvent(new Event('input', { bubbles:true }));
         }
-        if(!range || !range.startContainer || range.startContainer.nodeType !== 3) return null;
-        var text = range.startContainer.nodeValue || '';
-        var bounds = wordBoundsInText(text, range.startOffset);
-        if(!bounds) return null;
-        return {
-          word: bounds.word,
-          replace: function(next){
-            var r = document.createRange();
-            r.setStart(range.startContainer, bounds.start);
-            r.setEnd(range.startContainer, bounds.end);
-            r.deleteContents();
-            r.insertNode(document.createTextNode(next));
-            el.dispatchEvent(new Event('input', { bubbles:true }));
+        ctx.copy = function(){
+          if(ctx.selectedText && navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(ctx.selectedText);
+          document.execCommand && document.execCommand('copy');
+        };
+        ctx.cut = function(){
+          var text = ctx.selectedText;
+          if(!text) return;
+          var afterCopy = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.resolve(document.execCommand && document.execCommand('copy'));
+          return Promise.resolve(afterCopy).then(function(){
+            var sel = selectionInside(el);
+            if(sel && sel.rangeCount) {
+              sel.deleteFromDocument();
+              el.dispatchEvent(new Event('input', { bubbles:true }));
+            } else if(selectedRange) {
+              selectedRange.deleteContents();
+              el.dispatchEvent(new Event('input', { bubbles:true }));
+            }
+          });
+        };
+        ctx.paste = function(){
+          if(navigator.clipboard && navigator.clipboard.readText) {
+            return navigator.clipboard.readText().then(function(text){ if(text) insertContentEditableText(text); });
+          }
+          document.execCommand && document.execCommand('paste');
+        };
+        ctx.selectAll = function(){
+          el.focus();
+          var r = document.createRange();
+          r.selectNodeContents(el);
+          var sel = window.getSelection && window.getSelection();
+          if(sel) {
+            sel.removeAllRanges();
+            sel.addRange(r);
           }
         };
+        if(pointRange && pointRange.startContainer && pointRange.startContainer.nodeType === 3) {
+          var text = pointRange.startContainer.nodeValue || '';
+          var bounds = wordBoundsInText(text, pointRange.startOffset);
+          if(bounds) {
+            ctx.word = bounds.word;
+            ctx.replace = function(next){
+              var r = document.createRange();
+              r.setStart(pointRange.startContainer, bounds.start);
+              r.setEnd(pointRange.startContainer, bounds.end);
+              r.deleteContents();
+              var node = document.createTextNode(next);
+              r.insertNode(node);
+              r.setStartAfter(node);
+              r.collapse(true);
+              var sel = window.getSelection && window.getSelection();
+              if(sel) {
+                sel.removeAllRanges();
+                sel.addRange(r);
+              }
+              el.dispatchEvent(new Event('input', { bubbles:true }));
+            };
+          }
+        };
+        return ctx;
       }
       var value = el.value || '';
       var selStart = typeof el.selectionStart === 'number' ? el.selectionStart : 0;
@@ -11564,10 +11662,46 @@
       var bounds = selected && /^[\p{L}\p{N}'’-]+$/u.test(selected)
         ? { start:selStart, end:selEnd, word:selected }
         : wordBoundsInText(value, selStart);
-      if(!bounds) return null;
-      return {
-        word: bounds.word,
-        replace: function(next){
+      ctx.selectedText = selected;
+      ctx.copy = function(){
+        if(ctx.selectedText && navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(ctx.selectedText);
+        el.focus();
+        document.execCommand && document.execCommand('copy');
+      };
+      ctx.cut = function(){
+        if(!ctx.selectedText) return;
+        var afterCopy = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(ctx.selectedText) : Promise.resolve(document.execCommand && document.execCommand('copy'));
+        return Promise.resolve(afterCopy).then(function(){
+          el.focus();
+          if(typeof el.setRangeText === 'function') {
+            el.setSelectionRange(selStart, selEnd);
+            el.setRangeText('', selStart, selEnd, 'end');
+          } else {
+            el.value = value.slice(0,selStart) + value.slice(selEnd);
+          }
+          el.dispatchEvent(new Event('input', { bubbles:true }));
+        });
+      };
+      ctx.paste = function(){
+        el.focus();
+        if(navigator.clipboard && navigator.clipboard.readText) {
+          return navigator.clipboard.readText().then(function(text){
+            if(!text) return;
+            var start = typeof el.selectionStart === 'number' ? el.selectionStart : selStart;
+            var end = typeof el.selectionEnd === 'number' ? el.selectionEnd : selEnd;
+            if(typeof el.setRangeText === 'function') {
+              el.setRangeText(text, start, end, 'end');
+            } else {
+              el.value = el.value.slice(0,start) + text + el.value.slice(end);
+            }
+            el.dispatchEvent(new Event('input', { bubbles:true }));
+          });
+        }
+      };
+      ctx.selectAll = function(){ el.focus(); el.select && el.select(); };
+      if(bounds) {
+        ctx.word = bounds.word;
+        ctx.replace = function(next){
           el.focus();
           if(typeof el.setRangeText === 'function') {
             el.setSelectionRange(bounds.start, bounds.end);
@@ -11576,8 +11710,9 @@
             el.value = value.slice(0,bounds.start) + next + value.slice(bounds.end);
           }
           el.dispatchEvent(new Event('input', { bubbles:true }));
-        }
-      };
+        };
+      }
+      return ctx;
     }
     function placeSpellMenu(menu, x, y){
       document.body.appendChild(menu);
@@ -11601,20 +11736,46 @@
         document.addEventListener('keydown', closeSpellMenu, true);
       }, 0);
     }
-    function showSpellMenu(e, ctx, suggestions){
-      spellMenu = document.createElement('div');
-      spellMenu.className = 'spell-glass-menu';
-      spellMenu.innerHTML = '<div class="spell-glass-head">Replace "'+spellEsc(ctx.word)+'"</div>' +
+    function menuButton(action, label, hint, disabled){
+      return '<button class="spell-glass-item" type="button" data-action="'+spellEsc(action)+'"'+(disabled?' disabled':'')+'><span>'+spellEsc(label)+'</span><small>'+spellEsc(hint || '')+'</small></button>';
+    }
+    function renderSpellSuggestions(menu, ctx, suggestions){
+      var slot = menu.querySelector('[data-spell-slot]');
+      if(!slot || !ctx.replace || !suggestions.length) return;
+      slot.innerHTML = '<div class="spell-glass-head">Replace "'+spellEsc(ctx.word)+'"</div>' +
         suggestions.map(function(s){
-          return '<button class="spell-glass-item" type="button" data-word="'+spellEsc(s)+'"><span>'+spellEsc(s)+'</span><small>Replace</small></button>';
-        }).join('');
-      spellMenu.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
-      spellMenu.addEventListener('touchstart', function(ev){ ev.stopPropagation(); }, { passive:true });
-      spellMenu.querySelectorAll('.spell-glass-item').forEach(function(btn){
+          return '<button class="spell-glass-item" type="button" data-action="replace" data-word="'+spellEsc(s)+'"><span>'+spellEsc(s)+'</span><small>Replace</small></button>';
+        }).join('') +
+        '<div class="spell-glass-divider"></div>';
+      slot.querySelectorAll('[data-action="replace"]').forEach(function(btn){
         btn.addEventListener('click', function(ev){
           ev.stopPropagation();
           ctx.replace(btn.dataset.word || btn.textContent.trim());
           closeSpellMenu();
+        });
+      });
+    }
+    function showTextMenu(e, ctx){
+      closeSpellMenu();
+      spellMenu = document.createElement('div');
+      spellMenu.className = 'spell-glass-menu';
+      spellMenu.innerHTML =
+        '<div data-spell-slot></div>' +
+        '<div class="spell-glass-head">Text</div>' +
+        menuButton('cut', 'Cut', 'Ctrl+X', !ctx.selectedText) +
+        menuButton('copy', 'Copy', 'Ctrl+C', !ctx.selectedText) +
+        menuButton('paste', 'Paste', 'Ctrl+V', false) +
+        menuButton('selectAll', 'Select all', 'Ctrl+A', false);
+      spellMenu.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
+      spellMenu.addEventListener('touchstart', function(ev){ ev.stopPropagation(); }, { passive:true });
+      spellMenu.querySelectorAll('[data-action]').forEach(function(btn){
+        btn.addEventListener('click', function(ev){
+          ev.stopPropagation();
+          if(btn.disabled) return;
+          var action = btn.dataset.action;
+          if(action === 'replace') return;
+          var task = ctx[action] ? ctx[action]() : null;
+          Promise.resolve(task).catch(function(){}).then(function(){ closeSpellMenu(); });
         });
       });
       placeSpellMenu(spellMenu, e.clientX, e.clientY);
@@ -11645,22 +11806,23 @@
         return suggestions.slice(0, 5);
       });
     }
-    function openSpellMenu(e){
-      var ctx = getSpellContext(e);
-      if(!ctx || !ctx.word || ctx.word.length < 2) return false;
-      closeSpellMenu();
+    function openTextContextMenu(e){
+      var ctx = getEditableMenuContext(e);
+      if(!ctx) return false;
+      var menu = showTextMenu(e, ctx);
       var request = spellMenuRequest;
-      fetchSpellSuggestions(ctx.word).then(function(suggestions){
-        if(request !== spellMenuRequest) return;
-        if(!suggestions.length) return;
-        showSpellMenu(e, ctx, suggestions);
-      }).catch(function(){
-        if(request === spellMenuRequest) closeSpellMenu();
-      });
+      if(ctx.word && ctx.word.length > 1) {
+        fetchSpellSuggestions(ctx.word).then(function(suggestions){
+          if(request !== spellMenuRequest || spellMenu !== menu) return;
+          if(!suggestions.length) return;
+          renderSpellSuggestions(menu, ctx, suggestions);
+          placeSpellMenu(menu, e.clientX, e.clientY);
+        }).catch(function(){});
+      }
       return true;
     }
     document.addEventListener('contextmenu', function(e){
-      if(isNativeTextContextTarget(e.target) && openSpellMenu(e)) {
+      if(isNativeTextContextTarget(e.target) && openTextContextMenu(e)) {
         e.preventDefault();
         return;
       }
@@ -11680,18 +11842,23 @@
       var current = null, hideT = null;
       function place(el){
         var r = el.getBoundingClientRect();
-        var x = Math.round(r.left + r.width / 2);
+        var anchorX = Math.round(r.left + r.width / 2);
         var y = Math.round(r.top);
-        /* keep the bubble within the viewport horizontally */
-        x = Math.max(48, Math.min(x, window.innerWidth - 48));
-        tip.style.left = x + 'px';
+        var pad = 8;
+        var w = Math.min(tip.offsetWidth || 0, window.innerWidth - pad * 2);
+        var left = anchorX - w / 2;
+        left = Math.max(pad, Math.min(left, window.innerWidth - w - pad));
+        tip.style.left = Math.round(left) + 'px';
         tip.style.top  = y + 'px';
+        tip.style.setProperty('--tip-arrow', Math.round(anchorX - left) + 'px');
       }
       function show(el){
         var txt = el.getAttribute('data-cztip');
         if (!txt) return;
         current = el;
         tip.textContent = txt;
+        tip.style.left = '-9999px';
+        tip.style.top = '-9999px';
         place(el);
         tip.classList.add('show');
       }
