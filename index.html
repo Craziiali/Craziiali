@@ -4549,7 +4549,7 @@
       position: fixed; top: 0; left: 0; border-radius: 50%;
       pointer-events: none; will-change: transform;
       width: 20px; height: 20px; margin: -10px;
-      z-index: 200000; opacity: 0;
+      z-index: 999999; opacity: 0;
       backdrop-filter: blur(8px) brightness(1.15);
       -webkit-backdrop-filter: blur(8px) brightness(1.15);
       background: radial-gradient(circle at 35% 30%,
@@ -4597,7 +4597,7 @@
       width: 20px; height: 20px; margin: -10px;
       border-radius: 50%;
       border: 1px solid rgba(243,243,239,.42);
-      pointer-events: none; z-index: 199999;
+      pointer-events: none; z-index: 999998;
       opacity: 0; will-change: transform, opacity;
     }
     @keyframes clickRingExpand {
@@ -4889,7 +4889,40 @@
   ═══════════════════════════════════════════════════════════════ */
 
   /* Page shell */
-  .planner-page { min-height: 100vh; }
+  .planner-page {
+    min-height: 100vh;
+    position: relative;
+    isolation: isolate;
+  }
+  .planner-page::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 46% 38% at 50% 47%,
+        rgba(5,5,6,.34) 0%,
+        rgba(5,5,6,.24) 36%,
+        rgba(5,5,6,.08) 62%,
+        transparent 78%),
+      linear-gradient(90deg,
+        rgba(5,5,6,.46) 0%,
+        rgba(5,5,6,.18) 15%,
+        transparent 34%,
+        transparent 66%,
+        rgba(5,5,6,.18) 85%,
+        rgba(5,5,6,.46) 100%),
+      linear-gradient(180deg,
+        rgba(5,5,6,.24) 0%,
+        transparent 22%,
+        transparent 76%,
+        rgba(5,5,6,.28) 100%);
+  }
+  .planner-page > * {
+    position: relative;
+    z-index: 1;
+  }
 
   /* Sticky top bar */
   .planner-bar {
@@ -11532,6 +11565,29 @@
     }
     var spellMenu = null;
     var spellMenuRequest = 0;
+    var spellSuggestionCache = Object.create(null);
+    var spellSuggestionPending = Object.create(null);
+    try {
+      var savedSpellCache = sessionStorage.getItem('czSpellSuggestions');
+      if(savedSpellCache) spellSuggestionCache = JSON.parse(savedSpellCache) || spellSuggestionCache;
+    } catch(_) {}
+    function spellKey(word){
+      return String(word || '').trim().toLowerCase();
+    }
+    function saveSpellCache(){
+      try { sessionStorage.setItem('czSpellSuggestions', JSON.stringify(spellSuggestionCache)); } catch(_) {}
+    }
+    function getCachedSpellSuggestions(word){
+      var key = spellKey(word);
+      return Object.prototype.hasOwnProperty.call(spellSuggestionCache, key) ? spellSuggestionCache[key] : null;
+    }
+    function setCachedSpellSuggestions(word, suggestions){
+      var key = spellKey(word);
+      if(!key) return suggestions || [];
+      spellSuggestionCache[key] = suggestions || [];
+      saveSpellCache();
+      return spellSuggestionCache[key];
+    }
     function closeSpellMenu(ev){
       if(ev && spellMenu && ev.type !== 'keydown' && spellMenu.contains(ev.target)) return;
       spellMenuRequest++;
@@ -11781,7 +11837,7 @@
         });
       });
     }
-    function showTextMenu(e, ctx){
+    function showTextMenu(e, ctx, initialSuggestions){
       closeSpellMenu();
       spellMenu = document.createElement('div');
       spellMenu.className = 'spell-glass-menu cz-menu-surface';
@@ -11793,6 +11849,7 @@
         menuButton('copy', 'Copy', 'Ctrl+C', !ctx.selectedText) +
         menuButton('paste', 'Paste', 'Ctrl+V', false) +
         menuButton('selectAll', 'Select all', 'Ctrl+A', false);
+      if(initialSuggestions && initialSuggestions.length) renderSpellSuggestions(spellMenu, ctx, initialSuggestions);
       spellMenu.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
       spellMenu.addEventListener('touchstart', function(ev){ ev.stopPropagation(); }, { passive:true });
       spellMenu.querySelectorAll('[data-action]').forEach(function(btn){
@@ -11810,8 +11867,14 @@
       return spellMenu;
     }
     function fetchSpellSuggestions(word){
+      var key = spellKey(word);
+      if(!key) return Promise.resolve([]);
+      if(Object.prototype.hasOwnProperty.call(spellSuggestionCache, key)) {
+        return Promise.resolve(spellSuggestionCache[key]);
+      }
+      if(spellSuggestionPending[key]) return spellSuggestionPending[key];
       var body = new URLSearchParams({ text: word, language: 'en-US' });
-      return fetch('https://api.languagetool.org/v2/check', {
+      spellSuggestionPending[key] = fetch('https://api.languagetool.org/v2/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: body.toString()
@@ -11830,15 +11893,66 @@
             }
           });
         });
-        return suggestions.slice(0, 5);
+        return setCachedSpellSuggestions(word, suggestions.slice(0, 5));
+      }).catch(function(err){
+        delete spellSuggestionPending[key];
+        throw err;
+      }).then(function(suggestions){
+        delete spellSuggestionPending[key];
+        return suggestions;
       });
+      return spellSuggestionPending[key];
     }
+    var spellPrefetchTimer = null;
+    var spellPrefetchLast = '';
+    function wordFromEditableCaret(el){
+      if(!el || (el.matches && el.matches('[readonly], [disabled]'))) return '';
+      if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+        var value = el.value || '';
+        var pos = typeof el.selectionStart === 'number' ? el.selectionStart : value.length;
+        var bounds = wordBoundsInText(value, pos);
+        return bounds ? bounds.word : '';
+      }
+      if(el.isContentEditable) {
+        var sel = selectionInside(el);
+        if(!sel || !sel.rangeCount) return '';
+        var r = sel.getRangeAt(0);
+        if(!r.startContainer || r.startContainer.nodeType !== 3) return '';
+        var text = r.startContainer.nodeValue || '';
+        var bounds = wordBoundsInText(text, r.startOffset);
+        return bounds ? bounds.word : '';
+      }
+      return '';
+    }
+    function queueSpellPrefetch(target){
+      var el = editableTextTarget(target);
+      if(!el) return;
+      clearTimeout(spellPrefetchTimer);
+      spellPrefetchTimer = setTimeout(function(){
+        var word = wordFromEditableCaret(el);
+        var key = spellKey(word);
+        if(!key || key.length < 3 || key === spellPrefetchLast) return;
+        if(Object.prototype.hasOwnProperty.call(spellSuggestionCache, key) || spellSuggestionPending[key]) return;
+        spellPrefetchLast = key;
+        fetchSpellSuggestions(word).catch(function(){});
+      }, 180);
+    }
+    document.addEventListener('input', function(e){
+      if(isNativeTextContextTarget(e.target)) queueSpellPrefetch(e.target);
+    }, true);
+    document.addEventListener('keyup', function(e){
+      if(isNativeTextContextTarget(e.target)) queueSpellPrefetch(e.target);
+    }, true);
+    document.addEventListener('focusin', function(e){
+      if(isNativeTextContextTarget(e.target)) queueSpellPrefetch(e.target);
+    }, true);
     function openTextContextMenu(e){
       var ctx = getEditableMenuContext(e);
       if(!ctx) return false;
-      var menu = showTextMenu(e, ctx);
+      var cachedSuggestions = ctx.word && ctx.word.length > 1 ? getCachedSpellSuggestions(ctx.word) : null;
+      var menu = showTextMenu(e, ctx, cachedSuggestions);
       var request = spellMenuRequest;
-      if(ctx.word && ctx.word.length > 1) {
+      if(ctx.word && ctx.word.length > 1 && !cachedSuggestions) {
         fetchSpellSuggestions(ctx.word).then(function(suggestions){
           if(request !== spellMenuRequest || spellMenu !== menu) return;
           if(!suggestions.length) return;
