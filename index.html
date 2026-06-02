@@ -6197,19 +6197,27 @@
     }
     .planner-bar-brand { font-size: 9px; }
 
-    /* ─ Stats: 2 × 2 grid so all four numbers are visible ───── */
+    /* ─ Stats: compact single row on phones ─────────────────── */
     .planner-stats {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px 0;
-      padding: 14px 20px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0;
+      padding: 12px 20px;
     }
-    .p-stat { padding: 0; }
-    .p-stat + .p-stat { border-left: none; padding-left: 0; }
-    .p-stat:nth-child(even) {
-      padding-left: 18px;
+    .p-stat {
+      min-width: 0;
+      justify-content: center;
+      gap: 4px;
+      padding: 0 5px;
+      font-size: 7px;
+      letter-spacing: .1em;
+      white-space: nowrap;
+    }
+    .p-stat + .p-stat {
       border-left: 1px solid var(--rule);
+      padding-left: 5px;
     }
+    .p-stat-num { font-size: 13px; }
 
     /* ─ Controls: filters scroll horizontally, button stays right ─ */
     .planner-controls {
