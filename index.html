@@ -5471,18 +5471,27 @@
   .shoot-date::placeholder, .shoot-time::placeholder,
   .shoot-loc::placeholder { color: rgba(243,243,239,.28); }
 
-  /* Date/time — text cursor; scroll-wheel still adjusts values */
+  /* Date/time — grey & inert until clicked. Click to "activate": it lights up
+     white + a soft highlight, and ONLY then does the scroll wheel adjust it.
+     Click away to deactivate (back to grey) — prevents accidental changes. */
   .shoot-date, .shoot-time {
-    cursor: text;
+    cursor: pointer;
+    color: var(--ink-dim);
     user-select: none; -webkit-user-select: none;
+    border-radius: 4px;
+    transition: color .18s, background .18s, box-shadow .18s;
   }
   .shoot-date:focus, .shoot-time:focus {
+    cursor: text;
+    color: var(--ink);
+    background: rgba(243,243,239,.12);
+    box-shadow: 0 0 0 4px rgba(243,243,239,.12);
     user-select: text; -webkit-user-select: text;
   }
   /* Brief flash when a scroll-adjusted value changes */
   @keyframes scroll-bump {
-    0%   { color: rgba(243,243,239,.85); }
-    100% { color: rgba(243,243,239,.42); }
+    0%   { filter: brightness(1.7); }
+    100% { filter: brightness(1); }
   }
   .scroll-bump { animation: scroll-bump .18s ease-out forwards; }
 
@@ -9153,6 +9162,7 @@
 
     function initDesktopWheelScrollBridge(){
       if (!window.matchMedia || !window.matchMedia('(pointer: fine)').matches) return;
+      var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       function nearestScrollable(node){
         while (node && node !== document.body && node !== document.documentElement) {
           if (node.nodeType === 1) {
@@ -9163,20 +9173,36 @@
         }
         return null;
       }
-      function scrollElement(el, deltaY){
-        if (!el) return false;
-        var before = el.scrollTop;
-        el.scrollTop += deltaY;
-        return el.scrollTop !== before;
+      /* ── Momentum smooth-scroll ───────────────────────────────────────
+         The old bridge did `scrollTop += deltaY` on every wheel notch, which
+         is an instant hard jump (the choppy / stepped feel). Instead we hold a
+         target scrollTop and ease the real scrollTop toward it each frame, so
+         a flick glides to a stop. */
+      var sc = null, target = 0, raf = null;
+      function frame(){
+        if (!sc) { raf = null; return; }
+        var cur = sc.scrollTop, diff = target - cur;
+        if (Math.abs(diff) < 0.5) { sc.scrollTop = target; raf = null; sc = null; return; }
+        sc.scrollTop = cur + diff * 0.16;   /* easing — lower = longer glide */
+        raf = requestAnimationFrame(frame);
       }
       document.addEventListener('wheel', function(e){
         if (e.defaultPrevented || e.ctrlKey || e.metaKey || document.body.dataset.view === 'moodboardCanvas') return;
         var t = e.target;
-        if (t && t.closest && t.closest('.shoot-time, .shoot-date, .mb-stage, .mb-toolbar, .mb-propbar')) return;
-        var local = nearestScrollable(t);
-        var target = local || (current === 'invoice' ? document.scrollingElement : OVERLAYS[current]);
-        if (!target) return;
-        if (scrollElement(target, e.deltaY)) e.preventDefault();
+        /* A date/time field only "captures" the wheel (to scrub its value) once
+           it's been clicked/focused. Otherwise the wheel scrolls the page. */
+        var df = t && t.closest && t.closest('.shoot-time, .shoot-date');
+        if (df && document.activeElement === df) return;
+        if (t && t.closest && t.closest('.mb-stage, .mb-toolbar, .mb-propbar')) return;
+        var tgt = nearestScrollable(t) || (current === 'invoice' ? document.scrollingElement : OVERLAYS[current]);
+        if (!tgt || tgt.scrollHeight <= tgt.clientHeight + 1) return;
+        e.preventDefault();
+        /* normalise delta: lines→px, pages→viewport */
+        var delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? tgt.clientHeight : 1);
+        if (reduce) { tgt.scrollTop += delta; return; }
+        if (tgt !== sc) { sc = tgt; target = tgt.scrollTop; }   /* switched scrollers — resync */
+        target = Math.max(0, Math.min(target + delta, tgt.scrollHeight - tgt.clientHeight));
+        if (!raf) raf = requestAnimationFrame(frame);
       }, { passive:false, capture:true });
     }
     initDesktopWheelScrollBridge();
@@ -9917,8 +9943,11 @@
         flash(inp); savePlanner();
       }
 
-      /* Hover scroll (always works when mouse is over the field) */
+      /* Wheel scrub — only once the field is clicked/activated (focused).
+         Otherwise the wheel falls through to scroll the page (no accidental
+         changes). The touch-swipe handlers below still work on mobile. */
       inp.addEventListener('wheel', function(e){
+        if (document.activeElement !== inp) return;
         e.preventDefault(); e.stopPropagation();
         applyTime(e.deltaY);
       }, {passive:false});
@@ -9972,8 +10001,9 @@
         flash(inp); savePlanner();
       }
 
-      /* Hover scroll */
+      /* Wheel scrub — only once the field is clicked/activated (focused). */
       inp.addEventListener('wheel', function(e){
+        if (document.activeElement !== inp) return;
         e.preventDefault(); e.stopPropagation();
         applyDate(e.deltaY);
       }, {passive:false});
