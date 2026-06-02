@@ -40,6 +40,7 @@
     let gcalToken = null, gcalTokenExp = 0;
     const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
     const GCAL_LS_KEY = 'cz_gcal_token';
+    const GCAL_SESSION_KEY = 'cz_gcal_prompted_session_uid';
     /* Restore a previously captured calendar token so we DON'T re-prompt on every
        click or page reload while it's still valid. Only re-asks once it truly
        expires (~1h) or the user signs out. */
@@ -66,8 +67,23 @@
       /* ── Email / password auth ────────────────────────────── */
       signIn:             (email, pass) => signInWithEmailAndPassword(auth, email, pass),
       createAccount:      (email, pass) => createUserWithEmailAndPassword(auth, email, pass),
-      signInWithGoogle:   ()            => signInWithPopup(auth, new GoogleAuthProvider()),
-      signOut:            ()            => { gcalToken = null; gcalTokenExp = 0; _persistGcal(); return signOut(auth); },
+      signInWithGoogle:   ()            => {
+        const provider = new GoogleAuthProvider();
+        provider.addScope(GCAL_SCOPE);
+        return signInWithPopup(auth, provider).then(function(result){
+          const cred = GoogleAuthProvider.credentialFromResult(result);
+          if (cred && cred.accessToken) {
+            gcalToken = cred.accessToken;
+            gcalTokenExp = Date.now() + 55 * 60 * 1000;
+            _persistGcal();
+            try {
+              if (auth.currentUser && auth.currentUser.uid) sessionStorage.setItem(GCAL_SESSION_KEY, auth.currentUser.uid);
+            } catch (_) {}
+          }
+          return result;
+        });
+      },
+      signOut:            ()            => { gcalToken = null; gcalTokenExp = 0; _persistGcal(); try { sessionStorage.removeItem(GCAL_SESSION_KEY); } catch(_) {} return signOut(auth); },
       onAuthStateChanged: (cb)          => onAuthStateChanged(auth, cb),
       currentUser:        ()            => auth.currentUser,
       updateProfile:      (name, photo) => updateProfile(auth.currentUser, { displayName: name || '', photoURL: photo || null }),
@@ -81,13 +97,28 @@
          connectCalendar() pops a Google consent (calendar.events scope) and captures the
          OAuth access token. Done on-demand the first time the user uses "Add to Calendar",
          so normal sign-in is never burdened with a calendar prompt. */
-      connectCalendar: () => {
+      hasPromptedCalendarThisSession: () => {
+        try {
+          return !!(auth.currentUser && auth.currentUser.uid && sessionStorage.getItem(GCAL_SESSION_KEY) === auth.currentUser.uid);
+        } catch(_) { return false; }
+      },
+      connectCalendar: (opts) => {
+        opts = opts || {};
+        if (opts.oncePerSession !== false) {
+          try {
+            if (auth.currentUser && auth.currentUser.uid && sessionStorage.getItem(GCAL_SESSION_KEY) === auth.currentUser.uid) {
+              return Promise.reject({ code:'calendar-session-already-prompted' });
+            }
+          } catch(_) {}
+        }
         const provider = new GoogleAuthProvider();
         provider.addScope(GCAL_SCOPE);
         /* If they're already signed into one Google account, Google auto-completes
            without re-asking for consent (the scope is already granted). */
-        provider.setCustomParameters({ prompt: 'select_account' });
         return signInWithPopup(auth, provider).then(function(result){
+          try {
+            if (auth.currentUser && auth.currentUser.uid) sessionStorage.setItem(GCAL_SESSION_KEY, auth.currentUser.uid);
+          } catch (_) {}
           const cred = GoogleAuthProvider.credentialFromResult(result);
           if (!cred || !cred.accessToken) throw { code:'no-token' };
           gcalToken = cred.accessToken;
@@ -10519,7 +10550,7 @@
         });
       }
       function ensureTokenThenInsert(){
-        return fb.getGcalToken() ? insert() : fb.connectCalendar().then(insert);
+        return fb.getGcalToken() ? insert() : fb.connectCalendar({ oncePerSession:true }).then(insert);
       }
 
       ensureTokenThenInsert().catch(function(err){
@@ -10528,7 +10559,17 @@
         if(code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request'){ setBusy(false); return; }
         /* Token expired mid-flight → refresh once and retry. */
         if(code === 'token-expired'){
-          fb.connectCalendar().then(insert).catch(function(){ setBusy(false); fallbackTab('Opened Google Calendar for you to save.'); });
+          if(fb.hasPromptedCalendarThisSession && fb.hasPromptedCalendarThisSession()){
+            setBusy(false);
+            fallbackTab('Google session expired — opened Calendar without asking again.');
+          } else {
+            fb.connectCalendar({ oncePerSession:true }).then(insert).catch(function(){ setBusy(false); fallbackTab('Opened Google Calendar for you to save.'); });
+          }
+          return;
+        }
+        if(code === 'calendar-session-already-prompted'){
+          setBusy(false);
+          fallbackTab('Opened Calendar without asking you to sign in again.');
           return;
         }
         /* Calendar API not enabled yet (setup not finished) → fall back gracefully. */
