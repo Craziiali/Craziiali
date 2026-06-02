@@ -5486,13 +5486,9 @@
     user-select: text; -webkit-user-select: text;
   }
   /* Brief flash when a scroll-adjusted value changes */
-  @keyframes scroll-bump {
-    0%   { color: var(--accent); }
-    100% { color: var(--ink); }
-  }
-  /* No fill-forwards: after the flash, colour reverts to the stylesheet value
-     (white while focused, grey once blurred). Re-fires on every value change. */
-  .scroll-bump { animation: scroll-bump .22s ease-out; }
+  /* Value scrub gives no colour flicker — the field just stays white while
+     active. (.scroll-bump kept as a no-op so flash() calls remain harmless.) */
+  .scroll-bump {}
 
   /* Location wrapper */
   .loc-wrap  { position: relative; min-width: 0; display: flex; align-items: center; overflow: hidden; }
