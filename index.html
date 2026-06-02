@@ -2217,7 +2217,7 @@
 
       var entered=false,curType='',isText=false,lastX=window.innerWidth/2,lastY=window.innerHeight/2;
       var BTN_TAGS={'BUTTON':1,'A':1,'INPUT':1,'SELECT':1};
-      var BTN_CLS=/sp-row|sp-btn|sp-lock|sp-filter|sp-sbadge|lang-toggle|wordmark-link|planner-bar-brand|notes-bar-brand|shoot-dot|shoot-prio|shoot-del|auth-signin-trigger|auth-signout-btn|auth-google-btn|auth-submit|auth-switch/;
+      var BTN_CLS=/sp-row|sp-btn|sp-lock|sp-filter|sp-sbadge|lang-toggle|wordmark-link|planner-bar-brand|notes-bar-brand|shoot-dot|shoot-prio|shoot-del|pl-cal-menu|auth-signin-trigger|auth-signout-btn|auth-google-btn|auth-submit|auth-switch/;
 
       /* Returns true only when (x,y) is literally inside the rendered bounds
          of a text character — not just inside the element's box.
@@ -9729,7 +9729,15 @@
       }
       savePlanner();
     }
-    function closePlannerCalMenu(){
+    function closePlannerCalMenu(e){
+      var old = document.getElementById('plCalMenu');
+      if(e && old && old.contains(e.target)) return;
+      if(e && e.target && e.target.closest && e.target.closest('.shoot-cal')) return;
+      if(old) old.remove();
+      document.removeEventListener('mousedown', closePlannerCalMenu, true);
+      document.removeEventListener('touchstart', closePlannerCalMenu, true);
+    }
+    function removePlannerCalMenu(){
       var old = document.getElementById('plCalMenu');
       if(old) old.remove();
       document.removeEventListener('mousedown', closePlannerCalMenu, true);
@@ -9737,7 +9745,7 @@
     }
     function showPlannerCalMenu(p, btn){
       if(!p || !btn) return;
-      closePlannerCalMenu();
+      removePlannerCalMenu();
       var menu = document.createElement('div');
       menu.id = 'plCalMenu';
       menu.className = 'pl-cal-menu';
@@ -9762,6 +9770,7 @@
       menu.style.left = left + 'px';
       menu.style.top = top + 'px';
       requestAnimationFrame(function(){ menu.classList.add('show'); });
+      if(window._wakeGlassCursor) window._wakeGlassCursor();
       menu.addEventListener('mousedown', function(e){ e.stopPropagation(); });
       menu.addEventListener('touchstart', function(e){ e.stopPropagation(); }, { passive:true });
       menu.addEventListener('click', function(e){
@@ -9769,7 +9778,7 @@
         if(!item) return;
         e.stopPropagation();
         var act = item.dataset.act;
-        closePlannerCalMenu();
+        removePlannerCalMenu();
         if(act === 'copy') copyShootShareMessage(p, 'Message copied');
         else if(act === 'resend') openShootInGCal(p, btn, { forceCalendar:true });
         else if(act === 'open') {
