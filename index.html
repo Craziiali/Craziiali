@@ -5948,6 +5948,10 @@
     from { opacity:0; transform:translateY(16px); filter:blur(7px); }
     to   { opacity:1; transform:none;             filter:blur(0);   }
   }
+  @keyframes lineFadeIn {
+    from { opacity: 0; transform: translateY(8px); filter: blur(3px); }
+    to   { opacity: 1; transform: translateY(0);  filter: blur(0); }
+  }
 
   /* ── Planner entrance ────────────────────────────────────────── */
   .planner-entering .planner-bar      { animation: focusIn .60s cubic-bezier(.16,1,.3,1) both; animation-delay:  80ms; }
@@ -5961,6 +5965,8 @@
   .planner-entering .p-stat:nth-child(3) { animation-delay: 354ms; }
   .planner-entering .p-stat:nth-child(4) { animation-delay: 386ms; }
   .planner-entering .planner-controls { animation: focusIn .65s cubic-bezier(.16,1,.3,1) both; animation-delay: 430ms; }
+  .planner-entering .shoot-ghost      { animation: focusIn .62s cubic-bezier(.16,1,.3,1) both; animation-delay: 470ms; }
+  .planner-entering .shoot-ghost::after { animation: lineFadeIn .66s cubic-bezier(.16,1,.3,1) both; animation-delay: 515ms; }
   .planner-entering .shoot-row            { animation: focusIn .60s cubic-bezier(.16,1,.3,1) both; animation-delay: 558ms; }
   .planner-entering .shoot-row:nth-child(1) { animation-delay: 500ms; }
   .planner-entering .shoot-row:nth-child(2) { animation-delay: 538ms; }
@@ -6545,10 +6551,18 @@
       width: 100%; text-align: left;
       padding: 17px 0 17px 0;
       background: transparent; border: none;
-      border-bottom: 1px solid var(--rule);
+      position: relative;
       cursor: pointer; -webkit-tap-highlight-color: transparent;
       color: rgba(243,243,239,.76);
       transition: color .18s, opacity .18s;
+    }
+    .shoot-ghost::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 1px;
+      background: var(--rule);
+      pointer-events: none;
     }
     .shoot-ghost-plus {
       width: 11px; height: 11px; flex-shrink: 0;
