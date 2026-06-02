@@ -5814,7 +5814,8 @@
   .slm-item:hover { background: rgba(243,243,239,.06); color: var(--ink); }
   .slm-item:hover svg { opacity: 1; transform: translateX(0); }
   .slm-empty { padding: 32px 18px; text-align: center; font-family: var(--font-en-mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); opacity: .5; }
-  /* Add-to-Calendar — icon-only in the main row. Neutral, quiet, no blue badge. */
+  /* Add-to-Calendar — icon-only in the main row. Uses the same true-blue accent
+     as the mood board tools so the planner does not skew purple. */
   .shoot-cal {
     background: transparent; border: none; cursor: pointer;
     color: var(--ink-soft); opacity: 1; padding: 4px;   /* grey until added to calendar */
@@ -5823,13 +5824,13 @@
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     transition: color .18s, transform .14s, filter .18s;
   }
-  .shoot-cal:hover                       { color: rgba(243,243,239,.78); transform: translateY(-1px); }
+  .shoot-cal:hover                       { color: rgba(var(--accent-rgb),.85); transform: translateY(-1px); }  /* blue preview on hover */
   .shoot-cal:active                      { transform: translateY(0); }
   .shoot-cal svg                         { width: 14px; height: 14px; display: block; position: relative; z-index: 1; }
-  /* Added to Google Calendar → subtle ivory signal */
+  /* Added to Google Calendar → lit blue (with glow + dot) */
   .shoot-cal.is-scheduled {
-    color: rgba(243,243,239,.86); opacity: 1;
-    filter: drop-shadow(0 0 6px rgba(243,243,239,.18));
+    color: var(--accent); opacity: 1;
+    filter: drop-shadow(0 0 7px rgba(var(--accent-rgb),.42));
   }
   .shoot-cal.is-scheduled::after {
     content: '';
@@ -5839,19 +5840,19 @@
     width: 4px;
     height: 4px;
     border-radius: 50%;
-    background: rgba(243,243,239,.88);
-    box-shadow: 0 0 8px rgba(243,243,239,.42);
+    background: var(--accent);
+    box-shadow: 0 0 8px rgba(var(--accent-rgb),.7);
   }
   @keyframes calSignalGlow {
-    0%   { color: rgba(243,243,239,.62); filter: drop-shadow(0 0 0 rgba(243,243,239,0)); }
-    34%  { color: rgba(243,243,239,.96); filter: drop-shadow(0 0 12px rgba(243,243,239,.42)); }
-    100% { color: rgba(243,243,239,.86); filter: drop-shadow(0 0 2px rgba(243,243,239,.12)); }
+    0%   { color: rgba(var(--accent-rgb),.78); filter: drop-shadow(0 0 0 rgba(var(--accent-rgb),0)); }
+    34%  { color: var(--accent-ring); filter: drop-shadow(0 0 13px rgba(var(--accent-rgb),.68)); }
+    100% { color: rgba(var(--accent-rgb),.9); filter: drop-shadow(0 0 2px rgba(var(--accent-rgb),.16)); }
   }
   @keyframes calSignalRing {
-    0%   { opacity: 0; transform: scale(.36); border-color: rgba(243,243,239,0); filter: blur(0); }
-    16%  { opacity: .85; border-color: rgba(243,243,239,.48); }
-    58%  { opacity: .34; transform: scale(1.9); border-color: rgba(243,243,239,.22); }
-    100% { opacity: 0; transform: scale(2.65); border-color: rgba(243,243,239,0); filter: blur(3px); }
+    0%   { opacity: 0; transform: scale(.36); border-color: rgba(var(--accent-rgb),0); filter: blur(0); }
+    16%  { opacity: .95; border-color: rgba(var(--accent-rgb),.72); }
+    58%  { opacity: .42; transform: scale(1.9); border-color: rgba(var(--accent-rgb),.32); }
+    100% { opacity: 0; transform: scale(2.65); border-color: rgba(var(--accent-rgb),0); filter: blur(3px); }
   }
   @keyframes calIconPop {
     0%   { transform: scale(1) rotate(0deg); }
@@ -5860,7 +5861,7 @@
     100% { transform: scale(1) rotate(0deg); }
   }
   .shoot-cal.cal-flash {
-    color: rgba(243,243,239,.95);
+    color: var(--accent-ring);
     animation: calSignalGlow 1.08s cubic-bezier(.16,1,.3,1) both;
   }
   .shoot-cal.cal-flash::before {
@@ -5868,11 +5869,11 @@
     position: absolute;
     inset: -6px;
     border-radius: 50%;
-    border: 1px solid rgba(243,243,239,.28);
+    border: 1px solid rgba(var(--accent-rgb),.48);
     box-shadow:
-      0 0 0 1px rgba(243,243,239,.06),
-      0 0 22px rgba(243,243,239,.18),
-      inset 0 0 12px rgba(243,243,239,.10);
+      0 0 0 1px rgba(var(--accent-rgb),.1),
+      0 0 22px rgba(var(--accent-rgb),.3),
+      inset 0 0 12px rgba(var(--accent-rgb),.16);
     pointer-events: none;
     animation: calSignalRing 1.08s cubic-bezier(.16,1,.3,1) both;
   }
