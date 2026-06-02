@@ -5281,18 +5281,58 @@
   .p-filter[data-filter="waiting"].active   { color: rgba(240,180,60,.9); }
 
   /* New-shoot pill */
+  /* ── New Shoot — Liquid Glass ────────────────────────────────── */
   .planner-new-btn {
     display: inline-flex; align-items: center; gap: 6px;
     font-family: var(--font-en-mono); font-size: 8.5px;
     letter-spacing: .14em; text-transform: uppercase;
-    color: var(--ink-dim);
-    background: transparent;
-    border: 1px solid var(--rule-strong); border-radius: 100px;
-    cursor: pointer; padding: 5px 14px;
-    transition: color .22s, border-color .22s;
+    color: rgba(243,243,239,.68);
+    position: relative; isolation: isolate;
+    background: transparent; border: none; outline: none;
+    border-radius: 100px; cursor: pointer; padding: 6px 16px;
+    transition: color .22s, transform .18s;
   }
-  .planner-new-btn:hover { color: var(--ink); border-color: var(--ink-soft); }
-  .planner-new-btn svg   { width: 9px; height: 9px; opacity: .8; }
+  .planner-new-btn:hover  { color: rgba(243,243,239,.92); transform: scale(1.022); }
+  .planner-new-btn:active { transform: scale(0.972); transition-duration: .08s; }
+  .planner-new-btn svg    { width: 9px; height: 9px; opacity: .85; }
+
+  /* Glass material: frosted backdrop + mouse-tracking specular */
+  .planner-new-btn::before {
+    content: ''; position: absolute; inset: 0;
+    border-radius: inherit; z-index: -2;
+    backdrop-filter: blur(22px) brightness(1.14) saturate(1.5);
+    -webkit-backdrop-filter: blur(22px) brightness(1.14) saturate(1.5);
+    background:
+      radial-gradient(
+        ellipse 55% 40% at var(--lg-mx, 50%) var(--lg-my, -18%),
+        rgba(255,255,255,.26) 0%, rgba(255,255,255,0) 65%
+      ),
+      rgba(255,255,255,.055);
+    box-shadow: 0 3px 20px rgba(0,0,0,.32), 0 0 6px rgba(255,255,255,.03);
+    transition: box-shadow .22s;
+  }
+  .planner-new-btn:hover::before {
+    box-shadow: 0 5px 28px rgba(0,0,0,.40), 0 0 14px rgba(255,255,255,.06);
+  }
+
+  /* Glass rim: gradient border with chromatic aberration */
+  .planner-new-btn::after {
+    content: ''; position: absolute; inset: 0;
+    border-radius: inherit; z-index: -1;
+    pointer-events: none; padding: 1px;
+    background: linear-gradient(
+      148deg,
+      rgba(255,255,255,.54) 0%,
+      rgba(255,255,255,.16) 28%,
+      rgba(160,140,255,.09) 62%,
+      rgba(68,52,215,.36) 100%
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box,
+                  linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    filter: url(#lg-ca);
+  }
 
   /* Shoot rows */
   .shoot-list { display: flex; flex-direction: column; }
@@ -17144,6 +17184,64 @@
 
   })(); /* end Mood Board IIFE */
 
+  </script>
+
+  <!-- ── Liquid Glass: chromatic aberration SVG filter for the New Shoot rim ── -->
+  <svg aria-hidden="true"
+       style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none">
+    <defs>
+      <!-- Split RGB channels + offset horizontally → prismatic glass-edge refraction -->
+      <filter id="lg-ca" x="-14%" y="-14%" width="128%" height="128%"
+              color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix"
+          values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"
+          in="SourceGraphic" result="r-ch"/>
+        <feColorMatrix type="matrix"
+          values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0"
+          in="SourceGraphic" result="g-ch"/>
+        <feColorMatrix type="matrix"
+          values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"
+          in="SourceGraphic" result="b-ch"/>
+        <!-- Warm fringe to the left, cool fringe to the right -->
+        <feOffset in="r-ch" dx="-1.5" dy=" 0.5" result="r-off"/>
+        <feOffset in="b-ch" dx=" 1.5" dy="-0.5" result="b-off"/>
+        <feBlend in="r-off" in2="g-ch" mode="screen" result="rg"/>
+        <feBlend in="rg"   in2="b-off" mode="screen"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <script>
+  /* ── New Shoot: liquid glass — mouse-tracking specular highlight ── */
+  (function(){
+    var btn = document.getElementById('plannerAdd');
+    if (!btn) return;
+    var raf = null;
+    var mx = 50, my = -18;   /* current rendered specular position (% of button) */
+    var tx = 50, ty = -18;   /* target position */
+
+    function frame(){
+      var nx = mx + (tx - mx) * 0.16;
+      var ny = my + (ty - my) * 0.16;
+      var moving = Math.abs(nx - mx) > 0.04 || Math.abs(ny - my) > 0.04;
+      mx = nx; my = ny;
+      btn.style.setProperty('--lg-mx', mx.toFixed(2) + '%');
+      btn.style.setProperty('--lg-my', my.toFixed(2) + '%');
+      raf = moving ? requestAnimationFrame(frame) : null;
+    }
+
+    btn.addEventListener('mousemove', function(e){
+      var r = btn.getBoundingClientRect();
+      tx = (e.clientX - r.left) / r.width  * 100;
+      ty = (e.clientY - r.top)  / r.height * 100;
+      if (!raf) raf = requestAnimationFrame(frame);
+    });
+
+    btn.addEventListener('mouseleave', function(){
+      tx = 50; ty = -18;   /* float back to top-centre resting position */
+      if (!raf) raf = requestAnimationFrame(frame);
+    });
+  })();
   </script>
 
 </body>
