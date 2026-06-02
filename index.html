@@ -5487,10 +5487,12 @@
   }
   /* Brief flash when a scroll-adjusted value changes */
   @keyframes scroll-bump {
-    0%   { filter: brightness(1.7); }
-    100% { filter: brightness(1); }
+    0%   { color: var(--accent); }
+    100% { color: var(--ink); }
   }
-  .scroll-bump { animation: scroll-bump .18s ease-out forwards; }
+  /* No fill-forwards: after the flash, colour reverts to the stylesheet value
+     (white while focused, grey once blurred). Re-fires on every value change. */
+  .scroll-bump { animation: scroll-bump .22s ease-out; }
 
   /* Location wrapper */
   .loc-wrap  { position: relative; min-width: 0; display: flex; align-items: center; overflow: hidden; }
