@@ -2782,6 +2782,15 @@
     ::-webkit-scrollbar-thumb:hover   { background: rgba(243,243,239,.24); }
     ::-webkit-scrollbar-corner        { background: transparent; }
     * { scrollbar-width: thin; scrollbar-color: rgba(243,243,239,.10) transparent; }
+    .cz-no-scrollbar {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    .cz-no-scrollbar::-webkit-scrollbar {
+      width: 0 !important;
+      height: 0 !important;
+      display: none !important;
+    }
 
     /* When the invoice is in Arabic mode, switch its font and direction */
     main.invoice.invoice-lang-ar {
@@ -5219,7 +5228,7 @@
     inherits: false;
     initial-value: 100%;
   }
-  .shoot-row  { border-bottom: 1px solid var(--rule); position: relative; isolation: isolate; z-index: 1; }
+  .shoot-row  { border-bottom: 1px solid var(--rule); position: relative; isolation: isolate; z-index: 1; transform-origin: center top; }
   .shoot-row::before {
     content: '';
     position: absolute;
@@ -5288,22 +5297,37 @@
     opacity: 0;
     overflow: hidden;
     border-color: rgba(230,70,70,0);
-    background:
-      radial-gradient(circle at calc(100% - 28px) 50%, rgba(230,70,70,.28), rgba(230,70,70,.08) 28%, transparent 66%);
-    transform: translateY(-10px) scale(.985);
-    filter: blur(8px) saturate(.7);
+    transform: translateY(-6px);
+    filter: blur(6px) saturate(.72);
     pointer-events: none;
     transition:
-      height .86s cubic-bezier(.22,1,.22,1),
-      opacity .52s ease,
-      transform .78s cubic-bezier(.16,1,.3,1),
-      filter .7s ease,
+      height .72s cubic-bezier(.22,1,.22,1),
+      opacity .46s ease,
+      transform .62s cubic-bezier(.16,1,.3,1),
+      filter .58s ease,
       border-color .54s ease;
+  }
+  .shoot-row.shoot-row-new {
+    animation: shootRowAddIn .92s cubic-bezier(.16,1,.3,1) both;
+  }
+  .shoot-row.shoot-row-new .shoot-main,
+  .shoot-row.shoot-row-new .shoot-expand {
+    animation: shootRowAddContent .98s cubic-bezier(.16,1,.3,1) both;
   }
   @keyframes shootDelRowCharge {
     0%   { --shoot-del-front: 100%; opacity: .25; filter: saturate(.8); }
     28%  { opacity: .72; }
     100% { --shoot-del-front: 0%; opacity: 1; filter: saturate(1.06); }
+  }
+  @keyframes shootRowAddIn {
+    0%   { opacity: 0; transform: translateY(18px); filter: blur(10px); border-color: rgba(var(--accent-rgb),0); }
+    42%  { opacity: .72; transform: translateY(5px); filter: blur(3px); border-color: rgba(var(--accent-rgb),.16); }
+    100% { opacity: 1; transform: translateY(0); filter: blur(0); border-color: var(--rule); }
+  }
+  @keyframes shootRowAddContent {
+    0%   { opacity: 0; transform: translateY(8px); }
+    34%  { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
   }
 
   .shoot-main {
@@ -9179,6 +9203,50 @@
     window.showView = showView;
     window._getCurrentView = function(){ return current; };
     window._hasExplicitRoute = !!routeViewFromPath();
+    (function initAutoScrollbarVisibility(){
+      var pending = false;
+      var selectors = [
+        'html',
+        'body',
+        '.view-overlay',
+        '.inv-list',
+        '.sp-list',
+        '.planner-sheet',
+        '.mb-gallery-wrap',
+        '.notes-board',
+        '.notes-content',
+        '.ne-body',
+        '.czteam-list',
+        '.czchat-msgs'
+      ].join(',');
+      function setFlag(el){
+        if(!el || !el.classList) return;
+        var hasY = el.scrollHeight > el.clientHeight + 2;
+        var hasX = el.scrollWidth > el.clientWidth + 2;
+        el.classList.toggle('cz-no-scrollbar', !(hasY || hasX));
+      }
+      function refresh(){
+        pending = false;
+        document.querySelectorAll(selectors).forEach(setFlag);
+      }
+      function schedule(){
+        if(pending) return;
+        pending = true;
+        requestAnimationFrame(refresh);
+      }
+      window._refreshAutoScrollbars = schedule;
+      window.addEventListener('resize', schedule, { passive:true });
+      document.addEventListener('DOMContentLoaded', schedule);
+      if(window.MutationObserver){
+        new MutationObserver(schedule).observe(document.body, {
+          childList:true,
+          subtree:true,
+          attributes:true,
+          attributeFilter:['class','style']
+        });
+      }
+      schedule();
+    })();
     function startTopLoadLine(){
       var line = document.getElementById('topLoadLine');
       if (!line) return;
@@ -10022,10 +10090,15 @@
     }
 
     function savePlanner(){
+      var cleanProjects = projects.map(function(p){
+        var copy = Object.assign({}, p);
+        delete copy._justAdded;
+        return copy;
+      });
       /* 1 — immediate localStorage write */
       try{
         localStorage.setItem(STORE_KEY, JSON.stringify({
-          projects: projects, nextId: nextId
+          projects: cleanProjects, nextId: nextId
         }));
       }catch(e){}
 
@@ -10036,7 +10109,7 @@
         if (!window.fb || !window.fb.planner) return;
         var uid = window.fb.currentUser ? (window.fb.currentUser() || {}).uid || '' : '';
         _ownSaveTs = Date.now();
-        window.fb.planner.save({ projects: projects, nextId: nextId }, uid);
+        window.fb.planner.save({ projects: cleanProjects, nextId: nextId }, uid);
       }, 150);
     }
 
@@ -10089,6 +10162,18 @@
       set('statUpcoming',  projects.filter(function(p){ return p.status==='upcoming';  }).length);
       set('statConfirmed', projects.filter(function(p){ return p.status==='confirmed'; }).length);
       set('statDone',      projects.filter(function(p){ return p.status==='done';      }).length);
+      if (window._refreshAutoScrollbars) window._refreshAutoScrollbars();
+    }
+    function updatePlannerVisibleIndexes(){
+      document.querySelectorAll('#plannerList .shoot-row[data-id]').forEach(function(row, i){
+        var idx = row.querySelector('.shoot-idx');
+        if(idx) idx.textContent = String(i + 1).padStart(2, '0');
+      });
+    }
+    function syncPlannerEmptyState(){
+      var empty = document.getElementById('plannerEmpty');
+      if(empty) empty.style.display = visibleProjects().length ? 'none' : 'flex';
+      if (window._refreshAutoScrollbars) window._refreshAutoScrollbars();
     }
 
     /* ── Add to Calendar (Google Calendar direct link) ──────────────
@@ -10437,8 +10522,14 @@
         var isDone      = p.status==='done';
         var isCancelled = p.status==='cancelled';
         var row = document.createElement('div');
-        row.className = 'shoot-row'+(p.open?' open':'');
+        row.className = 'shoot-row'+(p.open?' open':'')+(p._justAdded?' shoot-row-new':'');
         row.dataset.id = p.id;
+        if(p._justAdded){
+          setTimeout(function(){
+            delete p._justAdded;
+            row.classList.remove('shoot-row-new');
+          }, 1120);
+        }
 
         row.innerHTML =
           /* ── Main 8-column row ── */
@@ -10643,8 +10734,12 @@
             setTimeout(function(){
               projects = projects.filter(function(x){ return x.id!==proj.id; });
               if (window.fb && window.fb.alarms) window.fb.alarms.remove(proj.id); /* cancel any laptop alarm */
-              renderPlanner(); updateStats(); savePlanner();
-            }, 760);
+              delRow.remove();
+              updatePlannerVisibleIndexes();
+              syncPlannerEmptyState();
+              updateStats();
+              savePlanner();
+            }, 740);
           }
           function startDeleteHold(e){
             if(delDeleting || delRow.classList.contains('del-confirming')) return;
@@ -10782,7 +10877,9 @@
 
     /* ── Add shoot ── */
     document.getElementById('plannerAdd').addEventListener('click', function(){
-      projects.push(mkProject());
+      var p = mkProject();
+      p._justAdded = true;
+      projects.push(p);
       activeFilter = 'all';
       document.querySelectorAll('.p-filter').forEach(function(b){
         b.classList.toggle('active', b.dataset.filter==='all');
@@ -10810,6 +10907,7 @@
         date:   inv.date     || '',
         status: 'waiting'
       });
+      p._justAdded = true;
       projects.push(p);
       activeFilter = 'all';
       document.querySelectorAll('.p-filter').forEach(function(b){
