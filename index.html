@@ -5349,15 +5349,15 @@
     box-shadow: 0 0 8px rgba(var(--accent-rgb),.7);
   }
   @keyframes calSignalGlow {
-    0%   { color: rgba(var(--accent-rgb),.78); filter: drop-shadow(0 0 0 rgba(80,210,130,0)); }
-    34%  { color: rgba(80,210,130,1); filter: drop-shadow(0 0 13px rgba(80,210,130,.62)); }
-    100% { color: rgba(var(--accent-rgb),.88); filter: drop-shadow(0 0 2px rgba(80,210,130,.12)); }
+    0%   { color: rgba(var(--accent-rgb),.78); filter: drop-shadow(0 0 0 rgba(var(--accent-rgb),0)); }
+    34%  { color: var(--accent-ring); filter: drop-shadow(0 0 13px rgba(var(--accent-rgb),.68)); }
+    100% { color: rgba(var(--accent-rgb),.9); filter: drop-shadow(0 0 2px rgba(var(--accent-rgb),.16)); }
   }
   @keyframes calSignalRing {
-    0%   { opacity: 0; transform: scale(.36); border-color: rgba(80,210,130,0); filter: blur(0); }
-    16%  { opacity: .95; border-color: rgba(80,210,130,.65); }
-    58%  { opacity: .42; transform: scale(1.9); border-color: rgba(80,210,130,.28); }
-    100% { opacity: 0; transform: scale(2.65); border-color: rgba(80,210,130,0); filter: blur(3px); }
+    0%   { opacity: 0; transform: scale(.36); border-color: rgba(var(--accent-rgb),0); filter: blur(0); }
+    16%  { opacity: .95; border-color: rgba(var(--accent-rgb),.72); }
+    58%  { opacity: .42; transform: scale(1.9); border-color: rgba(var(--accent-rgb),.32); }
+    100% { opacity: 0; transform: scale(2.65); border-color: rgba(var(--accent-rgb),0); filter: blur(3px); }
   }
   @keyframes calIconPop {
     0%   { transform: scale(1) rotate(0deg); }
@@ -5366,7 +5366,7 @@
     100% { transform: scale(1) rotate(0deg); }
   }
   .shoot-cal.cal-flash {
-    color: rgba(80,210,130,1);
+    color: var(--accent-ring);
     animation: calSignalGlow 1.08s cubic-bezier(.16,1,.3,1) both;
   }
   .shoot-cal.cal-flash::before {
@@ -5374,11 +5374,11 @@
     position: absolute;
     inset: -6px;
     border-radius: 50%;
-    border: 1px solid rgba(80,210,130,.45);
+    border: 1px solid rgba(var(--accent-rgb),.48);
     box-shadow:
-      0 0 0 1px rgba(80,210,130,.08),
-      0 0 22px rgba(80,210,130,.28),
-      inset 0 0 12px rgba(80,210,130,.14);
+      0 0 0 1px rgba(var(--accent-rgb),.1),
+      0 0 22px rgba(var(--accent-rgb),.3),
+      inset 0 0 12px rgba(var(--accent-rgb),.16);
     pointer-events: none;
     animation: calSignalRing 1.08s cubic-bezier(.16,1,.3,1) both;
   }
@@ -9788,6 +9788,7 @@
     }
     function showPlannerCalMenu(p, btn){
       if(!p || !btn) return;
+      if(!isPlannerAdmin()) return;
       removePlannerCalMenu();
       var menu = document.createElement('div');
       menu.id = 'plCalMenu';
@@ -10200,6 +10201,7 @@
             e.stopPropagation();
             clearTimeout(calHoldTimer);
             calHoldConsumed = false;
+            if(!isPlannerAdmin()) return;
             showPlannerCalMenu(currentCalProject(), calBtn);
           });
           calBtn.addEventListener('mousedown', function(e){
