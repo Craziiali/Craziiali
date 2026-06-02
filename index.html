@@ -10464,7 +10464,7 @@
         if(calBtn) {
           var calHoldTimer = null;
           var calHoldConsumed = false;
-          var CAL_HOLD_MS = 1000;
+          var CAL_HOLD_MS = 500;
           function currentCalProject(){ return projects.find(function(x){ return x.id===p.id; }) || p; }
           function triggerCalHoldResend(){
             calHoldConsumed = true;
