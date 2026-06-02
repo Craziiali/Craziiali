@@ -11046,6 +11046,8 @@
         if(calBtn) {
           var calHoldTimer = null;
           var calHoldConsumed = false;
+          var calTouchActive = false;
+          var calSuppressClick = false;
           var CAL_HOLD_MS = 500;
           function currentCalProject(){ return projects.find(function(x){ return x.id===p.id; }) || p; }
           function clearCalHold(){
@@ -11063,6 +11065,10 @@
           calBtn.addEventListener('click', function(e){
             e.stopPropagation();
             clearCalHold();
+            if(calSuppressClick){
+              calSuppressClick = false;
+              return;
+            }
             if(calHoldConsumed){ calHoldConsumed = false; return; }
             openShootInGCal(currentCalProject(), calBtn);
           });
@@ -11088,18 +11094,33 @@
             e.stopPropagation();
             clearCalHold();
             calHoldConsumed = false;
+            calTouchActive = true;
             calHoldTimer = setTimeout(triggerCalHoldResend, CAL_HOLD_MS);
           }, { passive:false });
-          ['touchend','touchcancel'].forEach(function(ev){
-            calBtn.addEventListener(ev, function(e){
-              e.preventDefault();
-              e.stopPropagation();
-              clearCalHold();
-              if(calHoldConsumed){
-                setTimeout(function(){ calHoldConsumed = false; }, 420);
-              }
-            }, { passive:false });
-          });
+          calBtn.addEventListener('touchend', function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            var wasHold = calHoldConsumed;
+            clearCalHold();
+            if(calTouchActive && !wasHold){
+              calSuppressClick = true;
+              openShootInGCal(currentCalProject(), calBtn);
+              setTimeout(function(){ calSuppressClick = false; }, 420);
+            }
+            calTouchActive = false;
+            if(wasHold){
+              setTimeout(function(){ calHoldConsumed = false; }, 420);
+            }
+          }, { passive:false });
+          calBtn.addEventListener('touchcancel', function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            clearCalHold();
+            calTouchActive = false;
+            if(calHoldConsumed){
+              setTimeout(function(){ calHoldConsumed = false; }, 420);
+            }
+          }, { passive:false });
         }
 
         /* ── Bind: status buttons (expand) — in-place update, no re-render ── */
