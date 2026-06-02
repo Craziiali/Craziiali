@@ -5016,15 +5016,50 @@
 
   /* Shoot rows */
   .shoot-list { display: flex; flex-direction: column; }
-  .shoot-row  { border-bottom: 1px solid var(--rule); }
-  .shoot-row.del-charging {
+  .shoot-row  { border-bottom: 1px solid var(--rule); position: relative; isolation: isolate; }
+  .shoot-row::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: right center;
     background:
-      radial-gradient(circle at calc(100% - 28px) 50%, rgba(230,70,70,.18), rgba(230,70,70,.04) 30%, transparent 62%),
-      linear-gradient(90deg, transparent 0%, rgba(230,70,70,.05) 72%, rgba(230,70,70,.12) 100%);
+      linear-gradient(90deg,
+        rgba(230,70,70,.04) 0%,
+        rgba(230,70,70,.10) 42%,
+        rgba(230,70,70,.22) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(230,70,70,.16),
+      inset 0 -1px 0 rgba(230,70,70,.18),
+      0 0 32px rgba(230,70,70,.1);
+  }
+  .shoot-row.del-charging {
     box-shadow:
       inset 0 1px 0 rgba(230,70,70,.14),
       inset 0 -1px 0 rgba(230,70,70,.18),
       0 0 30px rgba(230,70,70,.08);
+  }
+  .shoot-row.del-charging::before {
+    opacity: 1;
+    animation: shootDelRowCharge 2s linear forwards;
+  }
+  .shoot-row.del-confirming::before {
+    opacity: 1;
+    transform: scaleX(1);
+    background:
+      linear-gradient(90deg,
+        rgba(230,70,70,.08) 0%,
+        rgba(230,70,70,.14) 46%,
+        rgba(230,70,70,.30) 100%);
+  }
+  .shoot-row.del-confirming .shoot-main,
+  .shoot-row.del-confirming .shoot-expand {
+    opacity: .28;
+    filter: saturate(.65);
+    transition: opacity .32s ease, filter .32s ease;
   }
   .shoot-row.del-removing {
     min-height: 0 !important;
@@ -5043,8 +5078,14 @@
       filter .7s ease,
       border-color .54s ease;
   }
+  @keyframes shootDelRowCharge {
+    0%   { transform: scaleX(0); opacity: .25; filter: saturate(.8); }
+    28%  { opacity: .72; }
+    100% { transform: scaleX(1); opacity: 1; filter: saturate(1.06); }
+  }
 
   .shoot-main {
+    position: relative; z-index: 1;
     display: grid;
     /* dot | idx | name+client | notes | date | time | location | links | cal | del */
     grid-template-columns: 10px 26px minmax(120px,220px) 1fr 90px 64px 110px 78px 24px 28px;
@@ -5190,68 +5231,72 @@
   .shoot-del:hover  { color: #e36b6b; transform: translateY(-1px); }
   .shoot-del:active { transform: translateY(0); }
   .shoot-del svg    { width: 10px; height: 10px; display: block; position: relative; z-index: 1; }
-  @property --shoot-del-p {
-    syntax: '<number>';
-    inherits: false;
-    initial-value: 0;
-  }
-  .shoot-del::before {
-    content: '';
-    position: absolute;
-    inset: -7px;
-    border-radius: 50%;
-    opacity: 0;
-    transform: scale(.68);
-    --shoot-del-p: 0;
-    background:
-      conic-gradient(from -90deg, rgba(230,70,70,.95) 0turn, rgba(230,70,70,.95) calc(var(--shoot-del-p) * 1turn), rgba(243,243,239,.1) 1turn),
-      radial-gradient(circle, rgba(230,70,70,.2), transparent 64%);
-    filter: drop-shadow(0 0 0 rgba(230,70,70,0));
-    pointer-events: none;
-  }
   .shoot-del.del-holding {
     color: #ff7a7a;
     transform: translateY(-1px) scale(1.04);
   }
-  .shoot-del.del-holding::before {
-    opacity: 1;
-    animation: shootDelCharge 2s linear forwards;
-  }
   .shoot-del.del-fired {
     color: #ff9a9a;
-    animation: shootDelXExit .62s cubic-bezier(.16,1,.3,1) both;
+    transform: translateY(-1px) scale(.9);
+    opacity: .42;
   }
-  .shoot-del.del-fired::before {
-    opacity: 1;
-    animation: shootDelBurst .72s cubic-bezier(.16,1,.3,1) both;
+  .shoot-delete-confirm {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 0 38px 0 18px;
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateX(14px);
+    animation: shootDelConfirmIn .44s cubic-bezier(.16,1,.3,1) forwards;
   }
-  @keyframes shootDelCharge {
-    0% {
-      --shoot-del-p: 0;
-      transform: scale(.66);
-      background:
-        conic-gradient(from -90deg, rgba(230,70,70,.95) 0turn, rgba(230,70,70,.95) calc(var(--shoot-del-p) * 1turn), rgba(243,243,239,.1) 1turn),
-        radial-gradient(circle, rgba(230,70,70,.08), transparent 64%);
-      filter: drop-shadow(0 0 0 rgba(230,70,70,0));
-    }
-    100% {
-      --shoot-del-p: 1;
-      transform: scale(1.12);
-      background:
-        conic-gradient(from -90deg, rgba(230,70,70,.95) 0turn, rgba(230,70,70,.95) calc(var(--shoot-del-p) * 1turn), rgba(243,243,239,.1) 1turn),
-        radial-gradient(circle, rgba(230,70,70,.22), transparent 66%);
-      filter: drop-shadow(0 0 16px rgba(230,70,70,.46));
-    }
+  .shoot-delete-confirm span {
+    font-family: var(--font-en-mono);
+    font-size: 9px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: rgba(243,243,239,.78);
+    text-shadow: 0 0 18px rgba(0,0,0,.42);
   }
-  @keyframes shootDelBurst {
-    0%   { transform: scale(1.02); opacity: .9; filter: drop-shadow(0 0 12px rgba(230,70,70,.42)); }
-    55%  { transform: scale(1.9); opacity: .42; filter: drop-shadow(0 0 26px rgba(230,70,70,.38)); }
-    100% { transform: scale(2.55); opacity: 0; filter: blur(4px) drop-shadow(0 0 0 rgba(230,70,70,0)); }
+  .shoot-delete-confirm button {
+    height: 26px;
+    padding: 0 13px;
+    border-radius: 999px;
+    border: 1px solid rgba(243,243,239,.18);
+    background: rgba(10,10,12,.32);
+    color: rgba(243,243,239,.74);
+    font-family: var(--font-en-mono);
+    font-size: 8px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: transform .16s ease, border-color .18s ease, color .18s ease, background .18s ease;
   }
-  @keyframes shootDelXExit {
-    0%   { transform: translateY(-1px) scale(1.04) rotate(0deg); opacity: 1; }
-    35%  { transform: translateY(-1px) scale(1.22) rotate(90deg); opacity: 1; }
-    100% { transform: translateY(-6px) scale(.62) rotate(180deg); opacity: 0; }
+  .shoot-delete-confirm button:hover {
+    transform: translateY(-1px);
+    color: var(--ink);
+    border-color: rgba(243,243,239,.36);
+    background: rgba(10,10,12,.46);
+  }
+  .shoot-delete-confirm button[data-del-act="yes"] {
+    color: #ff9a9a;
+    border-color: rgba(230,70,70,.42);
+    background: rgba(230,70,70,.12);
+  }
+  .shoot-delete-confirm button[data-del-act="yes"]:hover {
+    color: #ffd0d0;
+    border-color: rgba(230,70,70,.72);
+    background: rgba(230,70,70,.22);
+  }
+  @keyframes shootDelConfirmIn {
+    0%   { opacity: 0; transform: translateX(14px); filter: blur(5px); }
+    100% { opacity: 1; transform: translateX(0); filter: blur(0); }
   }
 
   /* Description — inline in the bar, between name and date columns */
@@ -5273,6 +5318,7 @@
 
   /* Status selector expand */
   .shoot-expand {
+    position: relative; z-index: 1;
     overflow: hidden; height: 0; max-height: none;
     transition:
       height .95s cubic-bezier(.22,1,.22,1),
@@ -10275,14 +10321,47 @@
             delBtn.classList.remove('del-holding');
             delRow.classList.remove('del-charging');
           }
+          function resetDeleteConfirm(){
+            var panel = delRow.querySelector('.shoot-delete-confirm');
+            if(panel) panel.remove();
+            delRow.classList.remove('del-confirming');
+            delBtn.classList.remove('del-fired');
+            delDeleting = false;
+          }
+          function showDeleteConfirm(proj){
+            if(delDeleting || !proj) return;
+            delHoldConsumed = true;
+            clearDeleteHold();
+            delRow.classList.add('del-confirming');
+            delBtn.classList.add('del-fired');
+            var old = delRow.querySelector('.shoot-delete-confirm');
+            if(old) old.remove();
+            var panel = document.createElement('div');
+            panel.className = 'shoot-delete-confirm';
+            panel.innerHTML =
+              '<span>Delete this shoot?</span>'+
+              '<button type="button" data-del-act="no">No</button>'+
+              '<button type="button" data-del-act="yes">Yes</button>';
+            delRow.appendChild(panel);
+            panel.addEventListener('click', function(ev){
+              var actBtn = ev.target.closest('button[data-del-act]');
+              if(!actBtn) return;
+              ev.stopPropagation();
+              if(actBtn.dataset.delAct === 'yes') finishDelete(proj);
+              else resetDeleteConfirm();
+            });
+          }
           function finishDelete(proj){
             if(delDeleting || !proj) return;
             delDeleting = true;
             delHoldConsumed = true;
             clearDeleteHold();
+            var panel = delRow.querySelector('.shoot-delete-confirm');
+            if(panel) panel.remove();
             delRow.style.height = delRow.offsetHeight + 'px';
             delRow.style.overflow = 'hidden';
             delBtn.classList.add('del-fired');
+            delRow.classList.remove('del-confirming');
             delRow.classList.add('del-removing');
             if(navigator.vibrate) navigator.vibrate([12, 28, 16]);
             requestAnimationFrame(function(){
@@ -10295,7 +10374,7 @@
             }, 760);
           }
           function startDeleteHold(e){
-            if(delDeleting) return;
+            if(delDeleting || delRow.classList.contains('del-confirming')) return;
             if(e.pointerType === 'mouse' && e.button !== 0) return;
             delStart = { x: e.clientX || 0, y: e.clientY || 0 };
             clearDeleteHold();
@@ -10303,7 +10382,7 @@
             delBtn.classList.add('del-holding');
             delRow.classList.add('del-charging');
             delHoldTimer = setTimeout(function(){
-              finishDelete(currentDeleteProject());
+              showDeleteConfirm(currentDeleteProject());
             }, HOLD_MS);
           }
           function moveDeleteHold(e){
@@ -10328,15 +10407,6 @@
               e.preventDefault();
               return;
             }
-            var proj = currentDeleteProject();
-            var label = (proj.name||'').trim() || 'this shoot';
-            var fn = window._plannerDelConfirm || function(l){
-              return Promise.resolve(window.confirm('Delete “'+l+'”?'));
-            };
-            fn(label).then(function(confirmed){
-              if(!confirmed) return;
-              finishDelete(proj);
-            });
           });
         })(p.id, row);
 
