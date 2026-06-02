@@ -5864,27 +5864,6 @@
     54%  { transform: scale(.92) rotate(4deg); }
     100% { transform: scale(1) rotate(0deg); }
   }
-  @keyframes calHoldCharge {
-    from { opacity: .24; transform: scale(.72); border-color: rgba(var(--accent-rgb),.18); filter: blur(.2px); }
-    to   { opacity: .92; transform: scale(1.72); border-color: rgba(var(--accent-rgb),.64); filter: blur(0); }
-  }
-  .shoot-cal.cal-holding {
-    color: var(--accent-ring);
-    transform: translateY(-1px) scale(1.04);
-  }
-  .shoot-cal.cal-holding::before {
-    content: '';
-    position: absolute;
-    inset: -6px;
-    border-radius: 50%;
-    border: 1px solid rgba(var(--accent-rgb),.36);
-    box-shadow:
-      0 0 0 1px rgba(var(--accent-rgb),.08),
-      0 0 18px rgba(var(--accent-rgb),.24),
-      inset 0 0 10px rgba(var(--accent-rgb),.14);
-    pointer-events: none;
-    animation: calHoldCharge .5s linear both;
-  }
   .shoot-cal.cal-flash {
     color: var(--accent-ring);
     animation: calSignalGlow 1.08s cubic-bezier(.16,1,.3,1) both;
@@ -11072,12 +11051,13 @@
           function clearCalHold(){
             clearTimeout(calHoldTimer);
             calHoldTimer = null;
-            calBtn.classList.remove('cal-holding');
           }
           function triggerCalHoldResend(){
             calHoldConsumed = true;
             clearCalHold();
             if(navigator.vibrate) navigator.vibrate(12);
+            pulseShootCal(calBtn);
+            plCalToast('Rescheduling calendar…');
             openShootInGCal(currentCalProject(), calBtn, { forceCalendar:true });
           }
           calBtn.addEventListener('click', function(e){
@@ -11098,7 +11078,6 @@
             if(e.button !== 0) return;
             clearCalHold();
             calHoldConsumed = false;
-            calBtn.classList.add('cal-holding');
             calHoldTimer = setTimeout(triggerCalHoldResend, CAL_HOLD_MS);
           });
           ['mouseup','mouseleave','pointercancel'].forEach(function(ev){
@@ -11109,7 +11088,6 @@
             e.stopPropagation();
             clearCalHold();
             calHoldConsumed = false;
-            calBtn.classList.add('cal-holding');
             calHoldTimer = setTimeout(triggerCalHoldResend, CAL_HOLD_MS);
           }, { passive:false });
           ['touchend','touchcancel'].forEach(function(ev){
