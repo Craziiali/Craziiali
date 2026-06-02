@@ -6499,15 +6499,15 @@
        It sits exactly where the next shoot will appear. Tap it and it spawns a
        fresh editable shoot right below, while the ghost stays pinned on top. */
     .shoot-ghost {
-      display: flex; align-items: center; gap: 14px;
+      display: flex; align-items: center; gap: 17px;   /* label lines up with shoot names below */
       width: 100%; text-align: left;
-      padding: 18px 2px;
+      padding: 18px 0;                                 /* flush left → dot aligns with row dots */
       background: transparent; border: none;
       border-bottom: 1px solid var(--rule);
       cursor: pointer; -webkit-tap-highlight-color: transparent;
     }
     .shoot-ghost-dot {
-      width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0;
+      width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;  /* same size as row status dots */
       position: relative;
       border: 1px solid rgba(var(--accent-rgb), .85);
       background: rgba(var(--accent-rgb), .16);
@@ -6517,16 +6517,16 @@
     .shoot-ghost-dot::before,
     .shoot-ghost-dot::after {
       content: ''; position: absolute; left: 50%; top: 50%;
-      background: var(--accent-soft);
+      background: rgba(243,243,239,.92);              /* near-white + inside the blue circle */
       transform: translate(-50%, -50%);
       transition: background .2s;
     }
-    .shoot-ghost-dot::before { width: 5px; height: 1px; }
-    .shoot-ghost-dot::after  { width: 1px; height: 5px; }
+    .shoot-ghost-dot::before { width: 4.5px; height: 1px; }
+    .shoot-ghost-dot::after  { width: 1px; height: 4.5px; }
     .shoot-ghost-label {
       font-family: var(--font-en-body);
       font-size: 13.5px; font-weight: 400;
-      color: var(--accent-soft);
+      color: #4f79ff;                                 /* clean blue, not lavender */
       transition: color .2s;
     }
     .shoot-ghost:active { opacity: .7; }
