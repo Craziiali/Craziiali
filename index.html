@@ -4779,7 +4779,6 @@
     overflow-x: hidden;
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;   /* momentum scrolling on iOS */
-    scroll-behavior: smooth;
     display: flex;
     flex-direction: column;
   }
@@ -5798,17 +5797,18 @@
      as the mood board tools so the planner does not skew purple. */
   .shoot-cal {
     background: transparent; border: none; cursor: pointer;
-    color: rgba(var(--accent-rgb),.78); opacity: 1; padding: 4px;
+    color: var(--ink-soft); opacity: 1; padding: 4px;   /* grey until added to calendar */
     position: relative;
     isolation: isolate;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     transition: color .18s, transform .14s, filter .18s;
   }
-  .shoot-cal:hover                       { color: var(--accent-ring); transform: translateY(-1px); }
+  .shoot-cal:hover                       { color: rgba(var(--accent-rgb),.85); transform: translateY(-1px); }  /* blue preview on hover */
   .shoot-cal:active                      { transform: translateY(0); }
   .shoot-cal svg                         { width: 14px; height: 14px; display: block; position: relative; z-index: 1; }
+  /* Added to Google Calendar → lit blue (with glow + dot) */
   .shoot-cal.is-scheduled {
-    color: var(--accent);
+    color: var(--accent); opacity: 1;
     filter: drop-shadow(0 0 7px rgba(var(--accent-rgb),.42));
   }
   .shoot-cal.is-scheduled::after {
