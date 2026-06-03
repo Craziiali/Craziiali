@@ -2880,6 +2880,10 @@
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     button, a, [role="button"], input, select, label, textarea { touch-action: manipulation; }
 
+    @media (hover: hover) and (pointer: fine) {
+      *, *::before, *::after { cursor: none !important; }
+    }
+
     html, body {
       background: var(--bg);
       color: var(--ink);
@@ -4769,16 +4773,6 @@
         inset 0 0 8px rgba(var(--cursor-load-rgb),.08),
         0 0 16px rgba(var(--cursor-load-rgb),.12);
     }
-    .cursor-load-orbit::after {
-      content: '';
-      position: absolute;
-      width: 3px; height: 3px;
-      right: 1px; top: 3px;
-      border-radius: 50%;
-      background: rgba(var(--cursor-load-rgb),.9);
-      box-shadow: 0 0 12px rgba(var(--cursor-load-rgb),.58);
-      animation: cursorLoadPulse .62s ease-in-out infinite;
-    }
     .cursor-load-orbit.active { opacity: .96; }
     .cursor-load-orbit.text-hidden { opacity: 0 !important; }
     .halo-core.cur-loading:not(.cur-text) {
@@ -4787,10 +4781,6 @@
     }
     @keyframes cursorLoadOrbit {
       to { transform: rotate(360deg); }
-    }
-    @keyframes cursorLoadPulse {
-      0%, 100% { transform: scale(.72); opacity: .56; }
-      50%      { transform: scale(1.08); opacity: 1; }
     }
     body[data-view="moodboardCanvas"] .halo-core:not(.cur-text) {
       --mb-cursor-arrow-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%2216%2014%2032%2033%22%3E%3Cpath%20fill%3D%22black%22%20d%3D%22M26.69%2C43.46c1.11%2C2.97%2C4.28%2C2.92%2C5.36.02l2.23-5.98c.82-2.21%2C3.24-4.39%2C5.46-5.21l6.04-1.96c2.43-.6%2C3.08-4.14-.02-5.36l-24.34-8.86c-2.68-.96-4.64%2C1.04-3.59%2C3.59l8.86%2C23.76Z%22%2F%3E%3C%2Fsvg%3E");
