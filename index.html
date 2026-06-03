@@ -2311,8 +2311,8 @@
       window._startCursorLoading=function(rgb,delay){ setCursorLoading(true,rgb||'243,243,239',delay||0); };
       window._finishCursorLoading=function(){ setCursorLoading(false); };
       if(document.readyState!=='complete'){
-        setCursorLoading(true,'243,243,239',0);
-        window.addEventListener('load',function(){ setTimeout(function(){ setCursorLoading(false); },520); },{once:true});
+        setCursorLoading(true,'243,243,239',0);  /* start instantly on refresh */
+        window.addEventListener('load',function(){ setCursorLoading(false); },{once:true});  /* stop instantly when done */
       }
 
       /* Returns true only when (x,y) is literally inside the rendered bounds
@@ -2439,7 +2439,7 @@
           core.classList.remove('cur-click-flash');
           void core.offsetWidth;
           core.classList.add('cur-click-flash');
-          setCursorLoading(true,glowRgb,260,760);
+          /* No loading orbit on regular button clicks — only real page/data loads */
         }
         if(downType!=='pointer')return;
         /* Cursor contracts inward — quick ease-in */
@@ -9628,15 +9628,15 @@
       schedule();
     })();
     function startTopLoadLine(){
+      /* Top bar sweeps on nav — cursor spinner is NOT triggered here, only on
+         real page/data loads (see window load event and Firebase callbacks). */
       var line = document.getElementById('topLoadLine');
-      if (window._startCursorLoading) window._startCursorLoading('243,243,239', 0);
       if (!line) return;
       line.classList.remove('done');
       line.classList.add('loading');
     }
     function finishTopLoadLine(){
       var line = document.getElementById('topLoadLine');
-      if (window._finishCursorLoading) window._finishCursorLoading();
       if (!line) return;
       line.classList.remove('loading');
       line.classList.add('done');
