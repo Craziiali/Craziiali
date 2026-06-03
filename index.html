@@ -2367,6 +2367,11 @@
       document.body.appendChild(clickRing);
 
       document.addEventListener('mousedown',function(e){
+        if(e.button===0 && !window._cursorIsText){
+          core.classList.remove('cur-click-flash');
+          void core.offsetWidth;
+          core.classList.add('cur-click-flash');
+        }
         if(curType!=='pointer')return;
         /* Cursor contracts inward — quick ease-in */
         core.style.transition='width .08s ease-in,height .08s ease-in,margin .08s ease-in';
@@ -4635,6 +4640,35 @@
       width: 12px; height: 12px; margin: -6px;
       border-color: rgba(255,255,255,0.5);
     }
+    @keyframes cursorSignalGlow {
+      0% {
+        border-color: rgba(243,243,239,.18);
+        background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.10) 0%, rgba(255,255,255,.02) 50%, transparent 70%);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.20), 0 0 0 rgba(243,243,239,0);
+        filter: none;
+      }
+      34% {
+        border-color: rgba(243,243,239,.82);
+        background:
+          radial-gradient(circle at 35% 30%, rgba(255,255,255,.52) 0%, rgba(243,243,239,.18) 46%, transparent 74%),
+          rgba(243,243,239,.08);
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,.75),
+          inset 0 0 12px rgba(243,243,239,.42),
+          0 0 18px rgba(243,243,239,.58),
+          0 0 42px rgba(243,243,239,.25);
+        filter: brightness(1.25);
+      }
+      100% {
+        border-color: rgba(255,255,255,.15);
+        background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.10) 0%, rgba(255,255,255,.02) 50%, transparent 70%);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.20), 0 0 0 rgba(243,243,239,0);
+        filter: none;
+      }
+    }
+    .halo-core.cur-click-flash:not(.cur-text) {
+      animation: cursorSignalGlow .78s cubic-bezier(.16,1,.3,1) both;
+    }
     body[data-view="moodboardCanvas"] .halo-core:not(.cur-text) {
       --mb-cursor-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='6.5 8 30 31.5'%3E%3Cpath fill='black' d='M32.64,14.36l-18.73-5.32c-4.66-1.32-7.39,1.41-6.07,6.07l5.32,18.73c1.32,4.66,5.21,5.67,8.63,2.24l2.28-2.28c.32,.84,.81,1.62,1.48,2.29,2.57,2.57,6.77,2.57,9.33,0s2.57-6.77,0-9.33c-.67-.67-1.46-1.16-2.29-1.48l2.28-2.28c3.43-3.43,2.42-7.31-2.25-8.63Z'/%3E%3C/svg%3E");
       width: 13px;
@@ -4673,6 +4707,27 @@
       box-shadow:
         inset 0 1px 0 rgba(255,255,255,.30),
         inset 0 -1px 0 rgba(0,0,0,.26);
+    }
+    body[data-view="moodboardCanvas"] .halo-core.cur-click-flash:not(.cur-text) {
+      animation: cursorArrowSignalGlow .78s cubic-bezier(.16,1,.3,1) both;
+    }
+    @keyframes cursorArrowSignalGlow {
+      0% {
+        filter:
+          drop-shadow(0 0 1px rgba(255,255,255,.18))
+          drop-shadow(0 5px 10px rgba(0,0,0,.40));
+      }
+      34% {
+        filter:
+          drop-shadow(0 0 8px rgba(243,243,239,.78))
+          drop-shadow(0 0 24px rgba(243,243,239,.34))
+          drop-shadow(0 5px 10px rgba(0,0,0,.38));
+      }
+      100% {
+        filter:
+          drop-shadow(0 0 1px rgba(255,255,255,.18))
+          drop-shadow(0 5px 10px rgba(0,0,0,.40));
+      }
     }
     /* Status-dot hover: cursor absorbs the dot's colour + breathes */
     @keyframes curDotBreath {
