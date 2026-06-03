@@ -4636,10 +4636,9 @@
       border-color: rgba(255,255,255,0.5);
     }
     body[data-view="moodboardCanvas"] .halo-core:not(.cur-text) {
-      --mb-cursor-shape: path('M 3.1 1 Q 5.2 -0.2 7.4 0.9 L 22 8.4 Q 25.3 10.1 25.2 12.7 Q 25.1 15.1 22 16.1 L 13.7 18.7 Q 12.5 19.1 12.1 20.3 L 9.5 28 Q 8.6 30.6 6 30.1 Q 4.3 29.8 3.6 27.9 L 0.4 5.4 Q -0.1 2.5 3.1 1 Z');
-      --mb-cursor-fallback: polygon(11% 3%, 86% 28%, 98% 41%, 86% 52%, 53% 61%, 36% 98%, 22% 96%, 0 17%);
-      width: 26px;
-      height: 31px;
+      --mb-cursor-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 220'%3E%3Cpath fill='black' d='M74.4 26.8C59.6 19.8 43.6 35.1 50.3 50.1l55.8 126.8c6.2 14.2 26.5 13.5 31.8-1.1l19.9-54.8c2.4-6.5 7.8-11.4 14.5-13.1l50.4-12.7c15.3-3.9 17.4-24.8 3.2-31.7L74.4 26.8Z'/%3E%3C/svg%3E");
+      width: 24px;
+      height: 20px;
       margin: -1px 0 0 -1px;
       border-radius: 0;
       border: 0;
@@ -4657,7 +4656,8 @@
       content: '';
       position: absolute;
       inset: 0;
-      clip-path: var(--mb-cursor-shape);
+      -webkit-mask: var(--mb-cursor-mask) center / contain no-repeat;
+      mask: var(--mb-cursor-mask) center / contain no-repeat;
       pointer-events: none;
     }
     body[data-view="moodboardCanvas"] .halo-core:not(.cur-text)::before {
@@ -4673,12 +4673,6 @@
       box-shadow:
         inset 0 1px 0 rgba(255,255,255,.30),
         inset 0 -1px 0 rgba(0,0,0,.26);
-    }
-    @supports not (clip-path: path('M 0 0 L 1 1')) {
-      body[data-view="moodboardCanvas"] .halo-core:not(.cur-text)::before,
-      body[data-view="moodboardCanvas"] .halo-core:not(.cur-text)::after {
-        clip-path: var(--mb-cursor-fallback);
-      }
     }
     /* Status-dot hover: cursor absorbs the dot's colour + breathes */
     @keyframes curDotBreath {
