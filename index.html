@@ -6030,7 +6030,6 @@
     cursor: text;
   }
   .shoot-name::placeholder      { color: rgba(243,243,239,.34); }
-  .shoot-name.s-done            { text-decoration: line-through; opacity: .35; }
   .shoot-name.s-cancelled       { text-decoration: line-through; opacity: .22; }
 
   .shoot-client {
@@ -11414,7 +11413,7 @@
           });
           var nameInp = row.querySelector('.shoot-name');
           if (nameInp) {
-            nameInp.classList.toggle('s-done',      p.status === 'done');
+            nameInp.classList.remove('s-done');
             nameInp.classList.toggle('s-cancelled', p.status === 'cancelled');
           }
         }
@@ -11498,12 +11497,28 @@
     if (window.fb && window.fb.planner) startFirebaseSync();
 
     /* ── Stats ─────────────────────────────────────────────────── */
+    function plannerStatusRank(p){
+      var s = p && p.status;
+      if(s === 'confirmed') return 0;
+      if(s === 'waiting') return 1;
+      if(s === 'done') return 2;
+      return 1;
+    }
+    function plannerDisplaySort(list){
+      return list.slice().sort(function(a,b){
+        var ar = plannerStatusRank(a), br = plannerStatusRank(b);
+        if(ar !== br) return ar - br;
+        return projects.indexOf(a) - projects.indexOf(b);
+      });
+    }
     function visibleProjects(){
-      if(activeFilter==='all')       return projects;
-      if(activeFilter==='confirmed') return projects.filter(function(p){ return p.status==='confirmed'; });
-      if(activeFilter==='waiting')   return projects.filter(function(p){ return p.status==='waiting';   });
-      if(activeFilter==='done')      return projects.filter(function(p){ return p.status==='done';      });
-      return projects;
+      var list;
+      if(activeFilter==='all')       list = projects.filter(function(p){ return p.status!=='done'; });
+      else if(activeFilter==='confirmed') list = projects.filter(function(p){ return p.status==='confirmed'; });
+      else if(activeFilter==='waiting')   list = projects.filter(function(p){ return p.status==='waiting';   });
+      else if(activeFilter==='done')      list = projects.filter(function(p){ return p.status==='done';      });
+      else list = projects.filter(function(p){ return p.status!=='done'; });
+      return plannerDisplaySort(list);
     }
     function updateStats(){
       function set(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
@@ -11878,7 +11893,6 @@
       if(empty) empty.style.display = 'none';
 
       vis.forEach(function(p, i){
-        var isDone      = p.status==='done';
         var isCancelled = p.status==='cancelled';
         var row = document.createElement('div');
         row.className = 'shoot-row'+(p.open?' open':'')+(p._justAdded?' shoot-row-new':'');
@@ -11897,7 +11911,7 @@
             '<span class="shoot-idx">'+String(i+1).padStart(2,'0')+'</span>'+
 
             '<div class="shoot-info">'+
-              '<input class="shoot-name'+(isDone?' s-done':isCancelled?' s-cancelled':'')+'"'+
+              '<input class="shoot-name'+(isCancelled?' s-cancelled':'')+'"'+
                      ' type="text" placeholder="Project name…"'+
                      ' value="'+esc(p.name)+'" data-field="name">'+
               '<input class="shoot-client" type="text"'+
@@ -12236,13 +12250,14 @@
             row.querySelectorAll('.ss-btn').forEach(function(b){
               b.classList.toggle('active', b.dataset.s === proj.status);
             });
-            /* Strikethrough on name input for done / cancelled */
+            /* Cancelled keeps the crossed-out treatment; done is archived instead. */
             var nameInp = row.querySelector('.shoot-name');
             if(nameInp){
-              nameInp.classList.toggle('s-done',      proj.status==='done');
+              nameInp.classList.remove('s-done');
               nameInp.classList.toggle('s-cancelled', proj.status==='cancelled');
             }
             updateStats(); savePlanner();
+            renderPlanner();
           });
         });
 
