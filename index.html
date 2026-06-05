@@ -2292,6 +2292,7 @@
       var lastTypeAt = 0;
       var lastScrollAt = 0;
       var lastMoveAt = {};
+      var resumePromise = null;
       var CLICKABLE =
         'button,a,[role="button"],[role="menuitem"],summary,label,'+
         'input[type="button"],input[type="submit"],input[type="checkbox"],input[type="radio"],select,'+
@@ -2325,7 +2326,14 @@
           master.gain.value = gainForVolume();
           master.connect(ctx.destination);
         }
-        if(ctx.state === 'suspended') ctx.resume();
+        if(ctx.state === 'suspended') {
+          try {
+            resumePromise = ctx.resume();
+            if(resumePromise && resumePromise.then) {
+              resumePromise.then(function(){ applyMasterGain(); }).catch(function(){});
+            }
+          } catch(e) {}
+        }
         return ctx;
       }
       function rampGain(gain, at, dur, peak){
@@ -2373,7 +2381,14 @@
           if(t - lastTypeAt < 34) return;
           lastTypeAt = t;
         }
-        ensure();
+        var c0 = ensure();
+        if(!c0) return;
+        if(c0.state === 'suspended') {
+          if(resumePromise && resumePromise.then) {
+            resumePromise.then(function(){ play(kind); }).catch(function(){});
+          }
+          return;
+        }
         if(kind === 'press') {
           tone(180, .052, 'sine', .22, 0, -22);
           noise(.034, .09, 0, true);
@@ -2457,6 +2472,11 @@
         activeTarget = hit;
         play(soundKind(hit, 'down'));
       }, true);
+      document.addEventListener('touchend', function(e){
+        var hit = e.target && e.target.closest ? e.target.closest(CLICKABLE) : null;
+        if(!hit) return;
+        play(soundKind(hit, 'up'));
+      }, { passive:true, capture:true });
       document.addEventListener('pointerup', function(e){
         if(e.button && e.button !== 0) return;
         var hit = e.target && e.target.closest ? e.target.closest(CLICKABLE) : null;
