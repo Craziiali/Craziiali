@@ -10289,31 +10289,43 @@
       if(mins < floor) mins = floor;
       return pad2(Math.floor(mins / 60)) + ':' + pad2(mins % 60);
     }
-    function seedPlannerMoment(p, dateInp, timeInp){
+    function seedPlannerMoment(p, dateInp, timeInp, opts){
       if(!p) return;
+      opts = opts || {};
+      var commit = opts.commit !== false;
       var changed = false;
       if(!plannerDateParts(p.date)){
-        p.date = plannerTodayString();
-        if(dateInp) dateInp.value = p.date;
-        changed = true;
+        var today = plannerTodayString();
+        if(commit){
+          p.date = today;
+          changed = true;
+        }
+        if(dateInp) dateInp.value = today;
       } else {
         var clamped = clampPlannerDate(p.date);
         if(clamped !== p.date){
-          p.date = clamped;
-          if(dateInp) dateInp.value = p.date;
-          changed = true;
+          if(commit){
+            p.date = clamped;
+            changed = true;
+          }
+          if(dateInp) dateInp.value = clamped;
         }
       }
       if(!parse12(String(p.time || ''))){
-        p.time = plannerNowTimeString();
-        if(timeInp) timeInp.value = fmt12(p.time);
-        changed = true;
+        var nowTime = plannerNowTimeString();
+        if(commit){
+          p.time = nowTime;
+          changed = true;
+        }
+        if(timeInp) timeInp.value = fmt12(nowTime);
       } else {
         var clampedTime = clampPlannerTime(p.time, p.date);
         if(clampedTime !== p.time){
-          p.time = clampedTime;
-          if(timeInp) timeInp.value = fmt12(p.time);
-          changed = true;
+          if(commit){
+            p.time = clampedTime;
+            changed = true;
+          }
+          if(timeInp) timeInp.value = fmt12(clampedTime);
         }
       }
       if(changed) savePlanner();
@@ -10696,13 +10708,24 @@
       inp.addEventListener('focus', function(){
         acc = 0;
         var row = inp.closest('.shoot-row');
-        seedPlannerMoment(getP(), row && row.querySelector('.shoot-date'), inp);
+        var p = getP();
+        inp._previewSeed = !(p && parse12(String(p.time || '')));
+        inp._previewSeedValue = plannerNowTimeString();
+        seedPlannerMoment(p, null, inp, { commit:false });
       });
       inp.addEventListener('blur', function(){
         setMobileScrubKeyboardLock(false);
         acc = 0;
         var p = getP(); if(!p) return;
         var parsed = parse12(inp.value);
+        if(inp._previewSeed && !p.time && parsed === inp._previewSeedValue){
+          inp.value = '';
+          inp._previewSeed = false;
+          inp._previewSeedValue = '';
+          return;
+        }
+        inp._previewSeed = false;
+        inp._previewSeedValue = '';
         if(parsed){
           var clamped = clampPlannerTime(parsed, p.date);
           if(clamped !== parsed) invalidFlash(inp);
@@ -10812,12 +10835,23 @@
       inp.addEventListener('focus', function(){
         acc = 0;
         var row = inp.closest('.shoot-row');
-        seedPlannerMoment(getP(), inp, row && row.querySelector('.shoot-time'));
+        var p = getP();
+        inp._previewSeed = !(p && plannerDateParts(p.date));
+        inp._previewSeedValue = plannerTodayString();
+        seedPlannerMoment(p, inp, null, { commit:false });
       });
       inp.addEventListener('blur', function(){
         setMobileScrubKeyboardLock(false);
         acc = 0;
         var p = getP(); if(!p) return;
+        if(inp._previewSeed && !p.date && inp.value === inp._previewSeedValue){
+          inp.value = '';
+          inp._previewSeed = false;
+          inp._previewSeedValue = '';
+          return;
+        }
+        inp._previewSeed = false;
+        inp._previewSeedValue = '';
         var clamped = clampPlannerDate(inp.value);
         var typedParts = plannerDateParts(inp.value);
         if(!typedParts || plannerDateStamp(typedParts) < plannerDateStamp(plannerTodayParts())) invalidFlash(inp);
