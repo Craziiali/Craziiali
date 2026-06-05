@@ -6478,31 +6478,29 @@
   .nl-compose:hover { color: var(--ink); }
   .nl-compose svg { width: 16px; height: 16px; }
 
-  /* Search bar: full width, pill, inside the left col */
+  /* Search — a quiet editorial line, not a boxed field. The divider below
+     doubles as its underline (and the header/list separator). */
   .nl-search-row {
-    padding: 14px 28px 0;
+    padding: 18px 28px 13px;
   }
   .notes-search-wrap {
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 10px;
     width: 100%; box-sizing: border-box;
-    border: 1px solid var(--rule); border-radius: 8px;
-    padding: 8px 12px;
-    background: rgba(243,243,239,.04);
-    transition: border-color .22s, background .22s;
+    border: none; background: transparent; padding: 0;
   }
-  .notes-search-wrap:focus-within {
-    border-color: var(--rule-strong);
-    background: rgba(243,243,239,.07);
+  .notes-search-ico {
+    width: 12px; height: 12px; flex-shrink: 0;
+    color: var(--ink-soft); transition: color .2s;
   }
-  .notes-search-ico { width: 11px; height: 11px; color: var(--ink-dim); flex-shrink: 0; }
+  .nl-search-row:focus-within .notes-search-ico { color: var(--ink-dim); }
   .notes-search {
     flex: 1; min-width: 0;
-    font-family: var(--font-en-body);
-    font-size: 12px; font-weight: 300;
+    font-family: var(--font-en-mono);
+    font-size: 9px; letter-spacing: .14em; text-transform: uppercase;
     color: var(--ink); background: transparent; border: none; outline: none;
     padding: 0;
   }
-  .notes-search::placeholder { color: var(--ink-soft); opacity: 1; }
+  .notes-search::placeholder { color: var(--ink-soft); opacity: 1; letter-spacing: .14em; }
   .notes-search-clear {
     display: inline-flex; align-items: center; justify-content: center;
     width: 14px; height: 14px; padding: 0; flex-shrink: 0;
@@ -6512,11 +6510,13 @@
   .notes-search-clear:hover { color: var(--ink-dim); }
   .notes-search-clear svg { width: 8px; height: 8px; }
 
-  /* Divider below search */
+  /* Header rule — also the search underline; brightens when search is active */
   .nl-divider {
     height: 1px; background: var(--rule);
-    margin: 16px 0 0;
+    margin: 0;
+    transition: background .22s;
   }
+  .nl-head:focus-within .nl-divider { background: var(--rule-strong); }
 
   /* Note list rows */
   .notes-list { flex: 1; }
