@@ -6564,10 +6564,10 @@
   }
   .nr-preview.is-empty { opacity: .3; font-style: italic; }
 
-  /* RIGHT: sticky editor column */
+  /* RIGHT: editor column — body scrolls internally, toolbar floats */
   .notes-editor-col {
     flex: 1; min-width: 0;
-    overflow-y: auto; overflow-x: hidden;
+    overflow: hidden;
     display: flex; flex-direction: column;
   }
 
@@ -6586,16 +6586,20 @@
 
   /* Editor panel — centered, comfortable reading width */
   .ne-panel {
-    flex: 1; display: flex; flex-direction: column;
+    position: relative;
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column;
     width: 100%; max-width: 700px;
-    padding: 42px 56px 60px;
+    padding: 42px 56px 84px;   /* bottom room for floating toolbar */
     box-sizing: border-box;
   }
   .ne-topbar {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 32px;
+    margin-bottom: 28px; flex-shrink: 0;
   }
-  .ne-topbar-right { display: flex; align-items: center; gap: 10px; }
+  .ne-topbar-right { display: flex; align-items: center; gap: 8px; }
+  .ne-title { flex-shrink: 0; }
+  .ne-links, .ne-foot { flex-shrink: 0; }
 
   /* Mobile back button — hidden on desktop */
   .ne-back {
@@ -6650,7 +6654,8 @@
     transition: color .2s, border-color .2s, background .2s;
   }
   .ne-act svg { width: 11px; height: 11px; }
-  .ne-close:hover { color: var(--ink-dim); border-color: var(--rule-strong); }
+  .ne-close:hover, .ne-share:hover { color: var(--ink-dim); border-color: var(--rule-strong); }
+  .ne-share.active { color: var(--accent-soft); border-color: rgba(var(--accent-rgb),.5); background: rgba(var(--accent-rgb),.12); }
   .ne-del:hover {
     color: rgba(210,70,70,.9); border-color: rgba(210,70,70,.45);
     background: rgba(210,70,70,.08);
@@ -6665,19 +6670,61 @@
   }
   .ne-title::placeholder { color: var(--ink-soft); opacity: .4; }
 
+  /* Rich contenteditable body */
   .ne-body {
     flex: 1; min-height: 220px;
     font-family: var(--font-en-body);
     font-size: 13.5px; font-weight: 300; line-height: 1.75;
     color: var(--ink-dim);
-    background: transparent; border: none; outline: none; resize: none;
-    padding: 0; margin: 0;
+    background: transparent; border: none; outline: none;
+    padding: 0 0 24px; margin: 0;
     overflow-y: auto; overscroll-behavior: contain;
-    white-space: pre-wrap; word-break: break-word;
+    word-break: break-word;
   }
-  .ne-body::placeholder { color: var(--ink-soft); opacity: .45; }
+  .ne-body:empty::before {
+    content: attr(data-placeholder);
+    color: var(--ink-soft); opacity: .45; pointer-events: none;
+  }
   .ne-body::-webkit-scrollbar { width: 6px; }
   .ne-body::-webkit-scrollbar-thumb { background: rgba(243,243,239,.12); border-radius: 3px; }
+  /* Rich content inside the body */
+  .ne-body div, .ne-body p { margin: 0; min-height: 1.75em; }
+  .ne-body h2, .ne-body .ne-h {
+    font-family: var(--font-en-body);
+    font-size: 19px; font-weight: 500; color: var(--ink);
+    line-height: 1.3; margin: 6px 0 2px;
+  }
+  .ne-body b, .ne-body strong { font-weight: 600; color: var(--ink); }
+  .ne-body a { color: var(--accent-soft); text-decoration: underline; text-underline-offset: 2px; }
+  .ne-body img {
+    max-width: 100%; height: auto; display: block;
+    border-radius: 8px; margin: 12px 0;
+    border: 1px solid var(--rule);
+  }
+  /* Checklist line */
+  .ne-body .ne-check {
+    display: flex; align-items: flex-start; gap: 9px;
+    margin: 2px 0;
+  }
+  .ne-body .ne-check > .nec-box {
+    flex-shrink: 0; margin-top: 4px;
+    width: 15px; height: 15px; border-radius: 4px;
+    border: 1.4px solid var(--ink-soft);
+    cursor: pointer; position: relative;
+    transition: background .15s, border-color .15s;
+    user-select: none;
+  }
+  .ne-body .ne-check.checked > .nec-box {
+    background: var(--accent); border-color: var(--accent);
+  }
+  .ne-body .ne-check.checked > .nec-box::after {
+    content: ''; position: absolute; left: 4px; top: 1px;
+    width: 4px; height: 8px;
+    border: solid #fff; border-width: 0 1.6px 1.6px 0;
+    transform: rotate(43deg);
+  }
+  .ne-body .ne-check > .nec-text { flex: 1; min-width: 0; outline: none; }
+  .ne-body .ne-check.checked > .nec-text { color: var(--ink-soft); text-decoration: line-through; }
 
   /* Detected-link chips */
   .ne-links {
@@ -6715,6 +6762,152 @@
   }
   .ne-meta  { opacity: .7; }
   .ne-count { opacity: .5; }
+
+  /* ── Formatting toolbar (floating glass pill) ────────────────── */
+  .ne-toolbar {
+    position: absolute; left: 50%; bottom: 22px;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 2px;
+    padding: 5px 7px;
+    background: rgba(20,20,22,.82);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border: 1px solid rgba(243,243,239,.12);
+    border-radius: 100px;
+    box-shadow: 0 12px 36px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
+    z-index: 5;
+  }
+  .net-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; padding: 0;
+    background: transparent; border: none; border-radius: 50%;
+    color: var(--ink-dim); cursor: pointer;
+    transition: color .16s, background .16s;
+  }
+  .net-btn:hover  { color: var(--ink); background: rgba(243,243,239,.08); }
+  .net-btn.active { color: var(--accent-soft); background: rgba(var(--accent-rgb),.16); }
+  .net-btn svg { width: 16px; height: 16px; }
+  .net-sep { width: 1px; height: 18px; background: var(--rule); margin: 0 3px; }
+  .net-color-dot {
+    width: 15px; height: 15px; border-radius: 50%;
+    background: var(--ink); border: 1px solid rgba(255,255,255,.25);
+    box-shadow: 0 0 0 2px rgba(0,0,0,.2);
+  }
+
+  /* Colour popover */
+  .ne-color-pop {
+    position: absolute; left: 50%; bottom: 66px;
+    transform: translateX(-50%) translateY(8px);
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 11px;
+    background: rgba(20,20,22,.92);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border: 1px solid rgba(243,243,239,.12);
+    border-radius: 100px;
+    box-shadow: 0 12px 36px rgba(0,0,0,.5);
+    z-index: 6; opacity: 0; pointer-events: none;
+    transition: opacity .18s, transform .18s;
+  }
+  .ne-color-pop.open { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+  .necp-swatches { display: flex; gap: 7px; }
+  .necp-swatch {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.18); cursor: pointer; padding: 0;
+    transition: transform .14s;
+  }
+  .necp-swatch:hover { transform: scale(1.15); }
+  .necp-swatch.active { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--ink); }
+  .necp-wheel {
+    position: relative; display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; cursor: pointer; flex-shrink: 0;
+  }
+  .necp-wheel-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red);
+  }
+  .necp-wheel-label { display: none; }
+  .necp-wheel input[type="color"] {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    opacity: 0; cursor: pointer; border: none; padding: 0;
+  }
+
+  /* ── List date-group headers ─────────────────────────────────── */
+  .nl-group {
+    font-family: var(--font-en-mono);
+    font-size: 8px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--ink-soft);
+    padding: 18px 28px 7px;
+    position: sticky; top: 0;
+    background: var(--bg); z-index: 2;
+  }
+  .notes-list .nl-group:first-child { padding-top: 10px; }
+
+  /* ── Sketch overlay ──────────────────────────────────────────── */
+  .ne-draw-overlay {
+    position: fixed; inset: 0; z-index: 4000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 28px;
+    background: rgba(5,5,6,.74);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    opacity: 0; pointer-events: none; transition: opacity .24s;
+  }
+  .ne-draw-overlay.open { opacity: 1; pointer-events: auto; }
+  .ne-draw-modal {
+    display: flex; flex-direction: column;
+    width: min(760px, 100%); max-height: 86vh;
+    background: rgba(14,14,16,.92);
+    border: 1px solid rgba(243,243,239,.13); border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 40px 90px rgba(0,0,0,.6);
+  }
+  .ne-draw-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 14px 18px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .ne-draw-ttl {
+    font-family: var(--font-en-mono);
+    font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .ne-draw-tools { display: flex; align-items: center; gap: 4px; }
+  .ned-colors { display: flex; gap: 6px; align-items: center; }
+  .ned-swatch {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.2); cursor: pointer; padding: 0;
+    transition: transform .14s;
+  }
+  .ned-swatch:hover { transform: scale(1.15); }
+  .ned-swatch.active { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--ink); }
+  .ned-tool {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 8px;
+    background: transparent; border: none; color: var(--ink-dim); cursor: pointer;
+    transition: color .16s, background .16s;
+  }
+  .ned-tool:hover { color: var(--ink); background: rgba(243,243,239,.08); }
+  .ned-tool.active { color: var(--accent-soft); background: rgba(var(--accent-rgb),.16); }
+  .ned-tool svg { width: 15px; height: 15px; }
+  .ne-draw-canvas-wrap {
+    flex: 1; min-height: 0; background: #14141a;
+    display: flex; overflow: hidden;
+  }
+  #nedCanvas { width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+  .ne-draw-foot {
+    display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+    padding: 13px 18px; border-top: 1px solid var(--rule);
+  }
+  .ned-cancel, .ned-save {
+    font-family: var(--font-en-mono);
+    font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase;
+    padding: 8px 16px; border-radius: 100px; cursor: pointer;
+    transition: color .2s, border-color .2s, background .2s;
+  }
+  .ned-cancel { background: transparent; border: 1px solid var(--rule); color: var(--ink-dim); }
+  .ned-cancel:hover { color: var(--ink); border-color: var(--rule-strong); }
+  .ned-save { background: var(--accent); border: 1px solid var(--accent); color: #fff; }
+  .ned-save:hover { filter: brightness(1.1); }
 
   /* ── Notes entrance ──────────────────────────────────────────── */
   .notes-entering .notes-bar        { animation: focusIn .60s cubic-bezier(.16,1,.3,1) both; animation-delay:  80ms; }
@@ -6935,10 +7128,13 @@
     .nl-title-row { padding: 24px 20px 0; }   /* tighter on mobile */
     .nl-search-row { padding: 12px 20px 0; }
     .note-row { padding: 13px 20px; }
+    .nl-group { padding: 16px 20px 7px; }
+    .ne-toolbar { bottom: 16px; }
+    .ne-color-pop { bottom: 60px; }
     .notes-editor-col { display: none; }
     .notes-split[data-mobile="editor"] .notes-list-col { display: none; }
     .notes-split[data-mobile="editor"] .notes-editor-col { display: flex; min-height: 100vh; }
-    .ne-panel { padding: 24px 20px 60px; max-width: none; }
+    .ne-panel { padding: 24px 20px 80px; max-width: none; }
     .ne-back { display: inline-flex; }
     .notes-new-btn { align-self: flex-start; }
     .notes-board { grid-template-columns: 1fr; }
@@ -8510,6 +8706,12 @@
               </button>
               <div class="ne-topbar-right">
                 <span class="ne-num" id="neNum">N·01</span>
+                <button class="ne-act ne-share" id="neShare" type="button" title="Copy note text">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 1.5v6M3.8 3.4L6 1.3l2.2 2.1M2.6 6.4v3.1h6.8V6.4"/>
+                  </svg>
+                </button>
                 <button class="ne-act ne-del" id="neDelete" type="button" title="Delete note">
                   <svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.1"
                        stroke-linecap="round" aria-hidden="true">
@@ -8522,9 +8724,9 @@
             <input class="ne-title" id="neTitle" type="text"
                    placeholder="Untitled" maxlength="140" autocomplete="off" spellcheck="false">
 
-            <textarea class="ne-body" id="neBody"
-                      placeholder="Start writing — paste links, jot ideas, keep snippets…"
-                      spellcheck="false"></textarea>
+            <!-- Rich body (contenteditable) -->
+            <div class="ne-body" id="neBody" contenteditable="true" spellcheck="false"
+                 data-placeholder="Start writing — paste links, jot ideas, keep snippets…"></div>
 
             <div class="ne-links" id="neLinks"></div>
 
@@ -8533,10 +8735,84 @@
               <span class="ne-count" id="neCount">0 words</span>
             </div>
 
+            <!-- ── Formatting toolbar (floating, bottom) ── -->
+            <div class="ne-toolbar" id="neToolbar">
+              <button class="net-btn" data-cmd="checklist" type="button" title="Checklist">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 4l1.4 1.4L6 2.6"/><path d="M2 11.4l1.4 1.4L6 10"/><path d="M8.5 4h5.5M8.5 11.4h5.5"/>
+                </svg>
+              </button>
+              <button class="net-btn" data-cmd="heading" type="button" title="Heading">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3.5 3v10M12.5 3v10M3.5 8h9"/></svg>
+              </button>
+              <button class="net-btn" data-cmd="bold" type="button" title="Bold">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3h4a2.5 2.5 0 0 1 0 5h-4zM4.5 8h4.6a2.5 2.5 0 0 1 0 5H4.5z"/></svg>
+              </button>
+              <span class="net-sep"></span>
+              <button class="net-btn" data-cmd="align" type="button" title="Align">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" id="neAlignIco"><path d="M2 4h12M2 8h8M2 12h12"/></svg>
+              </button>
+              <button class="net-btn" data-cmd="dir" type="button" title="Text direction (LTR / RTL)">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H6.2a2.2 2.2 0 0 0 0 4.4H9M9 3v10M11.5 11l2 1.5-2 1.5"/></svg>
+              </button>
+              <button class="net-btn" data-cmd="color" type="button" title="Text colour">
+                <span class="net-color-dot" id="neColorDot"></span>
+              </button>
+              <span class="net-sep"></span>
+              <button class="net-btn" data-cmd="image" type="button" title="Attach image">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="5.5" cy="6.5" r="1.1"/><path d="M2.5 11l3.5-3 2.5 2 2-1.5 3 2.5"/></svg>
+              </button>
+              <button class="net-btn" data-cmd="draw" type="button" title="Sketch">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l3 3L6 13l-3.5.5L3 10z"/><path d="M9 4l3 3"/></svg>
+              </button>
+            </div>
+
+            <!-- Colour popover -->
+            <div class="ne-color-pop" id="neColorPop">
+              <div class="necp-swatches" id="necpSwatches"></div>
+              <label class="necp-wheel">
+                <span class="necp-wheel-ring"></span>
+                <span class="necp-wheel-label">Custom</span>
+                <input type="color" id="neColorInput" value="#f3f3ef">
+              </label>
+            </div>
+
+            <!-- Hidden image input -->
+            <input type="file" id="neImageInput" accept="image/*" multiple style="display:none">
+
           </div><!-- /ne-panel -->
         </div><!-- /notes-editor-col -->
 
       </div><!-- /notes-split -->
+    </div>
+  </div>
+
+  <!-- ══ NOTE SKETCH CANVAS ════════════════════════════════════════ -->
+  <div class="ne-draw-overlay" id="neDrawOverlay" aria-hidden="true">
+    <div class="ne-draw-modal">
+      <div class="ne-draw-bar">
+        <span class="ne-draw-ttl">Sketch</span>
+        <div class="ne-draw-tools">
+          <div class="ned-colors" id="nedColors"></div>
+          <span class="net-sep"></span>
+          <button class="ned-tool" id="nedPen" type="button" title="Pen" data-on="1">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l3 3L6 13l-3.5.5L3 10z"/></svg>
+          </button>
+          <button class="ned-tool" id="nedEraser" type="button" title="Eraser">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h9M3 9.5l4-4 5 5-3.5 3.5h-3z"/></svg>
+          </button>
+          <button class="ned-tool" id="nedClear" type="button" title="Clear">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h10M5 4V2.5h6V4M4 4l.6 9h6.8L12 4"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="ne-draw-canvas-wrap" id="nedCanvasWrap">
+        <canvas id="nedCanvas"></canvas>
+      </div>
+      <div class="ne-draw-foot">
+        <button class="ned-cancel" id="nedCancel" type="button">Cancel</button>
+        <button class="ned-save" id="nedSave" type="button">Add to note</button>
+      </div>
     </div>
   </div>
 
@@ -11520,6 +11796,14 @@
     var neLinks = document.getElementById('neLinks');
     var neBack  = document.getElementById('neBack');
     var neDelete= document.getElementById('neDelete');
+    var neShare = document.getElementById('neShare');
+    var neToolbar  = document.getElementById('neToolbar');
+    var neColorPop = document.getElementById('neColorPop');
+    var neColorDot = document.getElementById('neColorDot');
+    var neColorInput = document.getElementById('neColorInput');
+    var necpSwatches = document.getElementById('necpSwatches');
+    var neAlignIco = document.getElementById('neAlignIco');
+    var neImageInput = document.getElementById('neImageInput');
 
     var notes   = [];
     var nextId  = 1;
@@ -11538,10 +11822,16 @@
     function mkNote(d){
       d = d || {};
       var now = Date.now();
+      var html = d.html;
+      /* Migrate old plain-text notes → html (escape + line breaks) */
+      if(html == null && d.body){
+        html = esc(d.body).replace(/\n/g, '<br>');
+      }
       return {
         id:      d.id      || ('n' + (nextId++)),
         title:   d.title   || '',
-        body:    d.body    || '',
+        body:    d.body    || '',     /* plaintext mirror (search + preview) */
+        html:    html      || '',     /* rich content */
         created: d.created || now,
         edited:  d.edited  || now
       };
@@ -11629,20 +11919,44 @@
       }
       empty.style.display = 'none';
 
-      board.innerHTML = vis.map(function(n){
+      /* Group by recency bucket (Apple Notes style) */
+      var html = '', lastGroup = null;
+      vis.forEach(function(n){
+        var g = dateGroup(n.edited);
+        if(g !== lastGroup){
+          html += '<div class="nl-group">'+esc(g)+'</div>';
+          lastGroup = g;
+        }
         var tEmpty = !(n.title||'').trim();
         var bEmpty = !(n.body ||'').trim();
         var title  = tEmpty ? 'Untitled' : n.title;
         var prev   = bEmpty ? 'No additional text' : n.body.replace(/\n+/g,' ').trim();
         var sel    = editing === n.id ? ' selected' : '';
-        return '<button class="note-row'+sel+'" data-id="'+esc(n.id)+'" type="button">'
+        html += '<button class="note-row'+sel+'" data-id="'+esc(n.id)+'" type="button">'
           + '<span class="nr-top">'
             + '<span class="nr-title'+(tEmpty?' is-untitled':'')+'">'+esc(title)+'</span>'
             + '<span class="nr-time">'+relTime(n.edited)+'</span>'
           + '</span>'
           + '<span class="nr-preview'+(bEmpty?' is-empty':'')+'">'+esc(prev)+'</span>'
         + '</button>';
-      }).join('');
+      });
+      board.innerHTML = html;
+    }
+
+    /* Recency bucket label for the list section headers */
+    function dateGroup(ts){
+      if(!ts) return 'Earlier';
+      var now = new Date();
+      var d   = new Date(ts);
+      var startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      var dayMs = 86400000;
+      if(ts >= startToday)            return 'Today';
+      if(ts >= startToday - dayMs)    return 'Yesterday';
+      if(ts >= startToday - 7*dayMs)  return 'Previous 7 Days';
+      if(ts >= startToday - 30*dayMs) return 'Previous 30 Days';
+      var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      if(d.getFullYear() === now.getFullYear()) return months[d.getMonth()];
+      return months[d.getMonth()] + ' ' + d.getFullYear();
     }
 
     /* ── Editor ── */
@@ -11652,15 +11966,16 @@
       for(var i=0;i<a.length;i++) if(a[i].id===id) return i+1;
       return 0;
     }
+    function bodyPlain(){ return (neBody.innerText || '').replace(/ /g,' '); }
     function refreshMeta(){
       var n = notes.find(function(x){ return x.id===editing; });
       if(!n) return;
       neMeta.textContent  = 'Edited ' + relTime(n.edited);
-      var w = wordCount(neBody.value);
+      var w = wordCount(bodyPlain());
       neCount.textContent = w + (w===1 ? ' word' : ' words');
     }
     function refreshLinks(){
-      var links = extractLinks(neBody.value);
+      var links = extractLinks(bodyPlain());
       if(!links.length){ neLinks.innerHTML = ''; return; }
       neLinks.innerHTML = links.map(function(l){
         var disp = l.label.replace(/^https?:\/\//i,'').replace(/^www\./i,'');
@@ -11672,28 +11987,24 @@
       var n = notes.find(function(x){ return x.id===id; });
       if(!n) return;
       editing = id;
-      neTitle.value = n.title || '';
-      neBody.value  = n.body  || '';
+      neTitle.value    = n.title || '';
+      neBody.innerHTML = n.html  || '';
       neNum.textContent = 'N·' + pad2(noteNumber(id));
-      refreshMeta(); refreshLinks();
-      /* Show editor panel, hide placeholder */
+      bindChecklistBoxes();
+      refreshMeta(); refreshLinks(); syncToolbarState();
       if(placeholder) placeholder.style.display = 'none';
       if(panel) panel.style.display = 'flex';
-      /* Mobile: slide to editor column */
       if(isMobileNotes() && split) split.dataset.mobile = 'editor';
-      /* Update list selection highlight */
       renderBoard();
-      /* Focus: new/empty note → title, existing → body */
       setTimeout(function(){ ((n.title||'').trim() ? neBody : neTitle).focus(); }, 70);
     }
     function closeEditor(){
       if(!editing) return;
       var ae = document.activeElement;
-      if(ae && (ae === neTitle || ae === neBody) && ae.blur) ae.blur();
-      /* Hide editor panel, show placeholder */
+      if(ae && (ae === neTitle || neBody.contains(ae) || ae === neBody) && ae.blur) ae.blur();
+      hideColorPop();
       if(panel) panel.style.display = 'none';
       if(placeholder) placeholder.style.display = 'flex';
-      /* Mobile: slide back to list */
       if(split) split.dataset.mobile = 'list';
       editing = null;
       renderBoard();
@@ -11703,12 +12014,324 @@
       var n = notes.find(function(x){ return x.id===editing; });
       if(!n) return;
       n.title  = neTitle.value;
-      n.body   = neBody.value;
+      n.html   = neBody.innerHTML;
+      n.body   = bodyPlain();
       n.edited = Date.now();
       saveNotes();
       refreshMeta();
       refreshLinks();
     }
+
+    /* ══ Rich-text toolbar ════════════════════════════════════════ */
+    function placeCaret(el, atEnd){
+      try{
+        var r = document.createRange(); r.selectNodeContents(el); r.collapse(!atEnd);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      }catch(e){}
+    }
+    function exec(cmd, val){
+      neBody.focus();
+      try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
+      try{ document.execCommand(cmd, false, val); }catch(e){}
+      onEdit(); syncToolbarState();
+    }
+    function bindChecklistBoxes(){
+      neBody.querySelectorAll('.nec-box').forEach(function(b){ b.setAttribute('contenteditable','false'); });
+    }
+    function getCaretBlock(){
+      var sel = window.getSelection();
+      if(!sel || !sel.rangeCount) return null;
+      var node = sel.getRangeAt(0).startContainer;
+      if(node.nodeType === 3) node = node.parentNode;
+      while(node && node !== neBody && node.parentNode !== neBody) node = node.parentNode;
+      return (node && node !== neBody) ? node : null;
+    }
+
+    /* Heading toggle */
+    function toggleHeading(){
+      var blk = getCaretBlock();
+      var isH = blk && (blk.tagName === 'H2' || blk.classList.contains('ne-h'));
+      exec('formatBlock', isH ? 'div' : 'h2');
+    }
+    /* Checklist */
+    function insertChecklist(){
+      neBody.focus();
+      var html = '<div class="ne-check"><span class="nec-box" contenteditable="false"></span>'
+               + '<span class="nec-text"></span></div>';
+      try{ document.execCommand('insertHTML', false, html); }catch(e){}
+      bindChecklistBoxes();
+      var items = neBody.querySelectorAll('.ne-check .nec-text');
+      if(items.length) placeCaret(items[items.length-1]);
+      onEdit(); syncToolbarState();
+    }
+    /* Align cycle: left → center → right */
+    function cycleAlign(){
+      var cur = document.queryCommandState('justifyCenter') ? 'center'
+              : document.queryCommandState('justifyRight')  ? 'right' : 'left';
+      var next = cur === 'left' ? 'center' : cur === 'center' ? 'right' : 'left';
+      exec(next === 'left' ? 'justifyLeft' : next === 'center' ? 'justifyCenter' : 'justifyRight');
+      updateAlignIcon(next);
+    }
+    function updateAlignIcon(a){
+      if(!neAlignIco) return;
+      var p = a === 'center' ? 'M2 4h12M4 8h8M2 12h12'
+            : a === 'right'  ? 'M2 4h12M6 8h8M2 12h12'
+            :                  'M2 4h12M2 8h8M2 12h12';
+      neAlignIco.innerHTML = '<path d="'+p+'"/>';
+    }
+    /* Direction toggle (LTR ⇄ RTL) — per current block */
+    function toggleDir(){
+      neBody.focus();
+      var t = getCaretBlock() || neBody;
+      var cur = t.getAttribute('dir') || 'ltr';
+      var next = cur === 'rtl' ? 'ltr' : 'rtl';
+      t.setAttribute('dir', next);
+      t.style.textAlign = next === 'rtl' ? 'right' : '';
+      onEdit();
+    }
+    /* Colour */
+    var PRESET_COLORS = ['#f3f3ef','#5b85ff','#46c46e','#f0b43c','#e0564e'];
+    var lastColor = '#f3f3ef';
+    function buildSwatches(){
+      if(!necpSwatches) return;
+      necpSwatches.innerHTML = PRESET_COLORS.map(function(c){
+        return '<button class="necp-swatch" data-c="'+c+'" style="background:'+c+'" type="button"></button>';
+      }).join('');
+    }
+    function applyColor(c){
+      lastColor = c;
+      if(neColorDot) neColorDot.style.background = c;
+      exec('foreColor', c);
+    }
+    function showColorPop(){ if(neColorPop) neColorPop.classList.add('open'); }
+    function hideColorPop(){ if(neColorPop) neColorPop.classList.remove('open'); }
+
+    function syncToolbarState(){
+      if(!neToolbar) return;
+      try{
+        var b = neToolbar.querySelector('[data-cmd="bold"]');
+        if(b) b.classList.toggle('active', document.queryCommandState('bold'));
+      }catch(e){}
+      var blk = getCaretBlock();
+      var isH = blk && (blk.tagName === 'H2' || blk.classList.contains('ne-h'));
+      var hb = neToolbar.querySelector('[data-cmd="heading"]');
+      if(hb) hb.classList.toggle('active', !!isH);
+    }
+
+    /* ── Image attach (downscaled data-URL, offline-safe) ── */
+    function downscaleToDataURL(file, maxDim, q, cb){
+      var fr = new FileReader();
+      fr.onload = function(){
+        var img = new Image();
+        img.onload = function(){
+          var w = img.width, h = img.height;
+          var scale = Math.min(1, maxDim / Math.max(w, h));
+          var cw = Math.max(1, Math.round(w*scale)), ch = Math.max(1, Math.round(h*scale));
+          var c = document.createElement('canvas'); c.width = cw; c.height = ch;
+          c.getContext('2d').drawImage(img, 0, 0, cw, ch);
+          var out; try{ out = c.toDataURL('image/jpeg', q); }catch(e){ out = fr.result; }
+          cb(out);
+        };
+        img.onerror = function(){ cb(fr.result); };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    }
+    function insertImageURL(url){
+      neBody.focus();
+      try{ document.execCommand('insertHTML', false, '<img src="'+url+'" alt=""><div><br></div>'); }
+      catch(e){ neBody.innerHTML += '<img src="'+url+'" alt="">'; }
+      onEdit();
+    }
+    function handleImageFiles(files){
+      Array.prototype.forEach.call(files, function(f){
+        if(!/^image\//.test(f.type)) return;
+        downscaleToDataURL(f, 1280, 0.82, insertImageURL);
+      });
+    }
+
+    /* ── Share / copy ── */
+    function copyNote(){
+      var n = notes.find(function(x){ return x.id===editing; });
+      if(!n) return;
+      var text = ((n.title||'').trim() ? n.title.trim()+'\n\n' : '') + bodyPlain();
+      var done = function(){ if(neShare){ neShare.classList.add('active'); setTimeout(function(){ neShare.classList.remove('active'); }, 900); } };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done).catch(done);
+      } else { done(); }
+    }
+
+    /* ── Wire the toolbar ── */
+    if(neToolbar){
+      neToolbar.addEventListener('mousedown', function(e){
+        /* keep selection in the body; don't let buttons steal focus */
+        if(e.target.closest('.net-btn')) e.preventDefault();
+      });
+      neToolbar.addEventListener('click', function(e){
+        var btn = e.target.closest('.net-btn'); if(!btn) return;
+        var cmd = btn.dataset.cmd;
+        if(cmd === 'checklist') insertChecklist();
+        else if(cmd === 'heading') toggleHeading();
+        else if(cmd === 'bold') exec('bold');
+        else if(cmd === 'align') cycleAlign();
+        else if(cmd === 'dir') toggleDir();
+        else if(cmd === 'color'){ if(neColorPop.classList.contains('open')) hideColorPop(); else showColorPop(); }
+        else if(cmd === 'image'){ if(neImageInput) neImageInput.click(); }
+        else if(cmd === 'draw') openDraw();
+      });
+    }
+    buildSwatches();
+    if(necpSwatches) necpSwatches.addEventListener('mousedown', function(e){ e.preventDefault(); });
+    if(necpSwatches) necpSwatches.addEventListener('click', function(e){
+      var sw = e.target.closest('.necp-swatch'); if(!sw) return;
+      applyColor(sw.dataset.c); hideColorPop();
+    });
+    if(neColorInput) neColorInput.addEventListener('input', function(){ applyColor(neColorInput.value); });
+    if(neColorInput) neColorInput.addEventListener('change', hideColorPop);
+    /* Close colour pop on outside click */
+    document.addEventListener('click', function(e){
+      if(!neColorPop || !neColorPop.classList.contains('open')) return;
+      if(e.target.closest('.ne-color-pop') || e.target.closest('[data-cmd="color"]')) return;
+      hideColorPop();
+    });
+    if(neImageInput) neImageInput.addEventListener('change', function(){
+      handleImageFiles(neImageInput.files); neImageInput.value = '';
+    });
+    if(neShare) neShare.addEventListener('click', copyNote);
+
+    /* Checkbox toggle + selection sync inside the body */
+    neBody.addEventListener('click', function(e){
+      var box = e.target.closest ? e.target.closest('.nec-box') : null;
+      if(box){
+        e.preventDefault();
+        var item = box.closest('.ne-check');
+        if(item){ item.classList.toggle('checked'); onEdit(); }
+        return;
+      }
+      syncToolbarState();
+    });
+    neBody.addEventListener('keyup', syncToolbarState);
+    /* Smart Enter inside checklist items */
+    neBody.addEventListener('keydown', function(e){
+      if(e.key !== 'Enter' || e.shiftKey) return;
+      var sel = window.getSelection();
+      if(!sel || !sel.rangeCount) return;
+      var node = sel.getRangeAt(0).startContainer;
+      var el = node.nodeType === 3 ? node.parentNode : node;
+      var txt = el.closest ? el.closest('.nec-text') : null;
+      if(!txt) return;
+      var item = txt.closest('.ne-check');
+      e.preventDefault();
+      if(!(txt.textContent||'').trim()){
+        /* empty item → exit checklist */
+        var div = document.createElement('div'); div.innerHTML = '<br>';
+        item.parentNode.insertBefore(div, item.nextSibling);
+        item.remove(); placeCaret(div);
+      } else {
+        var ni = document.createElement('div');
+        ni.className = 'ne-check';
+        ni.innerHTML = '<span class="nec-box" contenteditable="false"></span><span class="nec-text"></span>';
+        item.parentNode.insertBefore(ni, item.nextSibling);
+        placeCaret(ni.querySelector('.nec-text'));
+      }
+      onEdit();
+    });
+    /* Paste images from clipboard */
+    neBody.addEventListener('paste', function(e){
+      var items = e.clipboardData && e.clipboardData.items;
+      if(!items) return;
+      for(var i=0;i<items.length;i++){
+        if(items[i].type && items[i].type.indexOf('image') === 0){
+          var f = items[i].getAsFile();
+          if(f){ e.preventDefault(); downscaleToDataURL(f, 1280, 0.82, insertImageURL); }
+        }
+      }
+    });
+
+    /* ══ Sketch canvas ════════════════════════════════════════════ */
+    var drawOverlay = document.getElementById('neDrawOverlay');
+    var drawCanvas  = document.getElementById('nedCanvas');
+    var drawWrap    = document.getElementById('nedCanvasWrap');
+    var nedColors   = document.getElementById('nedColors');
+    var nedPen      = document.getElementById('nedPen');
+    var nedEraser   = document.getElementById('nedEraser');
+    var nedClear    = document.getElementById('nedClear');
+    var nedSave     = document.getElementById('nedSave');
+    var nedCancel   = document.getElementById('nedCancel');
+    var dctx, drawing = false, lastPt = null, drawColor = '#f3f3ef', erasing = false, dpr = 1;
+
+    function buildDrawColors(){
+      if(!nedColors) return;
+      nedColors.innerHTML = PRESET_COLORS.map(function(c, i){
+        return '<button class="ned-swatch'+(i===0?' active':'')+'" data-c="'+c+'" style="background:'+c+'" type="button"></button>';
+      }).join('');
+    }
+    function sizeCanvas(){
+      if(!drawWrap) return;
+      dpr = window.devicePixelRatio || 1;
+      var w = drawWrap.clientWidth, h = drawWrap.clientHeight;
+      drawCanvas.width = w * dpr; drawCanvas.height = h * dpr;
+      drawCanvas.style.width = w+'px'; drawCanvas.style.height = h+'px';
+      dctx = drawCanvas.getContext('2d');
+      dctx.scale(dpr, dpr);
+      dctx.lineCap = 'round'; dctx.lineJoin = 'round';
+    }
+    function ptFromEvent(e){
+      var r = drawCanvas.getBoundingClientRect();
+      var cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+      var cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+      return { x: cx, y: cy };
+    }
+    function drawStart(e){ e.preventDefault(); drawing = true; lastPt = ptFromEvent(e); }
+    function drawMove(e){
+      if(!drawing) return; e.preventDefault();
+      var p = ptFromEvent(e);
+      dctx.globalCompositeOperation = erasing ? 'destination-out' : 'source-over';
+      dctx.strokeStyle = drawColor;
+      dctx.lineWidth = erasing ? 22 : 2.6;
+      dctx.beginPath(); dctx.moveTo(lastPt.x, lastPt.y); dctx.lineTo(p.x, p.y); dctx.stroke();
+      lastPt = p;
+    }
+    function drawEnd(){ drawing = false; lastPt = null; }
+    function openDraw(){
+      if(!drawOverlay) return;
+      drawOverlay.classList.add('open');
+      erasing = false;
+      if(nedPen) nedPen.classList.add('active');
+      if(nedEraser) nedEraser.classList.remove('active');
+      setTimeout(function(){
+        sizeCanvas();
+        dctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+      }, 30);
+    }
+    function closeDraw(){ if(drawOverlay) drawOverlay.classList.remove('open'); }
+    if(drawCanvas){
+      drawCanvas.addEventListener('mousedown', drawStart);
+      drawCanvas.addEventListener('mousemove', drawMove);
+      window.addEventListener('mouseup', drawEnd);
+      drawCanvas.addEventListener('touchstart', drawStart, {passive:false});
+      drawCanvas.addEventListener('touchmove', drawMove, {passive:false});
+      drawCanvas.addEventListener('touchend', drawEnd);
+    }
+    buildDrawColors();
+    if(nedColors) nedColors.addEventListener('click', function(e){
+      var sw = e.target.closest('.ned-swatch'); if(!sw) return;
+      drawColor = sw.dataset.c; erasing = false;
+      nedColors.querySelectorAll('.ned-swatch').forEach(function(b){ b.classList.toggle('active', b===sw); });
+      if(nedPen) nedPen.classList.add('active');
+      if(nedEraser) nedEraser.classList.remove('active');
+    });
+    if(nedPen) nedPen.addEventListener('click', function(){ erasing = false; nedPen.classList.add('active'); if(nedEraser) nedEraser.classList.remove('active'); });
+    if(nedEraser) nedEraser.addEventListener('click', function(){ erasing = true; nedEraser.classList.add('active'); if(nedPen) nedPen.classList.remove('active'); });
+    if(nedClear) nedClear.addEventListener('click', function(){ if(dctx) dctx.clearRect(0,0,drawCanvas.width,drawCanvas.height); });
+    if(nedCancel) nedCancel.addEventListener('click', closeDraw);
+    if(nedSave) nedSave.addEventListener('click', function(){
+      try{
+        var url = drawCanvas.toDataURL('image/png');
+        insertImageURL(url);
+      }catch(e){}
+      closeDraw();
+    });
 
     /* ── Search ── */
     function toggleClear(){ searchClr.style.display = searchInp.value ? 'inline-flex' : 'none'; }
