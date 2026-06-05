@@ -6564,11 +6564,11 @@
   }
   .nr-preview.is-empty { opacity: .3; font-style: italic; }
 
-  /* RIGHT: editor column — body scrolls internally, toolbar floats */
+  /* RIGHT: editor column — holds the text panel + (optional) sketch panel */
   .notes-editor-col {
     flex: 1; min-width: 0;
     overflow: hidden;
-    display: flex; flex-direction: column;
+    display: flex; flex-direction: row;
   }
 
   /* Empty state — no note selected */
@@ -6584,13 +6584,13 @@
     text-align: center; line-height: 1.5; margin: 0;
   }
 
-  /* Editor panel — centered, comfortable reading width */
+  /* Editor panel — comfortable reading column on the left of the editor area */
   .ne-panel {
     position: relative;
-    flex: 1; min-height: 0;
+    flex: 1 1 0; min-height: 0; min-width: 0;
     display: flex; flex-direction: column;
-    width: 100%; max-width: 700px;
-    padding: 42px 56px 84px;   /* bottom room for floating toolbar */
+    width: 100%; max-width: 680px;
+    padding: 42px 56px 26px;
     box-sizing: border-box;
   }
   .ne-topbar {
@@ -6599,7 +6599,7 @@
   }
   .ne-topbar-right { display: flex; align-items: center; gap: 8px; }
   .ne-title { flex-shrink: 0; }
-  .ne-links, .ne-foot { flex-shrink: 0; }
+  .ne-links { flex-shrink: 0; }
 
   /* Mobile back button — hidden on desktop */
   .ne-back {
@@ -6699,7 +6699,6 @@
   .ne-body img {
     max-width: 100%; height: auto; display: block;
     border-radius: 8px; margin: 12px 0;
-    border: 1px solid var(--rule);
   }
   /* Checklist line */
   .ne-body .ne-check {
@@ -6751,11 +6750,15 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
+  /* Integrated bottom bar: tools (left) + meta (right), hairline top */
+  .ne-editbar {
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    margin-top: 12px; padding-top: 12px;
+    border-top: 1px solid var(--rule);
+  }
   .ne-foot {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px;
-    margin-top: 18px; padding-top: 14px;
-    border-top: 1px solid rgba(243,243,239,.07);
+    display: flex; align-items: center; gap: 12px; flex-shrink: 0;
     font-family: var(--font-en-mono);
     font-size: 7.5px; letter-spacing: .1em; text-transform: uppercase;
     color: var(--ink-soft);
@@ -6763,53 +6766,40 @@
   .ne-meta  { opacity: .7; }
   .ne-count { opacity: .5; }
 
-  /* ── Formatting toolbar (floating glass pill) ────────────────── */
+  /* Formatting toolbar — quiet, part of the page (no glass, no float) */
   .ne-toolbar {
-    position: absolute; left: 50%; bottom: 22px;
-    transform: translateX(-50%);
-    display: flex; align-items: center; gap: 2px;
-    padding: 5px 7px;
-    background: rgba(20,20,22,.82);
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
-    border: 1px solid rgba(243,243,239,.12);
-    border-radius: 100px;
-    box-shadow: 0 12px 36px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
-    z-index: 5;
+    display: flex; align-items: center; gap: 1px;
   }
   .net-btn {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px; padding: 0;
-    background: transparent; border: none; border-radius: 50%;
+    width: 30px; height: 30px; padding: 0;
+    background: transparent; border: none; border-radius: 7px;
     color: var(--ink-dim); cursor: pointer;
     transition: color .16s, background .16s;
   }
-  .net-btn:hover  { color: var(--ink); background: rgba(243,243,239,.08); }
-  .net-btn.active { color: var(--accent-soft); background: rgba(var(--accent-rgb),.16); }
+  .net-btn:hover  { color: var(--ink); background: rgba(243,243,239,.06); }
+  .net-btn.active { color: var(--ink); background: rgba(243,243,239,.13); }
   .net-btn svg { width: 16px; height: 16px; }
-  .net-sep { width: 1px; height: 18px; background: var(--rule); margin: 0 3px; }
+  .net-sep { width: 1px; height: 16px; background: var(--rule); margin: 0 5px; }
   .net-color-dot {
-    width: 15px; height: 15px; border-radius: 50%;
-    background: var(--ink); border: 1px solid rgba(255,255,255,.25);
-    box-shadow: 0 0 0 2px rgba(0,0,0,.2);
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--ink); border: 1px solid rgba(255,255,255,.28);
   }
 
-  /* Colour popover */
+  /* Colour popover — anchored above the toolbar, left side */
   .ne-color-pop {
-    position: absolute; left: 50%; bottom: 66px;
-    transform: translateX(-50%) translateY(8px);
-    display: flex; align-items: center; gap: 8px;
-    padding: 9px 11px;
-    background: rgba(20,20,22,.92);
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
-    border: 1px solid rgba(243,243,239,.12);
-    border-radius: 100px;
-    box-shadow: 0 12px 36px rgba(0,0,0,.5);
+    position: absolute; left: 50px; bottom: 60px;
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 12px;
+    background: rgba(22,22,24,.96);
+    border: 1px solid rgba(243,243,239,.13);
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0,0,0,.5);
     z-index: 6; opacity: 0; pointer-events: none;
+    transform: translateY(8px);
     transition: opacity .18s, transform .18s;
   }
-  .ne-color-pop.open { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+  .ne-color-pop.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
   .necp-swatches { display: flex; gap: 7px; }
   .necp-swatch {
     width: 20px; height: 20px; border-radius: 50%;
@@ -6843,71 +6833,51 @@
   }
   .notes-list .nl-group:first-child { padding-top: 10px; }
 
-  /* ── Sketch overlay ──────────────────────────────────────────── */
-  .ne-draw-overlay {
-    position: fixed; inset: 0; z-index: 4000;
-    display: flex; align-items: center; justify-content: center;
-    padding: 28px;
-    background: rgba(5,5,6,.74);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    opacity: 0; pointer-events: none; transition: opacity .24s;
+  /* ── Sketch side panel — lives in the editor's right space ───── */
+  .ne-sketch {
+    display: none;                 /* shown when .notes-editor-col.sketching */
+    flex: 1 1 0; min-width: 0;
+    flex-direction: column;
+    border-left: 1px solid var(--rule);
   }
-  .ne-draw-overlay.open { opacity: 1; pointer-events: auto; }
-  .ne-draw-modal {
-    display: flex; flex-direction: column;
-    width: min(760px, 100%); max-height: 86vh;
-    background: rgba(14,14,16,.92);
-    border: 1px solid rgba(243,243,239,.13); border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 40px 90px rgba(0,0,0,.6);
-  }
-  .ne-draw-bar {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; padding: 14px 18px;
+  .notes-editor-col.sketching .ne-sketch { display: flex; }
+  .ne-sketch-bar {
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 16px 22px;
     border-bottom: 1px solid var(--rule);
   }
-  .ne-draw-ttl {
+  .ne-sketch-ttl {
     font-family: var(--font-en-mono);
-    font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
-    color: var(--ink-dim);
+    font-size: 8.5px; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--ink-soft);
   }
-  .ne-draw-tools { display: flex; align-items: center; gap: 4px; }
-  .ned-colors { display: flex; gap: 6px; align-items: center; }
+  .ne-sketch-tools { display: flex; align-items: center; gap: 2px; }
+  .ned-colors { display: flex; gap: 6px; align-items: center; margin-right: 4px; }
   .ned-swatch {
-    width: 18px; height: 18px; border-radius: 50%;
+    width: 16px; height: 16px; border-radius: 50%;
     border: 1px solid rgba(255,255,255,.2); cursor: pointer; padding: 0;
     transition: transform .14s;
   }
-  .ned-swatch:hover { transform: scale(1.15); }
-  .ned-swatch.active { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--ink); }
+  .ned-swatch:hover { transform: scale(1.18); }
+  .ned-swatch.active { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--ink); }
   .ned-tool {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 30px; height: 30px; border-radius: 8px;
+    width: 30px; height: 30px; border-radius: 7px;
     background: transparent; border: none; color: var(--ink-dim); cursor: pointer;
     transition: color .16s, background .16s;
   }
-  .ned-tool:hover { color: var(--ink); background: rgba(243,243,239,.08); }
-  .ned-tool.active { color: var(--accent-soft); background: rgba(var(--accent-rgb),.16); }
+  .ned-tool:hover { color: var(--ink); background: rgba(243,243,239,.07); }
+  .ned-tool.active { color: var(--ink); background: rgba(243,243,239,.13); }
   .ned-tool svg { width: 15px; height: 15px; }
-  .ne-draw-canvas-wrap {
-    flex: 1; min-height: 0; background: #14141a;
+  .ne-sketch-canvas-wrap {
+    flex: 1; min-height: 0;
     display: flex; overflow: hidden;
+    background:
+      linear-gradient(rgba(243,243,239,.025) 1px, transparent 1px) 0 0 / 100% 26px,
+      linear-gradient(90deg, rgba(243,243,239,.025) 1px, transparent 1px) 0 0 / 26px 100%;
   }
-  #nedCanvas { width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
-  .ne-draw-foot {
-    display: flex; align-items: center; justify-content: flex-end; gap: 10px;
-    padding: 13px 18px; border-top: 1px solid var(--rule);
-  }
-  .ned-cancel, .ned-save {
-    font-family: var(--font-en-mono);
-    font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase;
-    padding: 8px 16px; border-radius: 100px; cursor: pointer;
-    transition: color .2s, border-color .2s, background .2s;
-  }
-  .ned-cancel { background: transparent; border: 1px solid var(--rule); color: var(--ink-dim); }
-  .ned-cancel:hover { color: var(--ink); border-color: var(--rule-strong); }
-  .ned-save { background: var(--accent); border: 1px solid var(--accent); color: #fff; }
-  .ned-save:hover { filter: brightness(1.1); }
+  #nedCanvas { width: 100%; height: 100%; touch-action: none; cursor: crosshair; display: block; }
 
   /* ── Notes entrance ──────────────────────────────────────────── */
   .notes-entering .notes-bar        { animation: focusIn .60s cubic-bezier(.16,1,.3,1) both; animation-delay:  80ms; }
@@ -7129,8 +7099,19 @@
     .nl-search-row { padding: 12px 20px 0; }
     .note-row { padding: 13px 20px; }
     .nl-group { padding: 16px 20px 7px; }
-    .ne-toolbar { bottom: 16px; }
-    .ne-color-pop { bottom: 60px; }
+    .ne-color-pop { left: 20px; bottom: 54px; }
+
+    /* Bottom bar: give the tools the full row on narrow phones */
+    .ne-foot { display: none; }
+    .ne-editbar { justify-content: flex-start; }
+    .net-btn { width: 34px; height: 34px; }
+
+    /* Sketch on mobile = full-screen surface (no side-by-side room) */
+    .notes-editor-col.sketching .ne-sketch {
+      position: fixed; inset: 0; z-index: 4000;
+      background: var(--bg); border-left: none;
+    }
+    .ne-sketch-bar { padding: 16px 18px; }
     .notes-editor-col { display: none; }
     .notes-split[data-mobile="editor"] .notes-list-col { display: none; }
     .notes-split[data-mobile="editor"] .notes-editor-col { display: flex; min-height: 100vh; }
@@ -8730,41 +8711,42 @@
 
             <div class="ne-links" id="neLinks"></div>
 
-            <div class="ne-foot">
-              <span class="ne-meta" id="neMeta">Edited just now</span>
-              <span class="ne-count" id="neCount">0 words</span>
-            </div>
-
-            <!-- ── Formatting toolbar (floating, bottom) ── -->
-            <div class="ne-toolbar" id="neToolbar">
-              <button class="net-btn" data-cmd="checklist" type="button" title="Checklist">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M2 4l1.4 1.4L6 2.6"/><path d="M2 11.4l1.4 1.4L6 10"/><path d="M8.5 4h5.5M8.5 11.4h5.5"/>
-                </svg>
-              </button>
-              <button class="net-btn" data-cmd="heading" type="button" title="Heading">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3.5 3v10M12.5 3v10M3.5 8h9"/></svg>
-              </button>
-              <button class="net-btn" data-cmd="bold" type="button" title="Bold">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3h4a2.5 2.5 0 0 1 0 5h-4zM4.5 8h4.6a2.5 2.5 0 0 1 0 5H4.5z"/></svg>
-              </button>
-              <span class="net-sep"></span>
-              <button class="net-btn" data-cmd="align" type="button" title="Align">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" id="neAlignIco"><path d="M2 4h12M2 8h8M2 12h12"/></svg>
-              </button>
-              <button class="net-btn" data-cmd="dir" type="button" title="Text direction (LTR / RTL)">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H6.2a2.2 2.2 0 0 0 0 4.4H9M9 3v10M11.5 11l2 1.5-2 1.5"/></svg>
-              </button>
-              <button class="net-btn" data-cmd="color" type="button" title="Text colour">
-                <span class="net-color-dot" id="neColorDot"></span>
-              </button>
-              <span class="net-sep"></span>
-              <button class="net-btn" data-cmd="image" type="button" title="Attach image">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="5.5" cy="6.5" r="1.1"/><path d="M2.5 11l3.5-3 2.5 2 2-1.5 3 2.5"/></svg>
-              </button>
-              <button class="net-btn" data-cmd="draw" type="button" title="Sketch">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l3 3L6 13l-3.5.5L3 10z"/><path d="M9 4l3 3"/></svg>
-              </button>
+            <!-- Integrated bottom bar: formatting tools (left) + meta (right) -->
+            <div class="ne-editbar">
+              <div class="ne-toolbar" id="neToolbar">
+                <button class="net-btn" data-cmd="checklist" type="button" title="Checklist">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 4l1.4 1.4L6 2.6"/><path d="M2 11.4l1.4 1.4L6 10"/><path d="M8.5 4h5.5M8.5 11.4h5.5"/>
+                  </svg>
+                </button>
+                <button class="net-btn" data-cmd="heading" type="button" title="Heading">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3.5 3v10M12.5 3v10M3.5 8h9"/></svg>
+                </button>
+                <button class="net-btn" data-cmd="bold" type="button" title="Bold">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3h4a2.5 2.5 0 0 1 0 5h-4zM4.5 8h4.6a2.5 2.5 0 0 1 0 5H4.5z"/></svg>
+                </button>
+                <span class="net-sep"></span>
+                <button class="net-btn" data-cmd="align" type="button" title="Align">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" id="neAlignIco"><path d="M2 4h12M2 8h8M2 12h12"/></svg>
+                </button>
+                <button class="net-btn" data-cmd="dir" type="button" title="Text direction (LTR / RTL)">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H6.2a2.2 2.2 0 0 0 0 4.4H9M9 3v10M11.5 11l2 1.5-2 1.5"/></svg>
+                </button>
+                <button class="net-btn" data-cmd="color" type="button" title="Text colour">
+                  <span class="net-color-dot" id="neColorDot"></span>
+                </button>
+                <span class="net-sep"></span>
+                <button class="net-btn" data-cmd="image" type="button" title="Attach image">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="5.5" cy="6.5" r="1.1"/><path d="M2.5 11l3.5-3 2.5 2 2-1.5 3 2.5"/></svg>
+                </button>
+                <button class="net-btn" data-cmd="draw" type="button" title="Sketch alongside">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l3 3L6 13l-3.5.5L3 10z"/><path d="M9 4l3 3"/></svg>
+                </button>
+              </div>
+              <div class="ne-foot">
+                <span class="ne-meta" id="neMeta">Edited just now</span>
+                <span class="ne-count" id="neCount">0 words</span>
+              </div>
             </div>
 
             <!-- Colour popover -->
@@ -8781,38 +8763,38 @@
             <input type="file" id="neImageInput" accept="image/*" multiple style="display:none">
 
           </div><!-- /ne-panel -->
+
+          <!-- Sketch side — lives in the empty right space (desktop) /
+               full-screen (mobile). Drawn directly, no modal. -->
+          <div class="ne-sketch" id="neSketch">
+            <div class="ne-sketch-bar">
+              <span class="ne-sketch-ttl">Sketch</span>
+              <div class="ne-sketch-tools">
+                <div class="ned-colors" id="nedColors"></div>
+                <span class="net-sep"></span>
+                <button class="ned-tool active" id="nedPen" type="button" title="Pen">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l3 3L6 13l-3.5.5L3 10z"/></svg>
+                </button>
+                <button class="ned-tool" id="nedEraser" type="button" title="Eraser">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h9M3 9.5l4-4 5 5-3.5 3.5h-3z"/></svg>
+                </button>
+                <button class="ned-tool" id="nedClear" type="button" title="Clear all">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h10M5 4V2.5h6V4M4 4l.6 9h6.8L12 4"/></svg>
+                </button>
+                <span class="net-sep"></span>
+                <button class="ned-tool ne-sketch-close" id="neSketchClose" type="button" title="Close sketch">
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2.5 2.5l9 9M11.5 2.5l-9 9"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="ne-sketch-canvas-wrap" id="nedCanvasWrap">
+              <canvas id="nedCanvas"></canvas>
+            </div>
+          </div>
+
         </div><!-- /notes-editor-col -->
 
       </div><!-- /notes-split -->
-    </div>
-  </div>
-
-  <!-- ══ NOTE SKETCH CANVAS ════════════════════════════════════════ -->
-  <div class="ne-draw-overlay" id="neDrawOverlay" aria-hidden="true">
-    <div class="ne-draw-modal">
-      <div class="ne-draw-bar">
-        <span class="ne-draw-ttl">Sketch</span>
-        <div class="ne-draw-tools">
-          <div class="ned-colors" id="nedColors"></div>
-          <span class="net-sep"></span>
-          <button class="ned-tool" id="nedPen" type="button" title="Pen" data-on="1">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l3 3L6 13l-3.5.5L3 10z"/></svg>
-          </button>
-          <button class="ned-tool" id="nedEraser" type="button" title="Eraser">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h9M3 9.5l4-4 5 5-3.5 3.5h-3z"/></svg>
-          </button>
-          <button class="ned-tool" id="nedClear" type="button" title="Clear">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h10M5 4V2.5h6V4M4 4l.6 9h6.8L12 4"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="ne-draw-canvas-wrap" id="nedCanvasWrap">
-        <canvas id="nedCanvas"></canvas>
-      </div>
-      <div class="ne-draw-foot">
-        <button class="ned-cancel" id="nedCancel" type="button">Cancel</button>
-        <button class="ned-save" id="nedSave" type="button">Add to note</button>
-      </div>
     </div>
   </div>
 
@@ -11832,6 +11814,7 @@
         title:   d.title   || '',
         body:    d.body    || '',     /* plaintext mirror (search + preview) */
         html:    html      || '',     /* rich content */
+        sketch:  d.sketch  || '',     /* drawing (PNG data-URL) */
         created: d.created || now,
         edited:  d.edited  || now
       };
@@ -11995,6 +11978,9 @@
       if(placeholder) placeholder.style.display = 'none';
       if(panel) panel.style.display = 'flex';
       if(isMobileNotes() && split) split.dataset.mobile = 'editor';
+      /* Sketch: auto-open the side panel if this note has a drawing */
+      sketchDirty = !!(n.sketch);
+      if(n.sketch) openSketch(); else closeSketch();
       renderBoard();
       setTimeout(function(){ ((n.title||'').trim() ? neBody : neTitle).focus(); }, 70);
     }
@@ -12003,6 +11989,7 @@
       var ae = document.activeElement;
       if(ae && (ae === neTitle || neBody.contains(ae) || ae === neBody) && ae.blur) ae.blur();
       hideColorPop();
+      closeSketch();
       if(panel) panel.style.display = 'none';
       if(placeholder) placeholder.style.display = 'flex';
       if(split) split.dataset.mobile = 'list';
@@ -12177,7 +12164,7 @@
         else if(cmd === 'dir') toggleDir();
         else if(cmd === 'color'){ if(neColorPop.classList.contains('open')) hideColorPop(); else showColorPop(); }
         else if(cmd === 'image'){ if(neImageInput) neImageInput.click(); }
-        else if(cmd === 'draw') openDraw();
+        else if(cmd === 'draw') toggleSketch();
       });
     }
     buildSwatches();
@@ -12236,29 +12223,33 @@
       }
       onEdit();
     });
-    /* Paste images from clipboard */
+    /* Paste: images → inline; everything else → PLAIN TEXT (no foreign markup) */
     neBody.addEventListener('paste', function(e){
-      var items = e.clipboardData && e.clipboardData.items;
-      if(!items) return;
+      var dt = e.clipboardData; if(!dt) return;
+      var items = dt.items || [];
       for(var i=0;i<items.length;i++){
         if(items[i].type && items[i].type.indexOf('image') === 0){
           var f = items[i].getAsFile();
-          if(f){ e.preventDefault(); downscaleToDataURL(f, 1280, 0.82, insertImageURL); }
+          if(f){ e.preventDefault(); downscaleToDataURL(f, 1280, 0.82, insertImageURL); return; }
         }
       }
+      /* strip rich HTML — insert plain text only */
+      e.preventDefault();
+      var text = dt.getData('text/plain') || '';
+      try{ document.execCommand('insertText', false, text); }catch(err){}
     });
 
-    /* ══ Sketch canvas ════════════════════════════════════════════ */
-    var drawOverlay = document.getElementById('neDrawOverlay');
+    /* ══ Sketch side panel (draws in the editor's right space) ════ */
+    var neSketch    = document.getElementById('neSketch');
     var drawCanvas  = document.getElementById('nedCanvas');
     var drawWrap    = document.getElementById('nedCanvasWrap');
     var nedColors   = document.getElementById('nedColors');
     var nedPen      = document.getElementById('nedPen');
     var nedEraser   = document.getElementById('nedEraser');
     var nedClear    = document.getElementById('nedClear');
-    var nedSave     = document.getElementById('nedSave');
-    var nedCancel   = document.getElementById('nedCancel');
+    var neSketchClose = document.getElementById('neSketchClose');
     var dctx, drawing = false, lastPt = null, drawColor = '#f3f3ef', erasing = false, dpr = 1;
+    var sketchDirty = false;
 
     function buildDrawColors(){
       if(!nedColors) return;
@@ -12266,15 +12257,43 @@
         return '<button class="ned-swatch'+(i===0?' active':'')+'" data-c="'+c+'" style="background:'+c+'" type="button"></button>';
       }).join('');
     }
-    function sizeCanvas(){
-      if(!drawWrap) return;
+    function sizeCanvas(keep){
+      if(!drawWrap || !drawCanvas) return;
+      var prev = keep ? drawCanvas.toDataURL('image/png') : null;
+      var prevW = drawCanvas.width, prevH = drawCanvas.height;
       dpr = window.devicePixelRatio || 1;
       var w = drawWrap.clientWidth, h = drawWrap.clientHeight;
+      if(!w || !h) return;
       drawCanvas.width = w * dpr; drawCanvas.height = h * dpr;
       drawCanvas.style.width = w+'px'; drawCanvas.style.height = h+'px';
       dctx = drawCanvas.getContext('2d');
       dctx.scale(dpr, dpr);
       dctx.lineCap = 'round'; dctx.lineJoin = 'round';
+      if(prev && prevW){
+        var im = new Image();
+        im.onload = function(){ dctx.drawImage(im, 0, 0, w, h); };
+        im.src = prev;
+      }
+    }
+    function loadSketch(dataURL){
+      if(!dctx) sizeCanvas(false);
+      if(!dctx) return;
+      dctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+      if(!dataURL) return;
+      var im = new Image();
+      im.onload = function(){ dctx.drawImage(im, 0, 0, drawWrap.clientWidth, drawWrap.clientHeight); };
+      im.src = dataURL;
+    }
+    function persistSketch(){
+      if(!editing || !drawCanvas) return;
+      var n = notes.find(function(x){ return x.id===editing; });
+      if(!n) return;
+      try{
+        /* store only if there's something drawn */
+        n.sketch = sketchDirty ? drawCanvas.toDataURL('image/png') : (n.sketch || '');
+      }catch(e){}
+      n.edited = Date.now();
+      saveNotes(); refreshMeta(); renderBoard();
     }
     function ptFromEvent(e){
       var r = drawCanvas.getBoundingClientRect();
@@ -12282,29 +12301,42 @@
       var cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
       return { x: cx, y: cy };
     }
-    function drawStart(e){ e.preventDefault(); drawing = true; lastPt = ptFromEvent(e); }
+    function drawStart(e){ if(!dctx) sizeCanvas(true); e.preventDefault(); drawing = true; lastPt = ptFromEvent(e); }
     function drawMove(e){
-      if(!drawing) return; e.preventDefault();
+      if(!drawing || !dctx) return; e.preventDefault();
       var p = ptFromEvent(e);
       dctx.globalCompositeOperation = erasing ? 'destination-out' : 'source-over';
       dctx.strokeStyle = drawColor;
       dctx.lineWidth = erasing ? 22 : 2.6;
       dctx.beginPath(); dctx.moveTo(lastPt.x, lastPt.y); dctx.lineTo(p.x, p.y); dctx.stroke();
-      lastPt = p;
+      lastPt = p; sketchDirty = true;
     }
-    function drawEnd(){ drawing = false; lastPt = null; }
-    function openDraw(){
-      if(!drawOverlay) return;
-      drawOverlay.classList.add('open');
+    function drawEnd(){ if(!drawing) return; drawing = false; lastPt = null; persistSketch(); }
+
+    var sketchResizeTO = null;
+    function openSketch(){
+      if(!editorCol) return;
+      editorCol.classList.add('sketching');
       erasing = false;
       if(nedPen) nedPen.classList.add('active');
       if(nedEraser) nedEraser.classList.remove('active');
+      var n = notes.find(function(x){ return x.id===editing; });
       setTimeout(function(){
-        sizeCanvas();
-        dctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
-      }, 30);
+        sizeCanvas(false);
+        loadSketch(n && n.sketch);
+      }, 40);
     }
-    function closeDraw(){ if(drawOverlay) drawOverlay.classList.remove('open'); }
+    function closeSketch(){ if(editorCol) editorCol.classList.remove('sketching'); }
+    function toggleSketch(){
+      if(editorCol && editorCol.classList.contains('sketching')) closeSketch();
+      else openSketch();
+    }
+    window.addEventListener('resize', function(){
+      if(!editorCol || !editorCol.classList.contains('sketching')) return;
+      clearTimeout(sketchResizeTO);
+      sketchResizeTO = setTimeout(function(){ sizeCanvas(true); }, 160);
+    });
+
     if(drawCanvas){
       drawCanvas.addEventListener('mousedown', drawStart);
       drawCanvas.addEventListener('mousemove', drawMove);
@@ -12323,15 +12355,13 @@
     });
     if(nedPen) nedPen.addEventListener('click', function(){ erasing = false; nedPen.classList.add('active'); if(nedEraser) nedEraser.classList.remove('active'); });
     if(nedEraser) nedEraser.addEventListener('click', function(){ erasing = true; nedEraser.classList.add('active'); if(nedPen) nedPen.classList.remove('active'); });
-    if(nedClear) nedClear.addEventListener('click', function(){ if(dctx) dctx.clearRect(0,0,drawCanvas.width,drawCanvas.height); });
-    if(nedCancel) nedCancel.addEventListener('click', closeDraw);
-    if(nedSave) nedSave.addEventListener('click', function(){
-      try{
-        var url = drawCanvas.toDataURL('image/png');
-        insertImageURL(url);
-      }catch(e){}
-      closeDraw();
+    if(nedClear) nedClear.addEventListener('click', function(){
+      if(dctx) dctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+      sketchDirty = false;
+      var n = notes.find(function(x){ return x.id===editing; });
+      if(n){ n.sketch = ''; n.edited = Date.now(); saveNotes(); renderBoard(); }
     });
+    if(neSketchClose) neSketchClose.addEventListener('click', closeSketch);
 
     /* ── Search ── */
     function toggleClear(){ searchClr.style.display = searchInp.value ? 'inline-flex' : 'none'; }
