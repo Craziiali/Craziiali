@@ -2292,8 +2292,6 @@
       var lastTypeAt = 0;
       var lastScrollAt = 0;
       var lastMoveAt = {};
-      var unlocked = false;
-      var mobileBoost = window.matchMedia && window.matchMedia('(pointer: coarse)').matches ? 1.55 : 1;
       var CLICKABLE =
         'button,a,[role="button"],[role="menuitem"],summary,label,'+
         'input[type="button"],input[type="submit"],input[type="checkbox"],input[type="radio"],select,'+
@@ -2305,7 +2303,7 @@
       function gainForVolume(){
         /* Perceptual curve: quiet at low values, useful at the middle, capped at the top. */
         if(volume <= 0) return 0.0001;
-        return (0.012 + Math.pow(volume, 1.65) * 0.18) * mobileBoost;
+        return 0.012 + Math.pow(volume, 1.65) * 0.18;
       }
       function applyMasterGain(){
         if(!master) return;
@@ -2327,27 +2325,8 @@
           master.gain.value = gainForVolume();
           master.connect(ctx.destination);
         }
-        if(ctx.state === 'suspended') {
-          try {
-            var resumed = ctx.resume();
-            if(resumed && resumed.then) resumed.then(function(){ applyMasterGain(); });
-          } catch(e) {}
-        }
+        if(ctx.state === 'suspended') ctx.resume();
         return ctx;
-      }
-      function prime(){
-        var c = ensure(); if(!c || !master) return;
-        try {
-          var src = c.createBufferSource();
-          src.buffer = c.createBuffer(1, 1, c.sampleRate);
-          src.connect(master);
-          src.start(0);
-        } catch(e) {}
-        unlocked = true;
-      }
-      function unlockFromGesture(){
-        if(unlocked && ctx && ctx.state === 'running') return;
-        prime();
       }
       function rampGain(gain, at, dur, peak){
         var g = gain.gain;
@@ -2473,20 +2452,10 @@
       }
       document.addEventListener('pointerdown', function(e){
         if(e.button && e.button !== 0) return;
-        unlockFromGesture();
         var hit = e.target && e.target.closest ? e.target.closest(CLICKABLE) : null;
         if(!hit) return;
         activeTarget = hit;
         play(soundKind(hit, 'down'));
-      }, true);
-      document.addEventListener('touchstart', function(){
-        unlockFromGesture();
-      }, { passive:true, capture:true });
-      document.addEventListener('click', function(){
-        unlockFromGesture();
-      }, true);
-      document.addEventListener('keydown', function(){
-        unlockFromGesture();
       }, true);
       document.addEventListener('pointerup', function(e){
         if(e.button && e.button !== 0) return;
