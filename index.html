@@ -2281,7 +2281,7 @@
         if(status==='waiting')return'240,180,60';
         if(status==='cancelled')return'210,70,70';
         if(status==='done')return'155,110,235';
-        if(status==='upcoming')return accentRgb();
+        if(status==='upcoming')return'240,180,60';
         if(hit.closest('.shoot-cal,.shoot-link-chip.linked,.shoot-rl.linked')||hit.classList.contains('linked')||hit.classList.contains('active'))return accentRgb();
         return'243,243,239';
       }
@@ -5490,10 +5490,9 @@
   .p-filter:first-child { padding-left: 0; }
   .p-filter.active      { color: var(--ink); }
   .p-filter:hover:not(.active) { color: var(--ink); }
-  .p-filter[data-filter="upcoming"].active  { color: rgba(var(--accent-rgb),.92); }
   .p-filter[data-filter="confirmed"].active { color: rgba(50,200,110,.9); }
-  .p-filter[data-filter="done"].active      { color: rgba(155,110,235,.9); }
   .p-filter[data-filter="waiting"].active   { color: rgba(240,180,60,.9); }
+  .p-filter[data-filter="done"].active      { color: rgba(155,110,235,.9); }
 
   /* New-shoot pill */
   .planner-new-btn {
@@ -7255,8 +7254,8 @@
     display: flex !important;
     align-items: center !important;
     justify-content: flex-end !important;
-    gap: 0 !important;
-    max-width: min(360px, calc(100vw - 96px)) !important;
+    gap: 8px !important;
+    max-width: min(420px, calc(100vw - 96px)) !important;
   }
   body.planner-view-active #authUserProfile {
     display: flex !important;
@@ -7292,6 +7291,7 @@
       right: 20px !important;
       height: 32px !important;
       max-width: calc(100vw - 40px) !important;
+      gap: 7px !important;
     }
     body.planner-view-active #authUserProfile {
       height: 28px !important;
@@ -7320,27 +7320,40 @@
 
   /* ── Team trigger button ─────────────────────────────────── */
   .czteam-trigger {
-    position: fixed; bottom: var(--chat-tune-bottom); right: var(--chat-tune-right); z-index: 4000;
-    width: var(--chat-tune-size); height: var(--chat-tune-size); border-radius: var(--chat-tune-radius);
-    background: rgba(243,243,239,var(--chat-tune-bg));
-    border: 1px solid rgba(243,243,239,var(--chat-tune-border));
-    color: rgba(var(--chat-tune-icon-color),var(--chat-tune-icon-opacity));
-    display: flex; align-items: center; justify-content: center;
+    position: relative; z-index: 1;
+    height: 26px; min-width: 0; padding: 0 9px; border-radius: 999px;
+    background: rgba(8,8,9,.34);
+    border: 1px solid rgba(243,243,239,.12);
+    color: rgba(243,243,239,.56);
+    display: none; align-items: center; justify-content: center; gap: 7px;
     cursor: pointer;
-    transition: background .2s, border-color .2s, transform .18s, opacity .18s;
-    backdrop-filter: blur(10px);
+    transition: color .22s, background .22s, border-color .22s, transform .18s, opacity .18s;
+    backdrop-filter: blur(16px) saturate(.9);
+    -webkit-backdrop-filter: blur(16px) saturate(.9);
   }
-  .czteam-trigger:hover { background: rgba(243,243,239,.09); border-color: rgba(243,243,239,.2); transform: scale(1.07); }
-  .czteam-trigger svg { width: var(--chat-tune-icon); height: var(--chat-tune-icon); }
-  body:not([data-view="planner"]) .czteam-trigger { display: none !important; }
-  body:not(.role-admin):not(.role-viewer) .czteam-trigger { display: none !important; }
+  .czteam-trigger:hover,
   body.czteam-ui-open .czteam-trigger {
-    opacity: 0;
-    pointer-events: none;
-    transform: scale(.92);
+    color: var(--ink);
+    background: rgba(243,243,239,.055);
+    border-color: rgba(243,243,239,.24);
+    transform: translateY(-1px);
   }
+  .czteam-trigger:active { transform: translateY(0) scale(.98); }
+  .czteam-trigger svg { width: 12px; height: 12px; flex-shrink: 0; }
+  .czteam-trigger-label {
+    font-family: var(--font-en-mono);
+    font-size: 8px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  body[data-view="planner"].role-admin .czteam-trigger,
+  body[data-view="planner"].role-viewer .czteam-trigger { display: flex; }
+  body[data-view="planner"].role-admin:not(.auth-profile-ready) .czteam-trigger,
+  body[data-view="planner"].role-viewer:not(.auth-profile-ready) .czteam-trigger { display: none !important; }
 
   body.chat-tune-active .czteam-trigger {
+    position: fixed !important;
     bottom: var(--chat-tune-bottom, 32px) !important;
     right: var(--chat-tune-right, 24px) !important;
     width: var(--chat-tune-size, 42px) !important;
@@ -7460,10 +7473,10 @@
   .tuner-ruler-y::after { width:42px; height:7px; left:calc(50% - 21px); top:-3px; }
 
   .czteam-badge {
-    position: absolute; top: -4px; right: -4px;
-    min-width: 16px; height: 16px; padding: 0 3px;
+    position: absolute; top: -5px; right: -5px;
+    min-width: 14px; height: 14px; padding: 0 3px;
     background: rgba(240,180,60,.95); color: #0a0a0b;
-    border-radius: 99px; font-size: 9px; font-weight: 700;
+    border-radius: 99px; font-size: 8px; font-weight: 700;
     font-family: var(--font-en-mono); letter-spacing: -.01em;
     display: none; align-items: center; justify-content: center;
     border: 1.5px solid var(--bg);
@@ -7472,15 +7485,15 @@
 
   /* ── Team panel ──────────────────────────────────────────── */
   .czteam-panel {
-    position: fixed; bottom: 76px; right: 24px; z-index: 3999;
-    width: 236px;
+    position: fixed; top: 58px; right: 48px; z-index: 3999;
+    width: 246px;
     background: rgba(8,8,9,.94);
     border: 1px solid rgba(243,243,239,.09);
     border-radius: 16px;
     backdrop-filter: blur(28px) saturate(1.3);
     overflow: hidden;
-    transform-origin: bottom right;
-    transform: scale(.94) translateY(24px);
+    transform-origin: top right;
+    transform: scale(.96) translateY(-10px);
     opacity: 0; pointer-events: none;
     filter: blur(8px);
     transition:
@@ -7578,15 +7591,15 @@
 
   /* ── Chat window ─────────────────────────────────────────── */
   .czchat-win {
-    position: fixed; bottom: 72px; right: 24px; z-index: 4100;
-    width: 318px; height: 450px;
+    position: fixed; top: 58px; right: 48px; z-index: 4100;
+    width: 318px; height: min(450px, calc(100vh - 84px));
     background: rgba(8,8,9,.97);
     border: 1px solid rgba(243,243,239,.1);
     border-radius: 18px;
     backdrop-filter: blur(32px) saturate(1.4);
     display: flex; flex-direction: column; overflow: hidden;
-    transform-origin: bottom right;
-    transform: scale(.94) translateY(26px);
+    transform-origin: top right;
+    transform: scale(.96) translateY(-10px);
     opacity: 0; pointer-events: none;
     filter: blur(9px);
     transition:
@@ -7744,9 +7757,10 @@
   .czchat-input { cursor: text !important; }
 
   @media (max-width: 520px) {
-    .czteam-trigger  { bottom: 22px; right: 14px; }
-    .czteam-panel    { width: calc(100vw - 32px); right: 14px; bottom: 76px; }
-    .czchat-win      { width: calc(100vw - 28px); right: 14px; height: 400px; bottom: 76px; }
+    .czteam-trigger { width: 28px; height: 28px; padding: 0; }
+    .czteam-trigger-label { display: none; }
+    .czteam-panel { width: calc(100vw - 28px); right: 14px; top: 52px; }
+    .czchat-win { width: calc(100vw - 28px); right: 14px; top: 52px; height: min(400px, calc(100vh - 70px)); }
   }
 
   /* ═══ MOOD BOARD — Gallery ══════════════════════════════════════ */
@@ -8576,10 +8590,9 @@
           <div class="planner-controls">
             <div class="planner-filters">
               <button class="p-filter active" data-filter="all"       type="button">All</button>
-              <button class="p-filter"        data-filter="upcoming"  type="button">Upcoming</button>
               <button class="p-filter"        data-filter="confirmed" type="button">Confirmed</button>
-              <button class="p-filter"        data-filter="done"      type="button">Done</button>
               <button class="p-filter"        data-filter="waiting"   type="button">Waiting</button>
+              <button class="p-filter"        data-filter="done"      type="button">Done</button>
             </div>
             <button class="planner-new-btn" id="plannerAdd" type="button">
               <svg viewBox="0 0 9 9" fill="none" stroke="currentColor"
@@ -9373,6 +9386,15 @@
     </button>
     <!-- Thin separator -->
     <div class="auth-bar-sep" aria-hidden="true"></div>
+    <button class="czteam-trigger" id="czTeamTrigger" type="button" title="Team (Shift+T)" aria-label="Toggle team panel">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.35" aria-hidden="true">
+        <circle cx="7.5" cy="6.5" r="2.5"/>
+        <circle cx="13" cy="6.5" r="2.5"/>
+        <path d="M1.5 17c0-3 2.7-5.5 6-5.5h1M18.5 17c0-3-2.7-5.5-6-5.5h-1" stroke-linecap="round"/>
+      </svg>
+      <span class="czteam-trigger-label">Team</span>
+      <span class="czteam-badge" id="czTeamBadge" aria-hidden="true"></span>
+    </button>
     <!-- Avatar + display name (rightmost) -->
     <div class="auth-user-profile" id="authUserProfile" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">
       <span class="auth-user-name" id="authUserName"></span>
@@ -9530,15 +9552,6 @@
       <div class="czteam-empty" id="czTeamEmpty">No team members yet.</div>
     </div>
   </div>
-
-  <button class="czteam-trigger" id="czTeamTrigger" type="button" title="Team (Shift+T)" aria-label="Toggle team panel">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.35" aria-hidden="true">
-      <circle cx="7.5" cy="6.5" r="2.5"/>
-      <circle cx="13" cy="6.5" r="2.5"/>
-      <path d="M1.5 17c0-3 2.7-5.5 6-5.5h1M18.5 17c0-3-2.7-5.5-6-5.5h-1" stroke-linecap="round"/>
-    </svg>
-    <span class="czteam-badge" id="czTeamBadge" aria-hidden="true"></span>
-  </button>
 
   <div class="chat-tune-panel" id="chatTunePanel" aria-label="Tuner panel">
     <div class="chat-tune-head">
@@ -10219,9 +10232,8 @@
     var nextId       = 1;
     var activeFilter = 'all';
 
-    var STATUSES = ['upcoming','confirmed','shooting','done','cancelled','waiting'];
-    var SLABELS  = { upcoming:'Upcoming', confirmed:'Confirmed',
-                     shooting:'Shooting', done:'Done', cancelled:'Cancelled', waiting:'Waiting' };
+    var STATUSES = ['confirmed','waiting','done'];
+    var SLABELS  = { confirmed:'Confirmed', waiting:'Waiting', done:'Done' };
     var PRIOS    = ['high','medium','low'];
     var PLABELS  = { high:'High', medium:'Med', low:'Low' };
 
@@ -10370,7 +10382,7 @@
         location:    (d&&d.location)    || '',
         locationUrl: (d&&d.locationUrl) || '',
         priority:    (d&&d.priority)    || 'medium',
-        status:      (d&&d.status)      || 'upcoming',
+        status:      (d&&d.status && STATUSES.indexOf(d.status) > -1) ? d.status : 'waiting',
         notes:       (d&&d.notes)       || '',
         calendarAdded:   !!(d&&d.calendarAdded),
         calendarAddedAt: (d&&d.calendarAddedAt) || '',
@@ -11117,16 +11129,16 @@
     /* ── Stats ─────────────────────────────────────────────────── */
     function visibleProjects(){
       if(activeFilter==='all')       return projects;
-      if(activeFilter==='upcoming')  return projects.filter(function(p){ return p.status==='upcoming';  });
       if(activeFilter==='confirmed') return projects.filter(function(p){ return p.status==='confirmed'; });
+      if(activeFilter==='waiting')   return projects.filter(function(p){ return p.status==='waiting';   });
       if(activeFilter==='done')      return projects.filter(function(p){ return p.status==='done';      });
       return projects;
     }
     function updateStats(){
       function set(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
       set('statTotal',     projects.length);
-      set('statUpcoming',  projects.filter(function(p){ return p.status==='upcoming';  }).length);
       set('statConfirmed', projects.filter(function(p){ return p.status==='confirmed'; }).length);
+      set('statWaiting',   projects.filter(function(p){ return p.status==='waiting';   }).length);
       set('statDone',      projects.filter(function(p){ return p.status==='done';      }).length);
       if (window._refreshAutoScrollbars) window._refreshAutoScrollbars();
     }
