@@ -6437,7 +6437,7 @@
   .notes-kicker {
     font-family: var(--font-en-mono);
     font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
-    color: var(--ink-dim); margin-bottom: 28px;
+    color: var(--ink-dim); margin-bottom: 22px;
     display: flex; align-items: center; gap: 12px;
   }
   .notes-kicker-sep { opacity: .45; }
@@ -6466,7 +6466,7 @@
   .nl-head { flex-shrink: 0; }
   .nl-title-row {
     display: flex; align-items: baseline; justify-content: space-between;
-    padding: 32px 20px 0;
+    padding: 36px 28px 0;
   }
   .nl-compose {
     display: inline-flex; align-items: center; justify-content: center;
@@ -6480,7 +6480,7 @@
 
   /* Search bar: full width, pill, inside the left col */
   .nl-search-row {
-    padding: 14px 20px 0;
+    padding: 14px 28px 0;
   }
   .notes-search-wrap {
     display: flex; align-items: center; gap: 8px;
@@ -6523,7 +6523,7 @@
   .note-row {
     display: flex; flex-direction: column;
     width: 100%; text-align: left;
-    padding: 12px 20px;
+    padding: 13px 28px;
     background: transparent; border: none; outline: none;
     border-bottom: 1px solid var(--rule);
     cursor: pointer;
@@ -6584,15 +6584,16 @@
     text-align: center; line-height: 1.5; margin: 0;
   }
 
-  /* Editor panel */
+  /* Editor panel — centered, comfortable reading width */
   .ne-panel {
     flex: 1; display: flex; flex-direction: column;
-    padding: 38px 52px 60px;
-    max-width: 720px;
+    width: 100%; max-width: 700px;
+    padding: 42px 56px 60px;
+    box-sizing: border-box;
   }
   .ne-topbar {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 28px;
+    margin-bottom: 32px;
   }
   .ne-topbar-right { display: flex; align-items: center; gap: 10px; }
 
@@ -6611,31 +6612,6 @@
 
   /* .notes-controls kept minimal — layout now handled by .nl-search-row */
   .notes-controls { display: contents; }
-  .notes-search-wrap {
-    display: flex; align-items: center; gap: 8px;
-    flex: 1; max-width: 340px;
-    border: 1px solid var(--rule); border-radius: 100px;
-    padding: 7px 14px;
-    transition: border-color .22s;
-  }
-  .notes-search-wrap:focus-within { border-color: var(--rule-strong); }
-  .notes-search-ico { width: 12px; height: 12px; color: var(--ink-dim); flex-shrink: 0; }
-  .notes-search {
-    flex: 1; min-width: 0;
-    font-family: var(--font-en-mono);
-    font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
-    color: var(--ink); background: transparent; border: none; outline: none;
-    padding: 0;
-  }
-  .notes-search::placeholder { color: var(--ink-dim); opacity: 1; }
-  .notes-search-clear {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 14px; height: 14px; padding: 0; flex-shrink: 0;
-    background: transparent; border: none; cursor: pointer;
-    color: var(--ink-soft); transition: color .2s;
-  }
-  .notes-search-clear:hover { color: var(--ink-dim); }
-  .notes-search-clear svg { width: 8px; height: 8px; }
 
   /* .notes-new-btn hidden — replaced by .nl-compose icon in the header */
   .notes-new-btn { display: none; }
@@ -6956,8 +6932,9 @@
     #viewNotes .notes-page { min-height: 100%; overflow: visible; }
     .notes-split { flex-direction: column; overflow: visible; }
     .notes-list-col { width: 100%; border-right: none; overflow: visible; }
-    .nl-title-row { padding: 24px 20px 0; }
+    .nl-title-row { padding: 24px 20px 0; }   /* tighter on mobile */
     .nl-search-row { padding: 12px 20px 0; }
+    .note-row { padding: 13px 20px; }
     .notes-editor-col { display: none; }
     .notes-split[data-mobile="editor"] .notes-list-col { display: none; }
     .notes-split[data-mobile="editor"] .notes-editor-col { display: flex; min-height: 100vh; }
