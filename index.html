@@ -1521,6 +1521,7 @@
       var profileBtn = document.getElementById('authUserProfile');
       var menuSignOut = document.getElementById('authMenuSignOut');
       var menuBackup = document.getElementById('authMenuBackup');
+      var menuSound = document.getElementById('authMenuSound');
 
       function closeProfileMenu(){
         if (!authUserBar) return;
@@ -1560,6 +1561,26 @@
           closeProfileMenu();
           var backupBtn = document.getElementById('authBackupBtn');
           if (backupBtn) backupBtn.click();
+        });
+      }
+      function updateSoundMenu(){
+        if (!menuSound) return;
+        var on = true;
+        if (window.CZUISound && window.CZUISound.isEnabled) {
+          on = window.CZUISound.isEnabled();
+        } else {
+          try { on = localStorage.getItem('cz_ui_sound') !== '0'; } catch(e) { on = true; }
+        }
+        menuSound.setAttribute('aria-pressed', on ? 'true' : 'false');
+        var label = document.getElementById('authMenuSoundLabel');
+        if (label) label.textContent = on ? 'Sound on' : 'Sound off';
+      }
+      if (menuSound) {
+        updateSoundMenu();
+        menuSound.addEventListener('click', function(e){
+          e.stopPropagation();
+          if (window.CZUISound && window.CZUISound.toggle) window.CZUISound.toggle();
+          updateSoundMenu();
         });
       }
       document.addEventListener('click', function(e){
@@ -2222,6 +2243,180 @@
         }
       });
 
+    })();
+
+
+    /* ── UI sound layer ─────────────────────────────────────── */
+    (function(){
+      var STORE = 'cz_ui_sound';
+      var enabled = true;
+      try { enabled = localStorage.getItem(STORE) !== '0'; } catch(e) {}
+
+      var ctx = null;
+      var master = null;
+      var activeTarget = null;
+      var lastTypeAt = 0;
+      var CLICKABLE =
+        'button,a,[role="button"],[role="menuitem"],summary,label,'+
+        'input[type="button"],input[type="submit"],input[type="checkbox"],input[type="radio"],select,'+
+        '.tool-card,.shoot-dot,.shoot-cal,.shoot-del,.shoot-link-chip,.loc-chip,.p-filter,.planner-new-btn,.shoot-ghost,'+
+        '.auth-user-profile,.auth-menu-item,.czteam-trigger,.czteam-member,.czteam-member-chat,.czchat-send-btn,'+
+        '.mb-tool-btn,.mb-prop-btn,.mb-ctx-item,.mb-card-menu-btn,.mb-new-board-btn,.notes-new-btn,.note-row,.net-btn,.ned-tool';
+
+      function now(){ return (ctx && ctx.currentTime) || 0; }
+      function ensure(){
+        if(!enabled) return null;
+        if(!ctx){
+          var AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if(!AudioCtx) return null;
+          ctx = new AudioCtx();
+          master = ctx.createGain();
+          master.gain.value = 0.042;
+          master.connect(ctx.destination);
+        }
+        if(ctx.state === 'suspended') ctx.resume();
+        return ctx;
+      }
+      function rampGain(gain, at, dur, peak){
+        var g = gain.gain;
+        g.cancelScheduledValues(at);
+        g.setValueAtTime(0.0001, at);
+        g.exponentialRampToValueAtTime(Math.max(0.0002, peak), at + Math.min(.018, dur * .42));
+        g.exponentialRampToValueAtTime(0.0001, at + dur);
+      }
+      function tone(freq, dur, type, gain, delay, bend){
+        var c = ensure(); if(!c || !master) return;
+        var at = c.currentTime + (delay || 0);
+        var o = c.createOscillator();
+        var g = c.createGain();
+        o.type = type || 'sine';
+        o.frequency.setValueAtTime(freq, at);
+        if(bend) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq + bend), at + dur);
+        rampGain(g, at, dur, gain || .45);
+        o.connect(g); g.connect(master);
+        o.start(at); o.stop(at + dur + .03);
+      }
+      function noise(dur, gain, delay, highpass){
+        var c = ensure(); if(!c || !master) return;
+        var len = Math.max(1, Math.floor(c.sampleRate * dur));
+        var buf = c.createBuffer(1, len, c.sampleRate);
+        var data = buf.getChannelData(0);
+        for(var i=0;i<len;i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.4);
+        var src = c.createBufferSource();
+        var filt = c.createBiquadFilter();
+        var g = c.createGain();
+        var at = c.currentTime + (delay || 0);
+        src.buffer = buf;
+        filt.type = highpass ? 'highpass' : 'bandpass';
+        filt.frequency.value = highpass ? 1800 : 950;
+        filt.Q.value = highpass ? .45 : .7;
+        rampGain(g, at, dur, gain || .22);
+        src.connect(filt); filt.connect(g); g.connect(master);
+        src.start(at); src.stop(at + dur + .02);
+      }
+      function play(kind){
+        if(!enabled) return;
+        kind = kind || 'tap';
+        if(kind === 'type'){
+          var t = Date.now();
+          if(t - lastTypeAt < 34) return;
+          lastTypeAt = t;
+        }
+        ensure();
+        if(kind === 'press') {
+          tone(180, .052, 'sine', .22, 0, -22);
+          noise(.034, .09, 0, true);
+        } else if(kind === 'release') {
+          tone(430, .044, 'triangle', .16, 0, 26);
+        } else if(kind === 'calendar') {
+          tone(520, .075, 'triangle', .22, 0, 72);
+          tone(780, .09, 'sine', .11, .018, 90);
+        } else if(kind === 'delete') {
+          tone(145, .09, 'sine', .26, 0, -48);
+          noise(.075, .14, 0, false);
+        } else if(kind === 'confirm') {
+          tone(420, .055, 'triangle', .16, 0, 40);
+          tone(630, .075, 'sine', .12, .025, 60);
+        } else if(kind === 'waiting') {
+          tone(330, .052, 'triangle', .15, 0, 18);
+        } else if(kind === 'done') {
+          tone(470, .07, 'triangle', .15, 0, 34);
+        } else if(kind === 'type') {
+          tone(1180 + Math.random() * 80, .018, 'sine', .035, 0, -20);
+        } else if(kind === 'toggle') {
+          tone(360, .05, 'triangle', .13, 0, 25);
+          tone(540, .06, 'sine', .10, .02, 30);
+        } else {
+          tone(260, .042, 'triangle', .13, 0, 20);
+        }
+      }
+      function soundKind(el, phase){
+        if(!el || !el.closest) return phase === 'up' ? 'release' : 'press';
+        var hit = el.closest(CLICKABLE);
+        if(!hit) return null;
+        if(hit.disabled || hit.getAttribute('aria-disabled') === 'true') return null;
+        if(hit.closest('.shoot-del,.danger,[data-del-act="yes"],.mb-delete-confirm-btn')) return phase === 'up' ? 'release' : 'delete';
+        if(hit.closest('.shoot-cal')) return phase === 'up' ? 'calendar' : 'press';
+        var status = (hit.dataset && (hit.dataset.s || hit.dataset.status || hit.dataset.filter)) || '';
+        if(status === 'confirmed') return 'confirm';
+        if(status === 'waiting') return 'waiting';
+        if(status === 'done') return 'done';
+        return phase === 'up' ? 'release' : 'press';
+      }
+      function isTypingTarget(el){
+        if(!el) return false;
+        if(el.isContentEditable) return true;
+        var tag = el.tagName;
+        if(tag === 'TEXTAREA') return true;
+        if(tag !== 'INPUT') return false;
+        var type = (el.type || 'text').toLowerCase();
+        return /^(text|search|email|tel|url|password|number)$/i.test(type);
+      }
+      document.addEventListener('pointerdown', function(e){
+        if(e.button && e.button !== 0) return;
+        var hit = e.target && e.target.closest ? e.target.closest(CLICKABLE) : null;
+        if(!hit) return;
+        activeTarget = hit;
+        play(soundKind(hit, 'down'));
+      }, true);
+      document.addEventListener('pointerup', function(e){
+        if(e.button && e.button !== 0) return;
+        var hit = e.target && e.target.closest ? e.target.closest(CLICKABLE) : null;
+        if(!hit || (activeTarget && activeTarget !== hit && !activeTarget.contains(hit))) return;
+        play(soundKind(hit, 'up'));
+        activeTarget = null;
+      }, true);
+      document.addEventListener('pointercancel', function(){ activeTarget = null; }, true);
+      document.addEventListener('keydown', function(e){
+        if(!isTypingTarget(e.target)) return;
+        if(e.ctrlKey || e.metaKey || e.altKey) return;
+        if(e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta' || e.key === 'Tab') return;
+        play('type');
+      }, true);
+
+      var mo = new MutationObserver(function(records){
+        records.forEach(function(r){
+          if(r.type !== 'attributes' || r.attributeName !== 'class') return;
+          var oldClass = r.oldValue || '';
+          var el = r.target;
+          if(!el || !el.classList) return;
+          if(el.classList.contains('cal-flash') && oldClass.indexOf('cal-flash') < 0) play('calendar');
+          if(el.classList.contains('del-fired') && oldClass.indexOf('del-fired') < 0) play('delete');
+        });
+      });
+      mo.observe(document.documentElement, { subtree:true, attributes:true, attributeOldValue:true, attributeFilter:['class'] });
+
+      function setEnabled(on){
+        enabled = !!on;
+        try { localStorage.setItem(STORE, enabled ? '1' : '0'); } catch(e) {}
+        if(enabled) { ensure(); play('toggle'); }
+      }
+      window.CZUISound = {
+        play: play,
+        setEnabled: setEnabled,
+        toggle: function(){ setEnabled(!enabled); },
+        isEnabled: function(){ return enabled; }
+      };
     })();
 
 
@@ -4026,6 +4221,7 @@
     .auth-user-bar.profile-menu-open .auth-menu-item { opacity:1; transform:translateY(0); }
     .auth-user-bar.profile-menu-open .auth-menu-item:nth-child(1) { transition-delay:150ms, 260ms, 0ms, 0ms; }
     .auth-user-bar.profile-menu-open .auth-menu-item:nth-child(2) { transition-delay:190ms, 310ms, 0ms, 0ms; }
+    .auth-user-bar.profile-menu-open .auth-menu-item:nth-child(3) { transition-delay:230ms, 350ms, 0ms, 0ms; }
     .auth-menu-item svg { width:13px; height:13px; flex-shrink:0; opacity:.78; }
     .auth-menu-item:hover { background:rgba(255,255,255,.075); color:var(--ink); }
     .auth-menu-item.danger:hover { color:#ef8b8b; background:rgba(255,255,255,.06); }
@@ -9408,6 +9604,10 @@
       <button class="auth-menu-item danger" id="authMenuSignOut" type="button" role="menuitem">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M6.2 3H3.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2.7M9.5 5l3 3-3 3M12.3 8H5.8"/></svg>
         Sign out
+      </button>
+      <button class="auth-menu-item" id="authMenuSound" type="button" role="menuitem" aria-pressed="true">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.2h2.3L8.2 3v10L4.8 9.8H2.5Z"/><path d="M10.6 5.5c.7.7 1.1 1.5 1.1 2.5s-.4 1.8-1.1 2.5"/><path d="M12.5 3.8A5.8 5.8 0 0 1 14 8a5.8 5.8 0 0 1-1.5 4.2"/></svg>
+        <span id="authMenuSoundLabel">Sound on</span>
       </button>
     </div>
   </div>
