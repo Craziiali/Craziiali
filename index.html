@@ -1522,6 +1522,8 @@
       var menuSignOut = document.getElementById('authMenuSignOut');
       var menuBackup = document.getElementById('authMenuBackup');
       var menuSound = document.getElementById('authMenuSound');
+      var soundVolume = document.getElementById('authSoundVolume');
+      var soundValue = document.getElementById('authSoundValue');
 
       function closeProfileMenu(){
         if (!authUserBar) return;
@@ -1574,6 +1576,17 @@
         menuSound.setAttribute('aria-pressed', on ? 'true' : 'false');
         var label = document.getElementById('authMenuSoundLabel');
         if (label) label.textContent = on ? 'Sound on' : 'Sound off';
+        var vol = 55;
+        if (window.CZUISound && window.CZUISound.getVolume) {
+          vol = Math.round(window.CZUISound.getVolume() * 100);
+        } else {
+          try {
+            var savedVol = parseFloat(localStorage.getItem('cz_ui_sound_volume'));
+            if (!isNaN(savedVol)) vol = Math.round(savedVol * 100);
+          } catch(e) {}
+        }
+        if (soundVolume) soundVolume.value = String(vol);
+        if (soundValue) soundValue.textContent = vol + '%';
       }
       if (menuSound) {
         updateSoundMenu();
@@ -1581,6 +1594,21 @@
           e.stopPropagation();
           if (window.CZUISound && window.CZUISound.toggle) window.CZUISound.toggle();
           updateSoundMenu();
+        });
+      }
+      if (soundVolume) {
+        soundVolume.addEventListener('click', function(e){ e.stopPropagation(); });
+        soundVolume.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
+        soundVolume.addEventListener('input', function(e){
+          e.stopPropagation();
+          var v = Math.max(0, Math.min(100, parseInt(soundVolume.value, 10) || 0));
+          if (soundValue) soundValue.textContent = v + '%';
+          try { localStorage.setItem('cz_ui_sound_volume', String(v / 100)); } catch(err) {}
+          if (window.CZUISound && window.CZUISound.setVolume) window.CZUISound.setVolume(v / 100, true);
+        });
+        soundVolume.addEventListener('change', function(e){
+          e.stopPropagation();
+          if (window.CZUISound && window.CZUISound.play) window.CZUISound.play('toggle');
         });
       }
       document.addEventListener('click', function(e){
@@ -2249,13 +2277,21 @@
     /* ── UI sound layer ─────────────────────────────────────── */
     (function(){
       var STORE = 'cz_ui_sound';
+      var VOL_STORE = 'cz_ui_sound_volume';
       var enabled = true;
+      var volume = 0.55;
       try { enabled = localStorage.getItem(STORE) !== '0'; } catch(e) {}
+      try {
+        var savedVolume = parseFloat(localStorage.getItem(VOL_STORE));
+        if (!isNaN(savedVolume)) volume = Math.max(0, Math.min(1, savedVolume));
+      } catch(e) {}
 
       var ctx = null;
       var master = null;
       var activeTarget = null;
       var lastTypeAt = 0;
+      var lastScrollAt = 0;
+      var lastMoveAt = {};
       var CLICKABLE =
         'button,a,[role="button"],[role="menuitem"],summary,label,'+
         'input[type="button"],input[type="submit"],input[type="checkbox"],input[type="radio"],select,'+
@@ -2264,6 +2300,21 @@
         '.mb-tool-btn,.mb-prop-btn,.mb-ctx-item,.mb-card-menu-btn,.mb-new-board-btn,.notes-new-btn,.note-row,.net-btn,.ned-tool';
 
       function now(){ return (ctx && ctx.currentTime) || 0; }
+      function gainForVolume(){
+        /* Perceptual curve: quiet at low values, useful at the middle, capped at the top. */
+        if(volume <= 0) return 0.0001;
+        return 0.012 + Math.pow(volume, 1.65) * 0.18;
+      }
+      function applyMasterGain(){
+        if(!master) return;
+        var c = ctx || { currentTime:0 };
+        try {
+          master.gain.cancelScheduledValues(c.currentTime);
+          master.gain.setTargetAtTime(enabled ? gainForVolume() : 0.0001, c.currentTime, .018);
+        } catch(e) {
+          master.gain.value = enabled ? gainForVolume() : 0.0001;
+        }
+      }
       function ensure(){
         if(!enabled) return null;
         if(!ctx){
@@ -2271,7 +2322,7 @@
           if(!AudioCtx) return null;
           ctx = new AudioCtx();
           master = ctx.createGain();
-          master.gain.value = 0.042;
+          master.gain.value = gainForVolume();
           master.connect(ctx.destination);
         }
         if(ctx.state === 'suspended') ctx.resume();
@@ -2346,9 +2397,36 @@
         } else if(kind === 'toggle') {
           tone(360, .05, 'triangle', .13, 0, 25);
           tone(540, .06, 'sine', .10, .02, 30);
+        } else if(kind === 'scroll') {
+          tone(760, .018, 'sine', .045, 0, -18);
+        } else if(kind === 'pan') {
+          tone(185, .026, 'sine', .055, 0, 10);
+          noise(.026, .035, 0, false);
+        } else if(kind === 'drag') {
+          tone(240, .026, 'triangle', .06, 0, 18);
+        } else if(kind === 'draw') {
+          tone(930 + Math.random() * 90, .02, 'sine', .04, 0, -28);
+        } else if(kind === 'erase') {
+          noise(.035, .065, 0, true);
+          tone(120, .028, 'sine', .045, 0, -12);
+        } else if(kind === 'color') {
+          tone(520, .035, 'triangle', .11, 0, 55);
+          tone(690, .04, 'sine', .07, .015, 60);
+        } else if(kind === 'tool') {
+          tone(315, .04, 'triangle', .095, 0, 28);
+          tone(470, .035, 'sine', .06, .014, 24);
+        } else if(kind === 'zoom') {
+          tone(300, .032, 'sine', .06, 0, 32);
         } else {
           tone(260, .042, 'triangle', .13, 0, 20);
         }
+      }
+      function playThrottled(kind, ms){
+        var t = Date.now();
+        ms = ms == null ? 70 : ms;
+        if(t - (lastMoveAt[kind] || 0) < ms) return;
+        lastMoveAt[kind] = t;
+        play(kind);
       }
       function soundKind(el, phase){
         if(!el || !el.closest) return phase === 'up' ? 'release' : 'press';
@@ -2393,6 +2471,14 @@
         if(e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta' || e.key === 'Tab') return;
         play('type');
       }, true);
+      document.addEventListener('wheel', function(e){
+        if(!enabled) return;
+        if(e.target && e.target.closest && e.target.closest('#mbStage,#mbCanvasWrap')) return;
+        var t = Date.now();
+        if(t - lastScrollAt < 85) return;
+        lastScrollAt = t;
+        play('scroll');
+      }, { passive:true, capture:true });
 
       var mo = new MutationObserver(function(records){
         records.forEach(function(r){
@@ -2409,11 +2495,22 @@
       function setEnabled(on){
         enabled = !!on;
         try { localStorage.setItem(STORE, enabled ? '1' : '0'); } catch(e) {}
+        applyMasterGain();
         if(enabled) { ensure(); play('toggle'); }
+      }
+      function setVolume(v, quiet){
+        volume = Math.max(0, Math.min(1, parseFloat(v)));
+        if(isNaN(volume)) volume = .55;
+        try { localStorage.setItem(VOL_STORE, String(volume)); } catch(e) {}
+        applyMasterGain();
+        if(!quiet) play('toggle');
       }
       window.CZUISound = {
         play: play,
+        playThrottled: playThrottled,
         setEnabled: setEnabled,
+        setVolume: setVolume,
+        getVolume: function(){ return volume; },
         toggle: function(){ setEnabled(!enabled); },
         isEnabled: function(){ return enabled; }
       };
@@ -4226,6 +4323,55 @@
     .auth-menu-item:hover { background:rgba(255,255,255,.075); color:var(--ink); }
     .auth-menu-item.danger:hover { color:#ef8b8b; background:rgba(255,255,255,.06); }
     body:not(.role-admin) .auth-menu-backup { display:none; }
+    .auth-sound-control {
+      display:grid;
+      grid-template-columns: 1fr auto;
+      align-items:center;
+      gap:8px;
+      margin:2px 2px 4px;
+      padding:9px 10px 10px;
+      border-radius:10px;
+      background:rgba(255,255,255,.035);
+      border:1px solid rgba(255,255,255,.055);
+      opacity:0;
+      transform:translateY(7px);
+      transition:
+        opacity .34s ease,
+        transform .46s cubic-bezier(.16,1,.3,1),
+        background .16s,
+        border-color .16s;
+    }
+    .auth-user-bar.profile-menu-open .auth-sound-control {
+      opacity:1;
+      transform:translateY(0);
+      transition-delay:270ms, 390ms, 0ms, 0ms;
+    }
+    .auth-sound-control:hover {
+      background:rgba(255,255,255,.055);
+      border-color:rgba(255,255,255,.10);
+    }
+    .auth-sound-label {
+      font-family:var(--font-en-mono);
+      font-size:8px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:var(--ink-soft);
+    }
+    .auth-sound-value {
+      font-family:var(--font-en-mono);
+      font-size:8px;
+      letter-spacing:.08em;
+      color:var(--ink-dim);
+      min-width:28px;
+      text-align:right;
+    }
+    .auth-sound-range {
+      grid-column:1 / -1;
+      width:100%;
+      height:14px;
+      accent-color:rgba(243,243,239,.72);
+      cursor:pointer;
+    }
 
     /* ── Backup password modal ───────────────────────────────────── */
     .backup-pwd-overlay {
@@ -9609,6 +9755,11 @@
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.2h2.3L8.2 3v10L4.8 9.8H2.5Z"/><path d="M10.6 5.5c.7.7 1.1 1.5 1.1 2.5s-.4 1.8-1.1 2.5"/><path d="M12.5 3.8A5.8 5.8 0 0 1 14 8a5.8 5.8 0 0 1-1.5 4.2"/></svg>
         <span id="authMenuSoundLabel">Sound on</span>
       </button>
+      <div class="auth-sound-control" id="authSoundControl">
+        <span class="auth-sound-label">Volume</span>
+        <span class="auth-sound-value" id="authSoundValue">55%</span>
+        <input class="auth-sound-range" id="authSoundVolume" type="range" min="0" max="100" step="1" value="55" aria-label="Interface sound volume">
+      </div>
     </div>
   </div>
 
@@ -12570,9 +12721,10 @@
     if(necpSwatches) necpSwatches.addEventListener('mousedown', function(e){ e.preventDefault(); });
     if(necpSwatches) necpSwatches.addEventListener('click', function(e){
       var sw = e.target.closest('.necp-swatch'); if(!sw) return;
+      if(window.CZUISound) window.CZUISound.play('color');
       applyColor(sw.dataset.c); hideColorPop();
     });
-    if(neColorInput) neColorInput.addEventListener('input', function(){ applyColor(neColorInput.value); });
+    if(neColorInput) neColorInput.addEventListener('input', function(){ if(window.CZUISound) window.CZUISound.playThrottled('color', 120); applyColor(neColorInput.value); });
     if(neColorInput) neColorInput.addEventListener('change', hideColorPop);
     /* Close colour pop on outside click */
     document.addEventListener('click', function(e){
@@ -12700,10 +12852,11 @@
       var cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
       return { x: cx, y: cy };
     }
-    function drawStart(e){ if(!dctx) sizeCanvas(true); e.preventDefault(); drawing = true; lastPt = ptFromEvent(e); }
+    function drawStart(e){ if(!dctx) sizeCanvas(true); e.preventDefault(); drawing = true; lastPt = ptFromEvent(e); if(window.CZUISound) window.CZUISound.play(erasing ? 'erase' : 'draw'); }
     function drawMove(e){
       if(!drawing || !dctx) return; e.preventDefault();
       var p = ptFromEvent(e);
+      if(window.CZUISound) window.CZUISound.playThrottled(erasing ? 'erase' : 'draw', erasing ? 70 : 48);
       dctx.globalCompositeOperation = erasing ? 'destination-out' : 'source-over';
       dctx.strokeStyle = drawColor;
       dctx.lineWidth = erasing ? 22 : 2.6;
@@ -12747,13 +12900,14 @@
     buildDrawColors();
     if(nedColors) nedColors.addEventListener('click', function(e){
       var sw = e.target.closest('.ned-swatch'); if(!sw) return;
+      if(window.CZUISound) window.CZUISound.play('color');
       drawColor = sw.dataset.c; erasing = false;
       nedColors.querySelectorAll('.ned-swatch').forEach(function(b){ b.classList.toggle('active', b===sw); });
       if(nedPen) nedPen.classList.add('active');
       if(nedEraser) nedEraser.classList.remove('active');
     });
-    if(nedPen) nedPen.addEventListener('click', function(){ erasing = false; nedPen.classList.add('active'); if(nedEraser) nedEraser.classList.remove('active'); });
-    if(nedEraser) nedEraser.addEventListener('click', function(){ erasing = true; nedEraser.classList.add('active'); if(nedPen) nedPen.classList.remove('active'); });
+    if(nedPen) nedPen.addEventListener('click', function(){ if(window.CZUISound) window.CZUISound.play('tool'); erasing = false; nedPen.classList.add('active'); if(nedEraser) nedEraser.classList.remove('active'); });
+    if(nedEraser) nedEraser.addEventListener('click', function(){ if(window.CZUISound) window.CZUISound.play('erase'); erasing = true; nedEraser.classList.add('active'); if(nedPen) nedPen.classList.remove('active'); });
     if(nedClear) nedClear.addEventListener('click', function(){
       if(dctx) dctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
       sketchDirty = false;
@@ -15807,6 +15961,7 @@
         _panY += e.clientY - _panStart.y;
         _panStart = { x: e.clientX, y: e.clientY };
         applyTransform();
+        if (window.CZUISound) window.CZUISound.playThrottled('pan', 76);
         return;
       }
 
@@ -15837,6 +15992,7 @@
           if (dom) { dom.style.left=(op.x+ddx)+'px'; dom.style.top=(op.y+ddy)+'px'; }
         });
         positionPropbar();
+        if (window.CZUISound) window.CZUISound.playThrottled('drag', 68);
         return;
       }
 
@@ -15873,6 +16029,7 @@
       if (_drawing && e.buttons === 1) {
         _drawing.points.push([pos.x, pos.y]);
         _drawing.el.setAttribute('d', smoothPath(_drawing.points));
+        if (window.CZUISound) window.CZUISound.playThrottled('draw', 52);
         return;
       }
 
@@ -15882,6 +16039,7 @@
         _arrowDraw.line.setAttribute('y2', pos.y);
         var ah = arrowheadPath(_arrowDraw.x1,_arrowDraw.y1,pos.x,pos.y);
         _arrowDraw.head.setAttribute('d', ah);
+        if (window.CZUISound) window.CZUISound.playThrottled('draw', 64);
         return;
       }
 
@@ -16103,16 +16261,20 @@
         /* Pinch-to-zoom (trackpad) or Ctrl+scroll */
         var factor = e.deltaY < 0 ? 1.1 : 1/1.1;
         setZoom(_zoom * factor, e.clientX, e.clientY);
+        if (window.CZUISound) window.CZUISound.playThrottled('zoom', 90);
       } else if (e.shiftKey) {
         /* Shift+scroll = horizontal pan */
         _panX -= e.deltaY; applyTransform();
+        if (window.CZUISound) window.CZUISound.playThrottled('pan', 84);
       } else if (Math.abs(e.deltaX) > 1) {
         /* Two-finger horizontal swipe (trackpad) = pan */
         _panX -= e.deltaX; _panY -= e.deltaY; applyTransform();
+        if (window.CZUISound) window.CZUISound.playThrottled('pan', 84);
       } else {
         /* Plain mouse wheel = zoom centered on cursor */
         var factor2 = e.deltaY < 0 ? 1.1 : 1/1.1;
         setZoom(_zoom * factor2, e.clientX, e.clientY);
+        if (window.CZUISound) window.CZUISound.playThrottled('zoom', 90);
       }
     }
 
@@ -16262,6 +16424,7 @@
         _panX = mid.x - r.left - (_touchGesture.worldX * _zoom);
         _panY = mid.y - r.top  - (_touchGesture.worldY * _zoom);
         applyTransform();
+        if (window.CZUISound) window.CZUISound.playThrottled('zoom', 100);
         return;
       }
       if (e.touches.length !== 1) return;
@@ -16278,6 +16441,7 @@
         _panX = _touchGesture.panX + (t.clientX - _touchGesture.startX);
         _panY = _touchGesture.panY + (t.clientY - _touchGesture.startY);
         applyTransform();
+        if (window.CZUISound) window.CZUISound.playThrottled('pan', 82);
         return;
       }
       if (_touchGesture.type === 'drag') {
@@ -16296,6 +16460,7 @@
           if (dom) { dom.style.left=(op.x+ddx)+'px'; dom.style.top=(op.y+ddy)+'px'; }
         });
         positionPropbar();
+        if (window.CZUISound) window.CZUISound.playThrottled('drag', 76);
         return;
       }
       if (_touchGesture.type === 'draw' && _drawing) {
@@ -16303,6 +16468,7 @@
         var pos = screenToCanvas(t.clientX, t.clientY);
         _drawing.points.push([pos.x, pos.y]);
         _drawing.el.setAttribute('d', smoothPath(_drawing.points));
+        if (window.CZUISound) window.CZUISound.playThrottled('draw', 58);
         return;
       }
       if (_touchGesture.type === 'arrow' && _arrowDraw) {
@@ -16311,6 +16477,7 @@
         _arrowDraw.line.setAttribute('x2', pos2.x);
         _arrowDraw.line.setAttribute('y2', pos2.y);
         _arrowDraw.head.setAttribute('d', arrowheadPath(_arrowDraw.x1,_arrowDraw.y1,pos2.x,pos2.y));
+        if (window.CZUISound) window.CZUISound.playThrottled('draw', 68);
       }
     }
     function onStageTouchEnd(e) {
@@ -16765,6 +16932,7 @@
       /* Bind propbar events */
       propbar.querySelectorAll('[data-strokecolor]').forEach(function(btn){
         btn.addEventListener('click', function(){
+          if (window.CZUISound) window.CZUISound.play('color');
           var c = btn.dataset.strokecolor;
           var snap = _propSnap(['stroke']);
           _propStrokeColor = c;
@@ -16774,6 +16942,7 @@
       });
       propbar.querySelectorAll('[data-stickycolor]').forEach(function(btn){
         btn.addEventListener('click', function(){
+          if (window.CZUISound) window.CZUISound.play('color');
           var c = btn.dataset.stickycolor;
           var snap = _propSnap(['color']).filter(function(it){ return _elements[it.id]&&_elements[it.id].type==='sticky'; });
           _propStickyColor = c;
@@ -16783,6 +16952,7 @@
       });
       propbar.querySelectorAll('[data-textprop]').forEach(function(btn){
         btn.addEventListener('click', function(){
+          if (window.CZUISound) window.CZUISound.play('tool');
           var prop = btn.dataset.textprop;
           var snap = _propSnap([prop]).filter(function(it){ var t=_elements[it.id]&&_elements[it.id].type; return t==='text'||t==='sticky'; });
           snap.forEach(function(it){ it.after[prop] = !_elements[it.id][prop]; if(_elements[it.id])scheduleElUpdate(it.id,{[prop]:it.after[prop]}); });
@@ -16793,6 +16963,7 @@
       });
       propbar.querySelectorAll('[data-textcolor]').forEach(function(btn){
         btn.addEventListener('click', function(){
+          if (window.CZUISound) window.CZUISound.play('color');
           var c = btn.dataset.textcolor;
           var items = _selected.filter(function(id){ var t=(_elements[id]||{}).type; return t==='text'||t==='sticky'; }).map(function(id){
             var d=_elements[id], key=d.type==='sticky'?'textColor':'color';
@@ -16830,6 +17001,7 @@
       });
       propbar.querySelectorAll('[data-fill]').forEach(function(btn){
         btn.addEventListener('click', function(){
+          if (window.CZUISound) window.CZUISound.play('color');
           var f = decodeURIComponent(btn.dataset.fill);
           var snap = _propSnap(['fill']);
           _propFill = f;
@@ -16844,6 +17016,7 @@
           _swUndoBefore = { strokeWidth: _propStrokeWidth, ids: _selected.slice() };
         });
         swEl.addEventListener('input', function(){
+          if (window.CZUISound) window.CZUISound.playThrottled('drag', 80);
           _propStrokeWidth = parseInt(swEl.value);
           _selected.forEach(function(id){ if(_elements[id])scheduleElUpdate(id,{strokeWidth:_propStrokeWidth}); });
         });
@@ -16878,7 +17051,7 @@
         fsEl.addEventListener('mousedown', function(){
           _fsUndoBefore = { fontSize: _propFontSize, ids: _selected.slice() };
         });
-        fsEl.addEventListener('change', function(){ applyFontSize(fsEl.value); });
+        fsEl.addEventListener('change', function(){ if (window.CZUISound) window.CZUISound.play('tool'); applyFontSize(fsEl.value); });
       }
       var fsRange = propbar.querySelector('#mbFontSizeRange');
       if (fsRange) {
@@ -16889,6 +17062,7 @@
           _fsUndoBefore = { fontSize: _propFontSize, ids: _selected.slice() };
         }, { passive:true });
         fsRange.addEventListener('input', function(){
+          if (window.CZUISound) window.CZUISound.playThrottled('drag', 80);
           if (fsEl) fsEl.value = fsRange.value;
           _propFontSize = parseInt(fsRange.value);
           _selected.forEach(function(id){ var t=_elements[id]&&_elements[id].type; if(t==='text'||t==='sticky')scheduleElUpdate(id,{fontSize:_propFontSize}); });
@@ -16906,12 +17080,14 @@
       }
       propbar.querySelectorAll('[data-fontstep]').forEach(function(btn){
         btn.addEventListener('click', function(){
+          if (window.CZUISound) window.CZUISound.play('tool');
           _fsUndoBefore = { fontSize: _propFontSize, ids: _selected.slice() };
           applyFontSize((parseInt(fsEl && fsEl.value ? fsEl.value : _propFontSize) || 16) + parseInt(btn.dataset.fontstep));
         });
       });
       propbar.querySelectorAll('[data-fontpreset]').forEach(function(btn){
         btn.addEventListener('click', function(){
+          if (window.CZUISound) window.CZUISound.play('tool');
           var presetSize = parseInt(btn.dataset.fontpreset);
           var items = _selected.filter(function(id){ var t=_elements[id]&&_elements[id].type; return t==='text'||t==='sticky'; }).map(function(id){ return { id:id, before:{fontSize:_elements[id].fontSize}, after:{fontSize:presetSize} }; });
           if (fsEl) fsEl.value = presetSize;
@@ -16924,6 +17100,7 @@
       });
       propbar.querySelectorAll('[data-fontface]').forEach(function(btn){
         btn.addEventListener('click', function(){
+          if (window.CZUISound) window.CZUISound.play('tool');
           var face = btn.dataset.fontface;
           var items = _selected.filter(function(id){ var t=_elements[id]&&_elements[id].type; return t==='text'||t==='sticky'; }).map(function(id){ return { id:id, before:{fontFace:_elements[id].fontFace}, after:{fontFace:face} }; });
           items.forEach(function(it){ scheduleElUpdate(it.id,{fontFace:face}); });
@@ -16933,6 +17110,7 @@
       });
       propbar.querySelectorAll('[data-align]').forEach(function(btn){
         btn.addEventListener('click', function(){
+          if (window.CZUISound) window.CZUISound.play('tool');
           var align = btn.dataset.align;
           var items = _selected.filter(function(id){ var t=_elements[id]&&_elements[id].type; return t==='text'||t==='sticky'; }).map(function(id){ return { id:id, before:{align:_elements[id].align}, after:{align:align} }; });
           items.forEach(function(it){ scheduleElUpdate(it.id,{align:align}); });
