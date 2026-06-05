@@ -6427,7 +6427,7 @@
   .notes-bar-brand:hover { color: var(--ink); }
 
   /* Hero */
-  .notes-hero { padding: 38px 48px 0; }
+  /* .notes-hero removed — hero now lives inside .nl-head in the left column */
   .notes-title {
     font-family: var(--font-en-display);
     font-style: italic; font-size: 54px; font-weight: 400;
@@ -6442,13 +6442,127 @@
   }
   .notes-kicker-sep { opacity: .45; }
 
-  /* Content shell */
-  .notes-content { padding: 0 48px 90px; }
+  /* ── Split panel ──────────────────────────────────────────────── */
+  #viewNotes {
+    overflow: hidden !important;   /* columns scroll independently */
+  }
+  #viewNotes .notes-page {
+    flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  }
+  .notes-split {
+    flex: 1; min-height: 0;
+    display: flex; overflow: hidden;
+  }
 
-  /* Controls row */
+  /* LEFT: list column */
+  .notes-list-col {
+    width: 290px; flex-shrink: 0;
+    border-right: 1px solid var(--rule);
+    overflow-y: auto; overflow-x: hidden;
+    display: flex; flex-direction: column;
+  }
+  .nl-head {
+    padding: 34px 28px 0;
+    flex-shrink: 0;
+  }
+
+  /* Note list rows */
+  .notes-list { flex: 1; }
+  .note-row {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: 0;
+    width: 100%; text-align: left;
+    padding: 13px 20px 13px 28px;
+    background: transparent; border: none; outline: none;
+    border-top: 1px solid var(--rule);
+    cursor: pointer;
+    transition: background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .note-row:first-child { border-top: none; }
+  .note-row:hover   { background: rgba(243,243,239,.04); }
+  .note-row.selected { background: rgba(243,243,239,.08); }
+  .nr-num {
+    font-family: var(--font-en-mono);
+    font-size: 7px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--ink-soft); opacity: .6;
+    align-self: start; padding-top: 3px;
+  }
+  .nr-info { min-width: 0; padding-right: 12px; }
+  .nr-title {
+    font-family: var(--font-en-body);
+    font-size: 12.5px; font-weight: 400; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: block;
+  }
+  .nr-title.is-untitled { color: var(--ink-soft); font-style: italic; }
+  .nr-preview {
+    font-family: var(--font-en-mono);
+    font-size: 9.5px; letter-spacing: .02em;
+    color: var(--ink-dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: block; margin-top: 3px;
+  }
+  .nr-preview.is-empty { opacity: .35; font-style: italic; }
+  .nr-time {
+    font-family: var(--font-en-mono);
+    font-size: 8px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink-soft); opacity: .55;
+    align-self: start; padding-top: 3px;
+    white-space: nowrap;
+  }
+
+  /* RIGHT: sticky editor column */
+  .notes-editor-col {
+    flex: 1; min-width: 0;
+    overflow-y: auto; overflow-x: hidden;
+    display: flex; flex-direction: column;
+  }
+
+  /* Empty state — no note selected */
+  .ne-placeholder {
+    flex: 1; display: flex;
+    align-items: center; justify-content: center;
+    padding: 40px;
+  }
+  .ne-ph-text {
+    font-family: var(--font-en-display);
+    font-style: italic; font-size: 22px; font-weight: 400;
+    color: var(--ink-soft); opacity: .28;
+    text-align: center; line-height: 1.5; margin: 0;
+  }
+
+  /* Editor panel */
+  .ne-panel {
+    flex: 1; display: flex; flex-direction: column;
+    padding: 38px 52px 60px;
+    max-width: 720px;
+  }
+  .ne-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .ne-topbar-right { display: flex; align-items: center; gap: 10px; }
+
+  /* Mobile back button — hidden on desktop */
+  .ne-back {
+    display: none;
+    align-items: center; gap: 6px;
+    font-family: var(--font-en-mono);
+    font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-dim);
+    background: transparent; border: none; padding: 0;
+    cursor: pointer; transition: color .18s;
+  }
+  .ne-back:hover { color: var(--ink); }
+  .ne-back svg { width: 9px; height: 9px; }
+
+  /* Controls row (inside left col header) */
   .notes-controls {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
     padding: 16px 0 22px;
     border-top: 1px solid var(--rule);
     border-bottom: 1px solid var(--rule);
@@ -6494,79 +6608,6 @@
   .notes-new-btn svg   { width: 9px; height: 9px; opacity: .8; }
 
   /* Board — responsive card grid */
-  .notes-board {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(252px, 1fr));
-    gap: 12px;
-    padding-top: 26px;
-  }
-
-  /* Note card */
-  .note-card {
-    position: relative;
-    display: flex; flex-direction: column;
-    min-height: 168px;
-    text-align: left;
-    padding: 20px 20px 16px;
-    border: 1px solid var(--rule); border-radius: 4px;
-    background:
-      radial-gradient(ellipse 76% 58% at 50% 50%,
-        rgba(10,10,11,.92) 0%,
-        rgba(10,10,11,.70) 36%,
-        rgba(10,10,11,.24) 70%,
-        transparent 100%);
-    cursor: pointer; overflow: hidden;
-    transition: border-color .3s ease, transform .3s cubic-bezier(.16,1,.3,1);
-  }
-  .note-card::after {
-    content: '';
-    position: absolute; inset: 0;
-    background: radial-gradient(ellipse 130% 60% at 50% 0%,
-      rgba(243,243,239,.05) 0%, transparent 100%);
-    opacity: 0; transition: opacity .35s ease; pointer-events: none;
-  }
-  .note-card:hover          { border-color: rgba(243,243,239,.26); transform: translateY(-2px); }
-  .note-card:hover::after   { opacity: 1; }
-  .nc-num {
-    font-family: var(--font-en-mono);
-    font-size: 8px; letter-spacing: .16em;
-    color: var(--ink-dim); opacity: .7;
-    margin-bottom: 13px;
-  }
-  .nc-title {
-    font-family: var(--font-en-display);
-    font-style: italic; font-size: 20px; font-weight: 400;
-    color: var(--ink); line-height: 1.12;
-    margin: 0 0 9px;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .nc-title.is-untitled { color: var(--ink-soft); opacity: .5; }
-  .nc-preview {
-    flex: 1;
-    font-family: var(--font-en-body);
-    font-size: 11.5px; font-weight: 300; line-height: 1.7;
-    color: var(--ink-dim);
-    margin: 0 0 14px;
-    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
-    overflow: hidden;
-    white-space: pre-wrap; word-break: break-word;
-  }
-  .nc-preview.is-empty { opacity: .35; font-style: italic; }
-  .nc-foot {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 8px;
-    font-family: var(--font-en-mono);
-    font-size: 7.5px; letter-spacing: .1em; text-transform: uppercase;
-    color: var(--ink-dim);
-  }
-  .nc-time { opacity: .9; }
-  .nc-link-badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    opacity: .8;
-  }
-  .nc-link-badge svg { width: 9px; height: 9px; }
-
   /* Empty state */
   .notes-empty {
     display: flex; flex-direction: column;
@@ -6584,37 +6625,7 @@
     color: var(--ink-soft); opacity: .7;
   }
 
-  /* ── Note focus editor ──────────────────────────────────────── */
-  .note-editor-overlay {
-    position: fixed; inset: 0; z-index: 3500;
-    display: flex; align-items: center; justify-content: center;
-    padding: 28px;
-    background: rgba(5,5,6,.72);
-    backdrop-filter: blur(26px) saturate(.82); -webkit-backdrop-filter: blur(26px) saturate(.82);
-    opacity: 0; pointer-events: none;
-    transition: opacity .26s ease;
-  }
-  .note-editor-overlay.open { opacity: 1; pointer-events: auto; }
-
-  .note-editor {
-    display: flex; flex-direction: column;
-    width: min(640px, 100%); max-height: 84vh;
-    background: rgba(11,11,13,.58);
-    backdrop-filter: blur(32px) saturate(1.5) brightness(0.86);
-    -webkit-backdrop-filter: blur(32px) saturate(1.5) brightness(0.86);
-    border: 1px solid rgba(243,243,239,.13);
-    border-radius: 16px;
-    padding: 22px 28px 20px;
-    box-shadow: 0 40px 80px rgba(0,0,0,.55), 0 1px 0 rgba(243,243,239,.09) inset;
-    transform: scale(.95) translateY(8px);
-    transition: transform .3s cubic-bezier(.16,1,.3,1);
-  }
-  .note-editor-overlay.open .note-editor { transform: scale(1) translateY(0); }
-
-  .ne-bar {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 14px;
-  }
+  /* ── Note editor (inside split right column) ────────────────── */
   .ne-num {
     font-family: var(--font-en-mono);
     font-size: 8px; letter-spacing: .2em; text-transform: uppercase;
@@ -6697,18 +6708,18 @@
   .ne-count { opacity: .5; }
 
   /* ── Notes entrance ──────────────────────────────────────────── */
-  .notes-entering .notes-bar      { animation: focusIn .60s cubic-bezier(.16,1,.3,1) both; animation-delay:  80ms; }
-  .notes-entering .notes-hero     { animation: focusIn .65s cubic-bezier(.16,1,.3,1) both; animation-delay: 160ms; }
-  .notes-entering .notes-controls { animation: focusIn .65s cubic-bezier(.16,1,.3,1) both; animation-delay: 230ms; }
-  .notes-entering .note-card               { animation: focusIn .60s cubic-bezier(.16,1,.3,1) both; animation-delay: 540ms; }
-  .notes-entering .note-card:nth-child(1)  { animation-delay: 320ms; }
-  .notes-entering .note-card:nth-child(2)  { animation-delay: 360ms; }
-  .notes-entering .note-card:nth-child(3)  { animation-delay: 398ms; }
-  .notes-entering .note-card:nth-child(4)  { animation-delay: 434ms; }
-  .notes-entering .note-card:nth-child(5)  { animation-delay: 468ms; }
-  .notes-entering .note-card:nth-child(6)  { animation-delay: 500ms; }
-  .notes-entering .note-card:nth-child(7)  { animation-delay: 528ms; }
-  .notes-entering .note-card:nth-child(8)  { animation-delay: 552ms; }
+  .notes-entering .notes-bar        { animation: focusIn .60s cubic-bezier(.16,1,.3,1) both; animation-delay:  80ms; }
+  .notes-entering .notes-list-col   { animation: focusIn .65s cubic-bezier(.16,1,.3,1) both; animation-delay: 160ms; }
+  .notes-entering .notes-editor-col { animation: focusIn .65s cubic-bezier(.16,1,.3,1) both; animation-delay: 240ms; }
+  .notes-entering .note-row              { animation: focusIn .55s cubic-bezier(.16,1,.3,1) both; }
+  .notes-entering .note-row:nth-child(1) { animation-delay: 280ms; }
+  .notes-entering .note-row:nth-child(2) { animation-delay: 316ms; }
+  .notes-entering .note-row:nth-child(3) { animation-delay: 350ms; }
+  .notes-entering .note-row:nth-child(4) { animation-delay: 382ms; }
+  .notes-entering .note-row:nth-child(5) { animation-delay: 412ms; }
+  .notes-entering .note-row:nth-child(6) { animation-delay: 440ms; }
+  .notes-entering .note-row:nth-child(7) { animation-delay: 466ms; }
+  .notes-entering .note-row:nth-child(8) { animation-delay: 490ms; }
 
   /* Responsive */
   @media (max-width: 600px) {
@@ -6904,15 +6915,34 @@
     .shoot-link-modal { padding: 16px; }
 
     /* ─ Notes ───────────────────────────────────────────────── */
-    .notes-bar, .notes-hero, .notes-content {
-      padding-left: 20px; padding-right: 20px;
-    }
+    .notes-bar { padding-left: 20px; padding-right: 20px; }
     .notes-title { font-size: 44px; }
+
+    /* ── Mobile: split collapses to full-width single column with slide ── */
+    #viewNotes { overflow: auto !important; } /* restore scroll for mobile */
+    #viewNotes .notes-page { min-height: 100%; overflow: visible; }
+    .notes-split {
+      flex-direction: column;
+      overflow: visible;
+    }
+    .notes-list-col {
+      width: 100%; border-right: none;
+      overflow: visible;
+    }
+    .nl-head { padding: 28px 20px 0; }
     .notes-controls {
-      flex-direction: column; align-items: stretch; gap: 12px;
-      padding-bottom: 18px;
+      flex-direction: column; align-items: stretch; gap: 10px;
+      padding-bottom: 14px;
     }
     .notes-search-wrap { max-width: none; }
+    /* Right col: hidden on mobile unless a note is open */
+    .notes-editor-col { display: none; }
+    .notes-split[data-mobile="editor"] .notes-list-col { display: none; }
+    .notes-split[data-mobile="editor"] .notes-editor-col {
+      display: flex; min-height: 100vh;
+    }
+    .ne-panel { padding: 24px 20px 60px; max-width: none; }
+    .ne-back { display: inline-flex; } /* show back arrow on mobile */
     .notes-new-btn { align-self: flex-start; }
     .notes-board { grid-template-columns: 1fr; }
     .note-editor-overlay { padding: 16px; }
@@ -8406,89 +8436,101 @@
         </div>
       </div>
 
-      <!-- Hero -->
-      <div class="notes-hero">
-        <h1 class="notes-title">Notes<span class="blink">.</span></h1>
-        <p class="notes-kicker">
-          <span>Scratchpad</span>
-          <span class="notes-kicker-sep">/</span>
-          <span id="notesCount">0 entries</span>
-        </p>
-      </div>
+      <!-- ── Split panel: list (left) + editor (right) ── -->
+      <div class="notes-split" id="notesSplit">
 
-      <!-- Controls + board -->
-      <div class="notes-content">
-
-        <div class="notes-controls">
-          <div class="notes-search-wrap">
-            <svg class="notes-search-ico" viewBox="0 0 12 12" fill="none"
-                 stroke="currentColor" stroke-width="1.1" aria-hidden="true">
-              <circle cx="5" cy="5" r="3.4"/>
-              <path d="M7.6 7.6L10.5 10.5" stroke-linecap="round"/>
-            </svg>
-            <input class="notes-search" id="notesSearch" type="text"
-                   placeholder="Search notes…" autocomplete="off" spellcheck="false">
-            <button class="notes-search-clear" id="notesSearchClear" type="button"
-                    title="Clear" style="display:none">
-              <svg viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.2">
-                <path d="M1.5 1.5l6 6M7.5 1.5l-6 6"/>
-              </svg>
-            </button>
+        <!-- LEFT: scrollable note list -->
+        <div class="notes-list-col">
+          <div class="nl-head">
+            <h1 class="notes-title">Notes<span class="blink">.</span></h1>
+            <p class="notes-kicker">
+              <span>Scratchpad</span>
+              <span class="notes-kicker-sep">/</span>
+              <span id="notesCount">0 entries</span>
+            </p>
+            <div class="notes-controls">
+              <div class="notes-search-wrap">
+                <svg class="notes-search-ico" viewBox="0 0 12 12" fill="none"
+                     stroke="currentColor" stroke-width="1.1" aria-hidden="true">
+                  <circle cx="5" cy="5" r="3.4"/>
+                  <path d="M7.6 7.6L10.5 10.5" stroke-linecap="round"/>
+                </svg>
+                <input class="notes-search" id="notesSearch" type="text"
+                       placeholder="Search…" autocomplete="off" spellcheck="false">
+                <button class="notes-search-clear" id="notesSearchClear" type="button"
+                        title="Clear" style="display:none">
+                  <svg viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.2">
+                    <path d="M1.5 1.5l6 6M7.5 1.5l-6 6"/>
+                  </svg>
+                </button>
+              </div>
+              <button class="notes-new-btn" id="notesAdd" type="button">
+                <svg viewBox="0 0 9 9" fill="none" stroke="currentColor"
+                     stroke-width="1.2" aria-hidden="true">
+                  <path d="M4.5 1v7M1 4.5h7"/>
+                </svg>
+                New Note
+              </button>
+            </div>
           </div>
-          <button class="notes-new-btn" id="notesAdd" type="button">
-            <svg viewBox="0 0 9 9" fill="none" stroke="currentColor"
-                 stroke-width="1.2" aria-hidden="true">
-              <path d="M4.5 1v7M1 4.5h7"/>
-            </svg>
-            New Note
-          </button>
+
+          <div class="notes-list" id="notesBoard"></div>
+
+          <div class="notes-empty" id="notesEmpty" style="display:none">
+            <p class="notes-empty-ttl">Nothing written yet.</p>
+            <p class="notes-empty-sub">— start your first note —</p>
+          </div>
         </div>
 
-        <div class="notes-board" id="notesBoard"></div>
+        <!-- RIGHT: always-visible editor -->
+        <div class="notes-editor-col" id="notesEditorCol">
 
-        <div class="notes-empty" id="notesEmpty" style="display:none">
-          <p class="notes-empty-ttl">Nothing written yet.</p>
-          <p class="notes-empty-sub">— start your first note —</p>
-        </div>
+          <!-- Shown when no note is selected -->
+          <div class="ne-placeholder" id="nePlaceholder">
+            <p class="ne-ph-text">Select a note<br>or create a new one.</p>
+          </div>
 
-      </div>
-    </div>
-  </div>
+          <!-- Shown when a note is open -->
+          <div class="ne-panel" id="noteEditor" style="display:none">
 
-  <!-- ══ NOTE FOCUS EDITOR ═════════════════════════════════════════ -->
-  <div class="note-editor-overlay" id="noteEditor" role="dialog" aria-modal="true">
-    <div class="note-editor">
-      <div class="ne-bar">
-        <span class="ne-num" id="neNum">N·01</span>
-        <div class="ne-bar-actions">
-          <button class="ne-act ne-del" id="neDelete" type="button" title="Delete note">
-            <svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.1"
-                 stroke-linecap="round" aria-hidden="true">
-              <path d="M2 3h7M4 3V2h3v1M3 3l.4 6h4.2L8 3"/>
-            </svg>
-          </button>
-          <button class="ne-act ne-close" id="neClose" type="button" title="Close">
-            <svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2"
-                 stroke-linecap="round" aria-hidden="true">
-              <path d="M2 2l7 7M9 2l-7 7"/>
-            </svg>
-          </button>
-        </div>
-      </div>
+            <div class="ne-topbar">
+              <!-- Mobile: back to list -->
+              <button class="ne-back" id="neBack" type="button">
+                <svg viewBox="0 0 9 9" fill="none" stroke="currentColor"
+                     stroke-width="1.3" stroke-linecap="round" aria-hidden="true">
+                  <path d="M5.5 1.5L2 4.5l3.5 3"/>
+                </svg>
+                Notes
+              </button>
+              <div class="ne-topbar-right">
+                <span class="ne-num" id="neNum">N·01</span>
+                <button class="ne-act ne-del" id="neDelete" type="button" title="Delete note">
+                  <svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.1"
+                       stroke-linecap="round" aria-hidden="true">
+                    <path d="M2 3h7M4 3V2h3v1M3 3l.4 6h4.2L8 3"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
 
-      <input class="ne-title" id="neTitle" type="text"
-             placeholder="Untitled" maxlength="140" autocomplete="off" spellcheck="false">
+            <input class="ne-title" id="neTitle" type="text"
+                   placeholder="Untitled" maxlength="140" autocomplete="off" spellcheck="false">
 
-      <textarea class="ne-body" id="neBody"
-                placeholder="Start writing — paste links, jot ideas, keep snippets…"
-                spellcheck="false"></textarea>
+            <textarea class="ne-body" id="neBody"
+                      placeholder="Start writing — paste links, jot ideas, keep snippets…"
+                      spellcheck="false"></textarea>
 
-      <div class="ne-links" id="neLinks"></div>
+            <div class="ne-links" id="neLinks"></div>
 
-      <div class="ne-foot">
-        <span class="ne-meta" id="neMeta">Edited just now</span>
-        <span class="ne-count" id="neCount">0 words</span>
-      </div>
+            <div class="ne-foot">
+              <span class="ne-meta" id="neMeta">Edited just now</span>
+              <span class="ne-count" id="neCount">0 words</span>
+            </div>
+
+          </div><!-- /ne-panel -->
+        </div><!-- /notes-editor-col -->
+
+      </div><!-- /notes-split -->
     </div>
   </div>
 
@@ -9594,7 +9636,7 @@
         '.planner-sheet',
         '.mb-gallery-wrap',
         '.notes-board',
-        '.notes-content',
+        '.notes-list-col',
         '.ne-body',
         '.czteam-list',
         '.czchat-msgs'
@@ -11457,15 +11499,20 @@
     var searchClr = document.getElementById('notesSearchClear');
     if(!board) return;
 
+    /* Split panel refs */
+    var split       = document.getElementById('notesSplit');
+    var editorCol   = document.getElementById('notesEditorCol');
+    var placeholder = document.getElementById('nePlaceholder');
+
     /* Editor refs */
-    var overlay = document.getElementById('noteEditor');
+    var panel   = document.getElementById('noteEditor');
     var neTitle = document.getElementById('neTitle');
     var neBody  = document.getElementById('neBody');
     var neNum   = document.getElementById('neNum');
     var neMeta  = document.getElementById('neMeta');
     var neCount = document.getElementById('neCount');
     var neLinks = document.getElementById('neLinks');
-    var neClose = document.getElementById('neClose');
+    var neBack  = document.getElementById('neBack');
     var neDelete= document.getElementById('neDelete');
 
     var notes   = [];
@@ -11545,7 +11592,7 @@
     var LINK_ICO = '<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">'
       + '<path d="M4.1 5.9l1.8-1.8M3.3 5.1L2.1 6.3a1.35 1.35 0 0 0 1.9 1.9l1.2-1.2M6.7 4.9l1.2-1.2a1.35 1.35 0 0 0-1.9-1.9L4.8 2.9"/></svg>';
 
-    /* ── Render board ── */
+    /* ── Render list ── */
     function renderBoard(){
       countEl.textContent = notes.length + (notes.length===1 ? ' entry' : ' entries');
 
@@ -11579,22 +11626,22 @@
       board.innerHTML = vis.map(function(n){
         var tEmpty = !(n.title||'').trim();
         var bEmpty = !(n.body ||'').trim();
-        var title  = tEmpty ? 'Untitled'   : n.title;
-        var prev   = bEmpty ? 'Empty note' : n.body;
-        var links  = extractLinks(n.body).length;
-        return '<button class="note-card" data-id="'+esc(n.id)+'" type="button">'
-          + '<span class="nc-num">N·'+pad2(posOf[n.id])+'</span>'
-          + '<h3 class="nc-title'+(tEmpty?' is-untitled':'')+'">'+esc(title)+'</h3>'
-          + '<p class="nc-preview'+(bEmpty?' is-empty':'')+'">'+esc(prev)+'</p>'
-          + '<div class="nc-foot">'
-            + '<span class="nc-time">'+relTime(n.edited)+'</span>'
-            + (links ? '<span class="nc-link-badge">'+LINK_ICO+links+'</span>' : '')
-          + '</div>'
+        var title  = tEmpty ? 'Untitled' : n.title;
+        var prev   = bEmpty ? 'Empty note' : n.body.split('\n')[0];
+        var sel    = editing === n.id ? ' selected' : '';
+        return '<button class="note-row'+sel+'" data-id="'+esc(n.id)+'" type="button">'
+          + '<span class="nr-num">'+pad2(posOf[n.id])+'</span>'
+          + '<span class="nr-info">'
+            + '<span class="nr-title'+(tEmpty?' is-untitled':'')+'">'+esc(title)+'</span>'
+            + '<span class="nr-preview'+(bEmpty?' is-empty':'')+'">'+esc(prev)+'</span>'
+          + '</span>'
+          + '<span class="nr-time">'+relTime(n.edited)+'</span>'
         + '</button>';
       }).join('');
     }
 
     /* ── Editor ── */
+    function isMobileNotes(){ return window.innerWidth <= 600; }
     function noteNumber(id){
       var a = sortedNotes();
       for(var i=0;i<a.length;i++) if(a[i].id===id) return i+1;
@@ -11623,17 +11670,26 @@
       neTitle.value = n.title || '';
       neBody.value  = n.body  || '';
       neNum.textContent = 'N·' + pad2(noteNumber(id));
-      refreshMeta();
-      refreshLinks();
-      overlay.classList.add('open');
-      /* New/empty note → focus the title; existing → drop into the body */
+      refreshMeta(); refreshLinks();
+      /* Show editor panel, hide placeholder */
+      if(placeholder) placeholder.style.display = 'none';
+      if(panel) panel.style.display = 'flex';
+      /* Mobile: slide to editor column */
+      if(isMobileNotes() && split) split.dataset.mobile = 'editor';
+      /* Update list selection highlight */
+      renderBoard();
+      /* Focus: new/empty note → title, existing → body */
       setTimeout(function(){ ((n.title||'').trim() ? neBody : neTitle).focus(); }, 70);
     }
     function closeEditor(){
-      if(!overlay.classList.contains('open')) return;
+      if(!editing) return;
       var ae = document.activeElement;
-      if(ae && overlay.contains(ae) && ae.blur) ae.blur();
-      overlay.classList.remove('open');
+      if(ae && (ae === neTitle || ae === neBody) && ae.blur) ae.blur();
+      /* Hide editor panel, show placeholder */
+      if(panel) panel.style.display = 'none';
+      if(placeholder) placeholder.style.display = 'flex';
+      /* Mobile: slide back to list */
+      if(split) split.dataset.mobile = 'list';
       editing = null;
       renderBoard();
     }
@@ -11654,15 +11710,14 @@
 
     /* ── Wire events ── */
     board.addEventListener('click', function(e){
-      var card = e.target.closest ? e.target.closest('.note-card') : null;
-      if(card) openEditor(card.dataset.id);
+      var row = e.target.closest ? e.target.closest('.note-row') : null;
+      if(row) openEditor(row.dataset.id);
     });
 
     addBtn.addEventListener('click', function(){
       var n = mkNote();
-      notes.push(n);
+      notes.unshift(n);
       saveNotes();
-      /* clear any active search so the new note is visible */
       searchInp.value = ''; query = ''; toggleClear();
       renderBoard();
       openEditor(n.id);
@@ -11670,8 +11725,7 @@
 
     neTitle.addEventListener('input', onEdit);
     neBody .addEventListener('input', onEdit);
-    neClose.addEventListener('click', closeEditor);
-    overlay.addEventListener('click', function(e){ if(e.target === overlay) closeEditor(); });
+    if(neBack) neBack.addEventListener('click', closeEditor);
 
     neDelete.addEventListener('click', function(){
       if(!editing) return;
@@ -11687,12 +11741,12 @@
       });
     });
 
-    /* Escape closes the editor — but yields to the delete-confirm modal if it's up */
+    /* Escape deselects the note — yields to the delete-confirm modal if up */
     document.addEventListener('keydown', function(e){
       if(e.key !== 'Escape') return;
-      if(!overlay.classList.contains('open')) return;
+      if(!editing) return;
       var pdc = document.getElementById('pdcOverlay');
-      if(pdc && pdc.classList.contains('open')) return; /* let the confirm handle it */
+      if(pdc && pdc.classList.contains('open')) return;
       e.preventDefault(); e.stopImmediatePropagation();
       closeEditor();
     }, true);
@@ -11723,7 +11777,10 @@
     };
     window._planOpenNote = function(id){
       if (window.showView) window.showView('notes');
-      setTimeout(function(){ openEditor(id); }, 90);
+      setTimeout(function(){
+        var n = notes.find(function(x){ return x.id===id; });
+        if(n) openEditor(id);
+      }, 90);
     };
   })();
 
