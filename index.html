@@ -10294,14 +10294,14 @@
       opts = opts || {};
       var commit = opts.commit !== false;
       var changed = false;
-      if(!plannerDateParts(p.date)){
+      if(dateInp && !plannerDateParts(p.date)){
         var today = plannerTodayString();
         if(commit){
           p.date = today;
           changed = true;
         }
         if(dateInp) dateInp.value = today;
-      } else {
+      } else if(dateInp) {
         var clamped = clampPlannerDate(p.date);
         if(clamped !== p.date){
           if(commit){
@@ -10311,15 +10311,15 @@
           if(dateInp) dateInp.value = clamped;
         }
       }
-      if(!parse12(String(p.time || ''))){
+      if(timeInp && !parse12(String(p.time || ''))){
         var nowTime = plannerNowTimeString();
         if(commit){
           p.time = nowTime;
           changed = true;
         }
         if(timeInp) timeInp.value = fmt12(nowTime);
-      } else {
-        var clampedTime = clampPlannerTime(p.time, p.date);
+      } else if(timeInp) {
+        var clampedTime = clampPlannerTime(p.time, p.date || plannerTodayString());
         if(clampedTime !== p.time){
           if(commit){
             p.time = clampedTime;
@@ -10646,11 +10646,11 @@
           delta = acc > 0 ? 1 : -1; acc -= delta * 25;
         }
         var p = getP(); if(!p) return;
-        seedPlannerMoment(p, inp.closest('.shoot-row') && inp.closest('.shoot-row').querySelector('.shoot-date'), inp);
+        seedPlannerMoment(p, null, inp);
         var pm = p.time.match(/^(\d{1,2}):(\d{2})$/);
         var h = pm ? +pm[1] : 0, mn = pm ? +pm[2] : 0;
         var total = ((h*60 + mn + delta) % 1440 + 1440) % 1440;
-        var floor = plannerMinTimeForDate(p.date);
+        var floor = plannerMinTimeForDate(p.date || plannerTodayString());
         if(total < floor){
           total = floor;
           invalidFlash(inp);
@@ -10727,7 +10727,7 @@
         inp._previewSeed = false;
         inp._previewSeedValue = '';
         if(parsed){
-          var clamped = clampPlannerTime(parsed, p.date);
+          var clamped = clampPlannerTime(parsed, p.date || plannerTodayString());
           if(clamped !== parsed) invalidFlash(inp);
           p.time = clamped;
           inp.value = fmt12(p.time);
@@ -10763,7 +10763,7 @@
           delta = acc > 0 ? 1 : -1; acc -= delta * 40;
         }
         var p = getP(); if(!p) return;
-        seedPlannerMoment(p, inp, inp.closest('.shoot-row') && inp.closest('.shoot-row').querySelector('.shoot-time'));
+        seedPlannerMoment(p, inp, null);
         var pm = p.date.match(/^(\d{4})\.(\d{2})\.(\d{2})$/);
         var dt = pm ? new Date(+pm[1],+pm[2]-1,+pm[3]) : new Date();
         dt.setDate(dt.getDate() + delta);
@@ -10771,7 +10771,7 @@
         p.date = clampPlannerDate(rawDate);
         if(p.date !== rawDate) invalidFlash(inp);
         var timeInp = inp.closest('.shoot-row') && inp.closest('.shoot-row').querySelector('.shoot-time');
-        var clampedTime = clampPlannerTime(p.time, p.date);
+        var clampedTime = plannerTimeMinutes(p.time) == null ? p.time : clampPlannerTime(p.time, p.date);
         if(clampedTime !== p.time){
           p.time = clampedTime;
           if(timeInp) timeInp.value = fmt12(p.time);
@@ -10858,7 +10858,7 @@
         p.date = clamped;
         var row = inp.closest('.shoot-row');
         var timeInp = row && row.querySelector('.shoot-time');
-        var clampedTime = clampPlannerTime(p.time, p.date);
+        var clampedTime = plannerTimeMinutes(p.time) == null ? p.time : clampPlannerTime(p.time, p.date);
         if(clampedTime !== p.time){
           p.time = clampedTime;
           if(timeInp) timeInp.value = fmt12(p.time);
