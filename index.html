@@ -5706,10 +5706,26 @@
     user-select: none; -webkit-user-select: none;
     caret-color: transparent;
   }
-  /* Brief flash when a scroll-adjusted value changes */
-  /* Value scrub gives no colour flicker — the field just stays white while
-     active. (.scroll-bump kept as a no-op so flash() calls remain harmless.) */
+  /* Value scrub normally stays quiet. Invalid movement gives a small red nudge. */
   .scroll-bump {}
+  .scroll-invalid {
+    animation: plannerInvalidNudge .34s cubic-bezier(.16,1,.3,1) both;
+  }
+  @keyframes plannerInvalidNudge {
+    0%, 100% {
+      color: var(--ink);
+      text-shadow: none;
+      transform: translateX(0);
+    }
+    18% {
+      color: rgba(255, 92, 92, .95);
+      text-shadow: 0 0 14px rgba(255, 72, 72, .32);
+      transform: translateX(-3px);
+    }
+    38% { transform: translateX(3px); }
+    58% { transform: translateX(-2px); }
+    78% { transform: translateX(1px); }
+  }
 
   /* Location wrapper */
   .loc-wrap  { position: relative; min-width: 0; display: flex; align-items: center; overflow: hidden; }
@@ -10231,6 +10247,15 @@
     function plannerDateStamp(parts){
       return parts ? new Date(parts.y, parts.mo - 1, parts.d).getTime() : NaN;
     }
+    function plannerTodayParts(){
+      var n = plannerNow();
+      return { y: n.y, mo: n.mo, d: n.d };
+    }
+    function plannerIsToday(dateStr){
+      var parts = plannerDateParts(dateStr);
+      if(!parts) return false;
+      return plannerDateStamp(parts) === plannerDateStamp(plannerTodayParts());
+    }
     function formatPlannerDate(dt){
       return dt.getFullYear() + '.' + pad2(dt.getMonth() + 1) + '.' + pad2(dt.getDate());
     }
@@ -10242,6 +10267,27 @@
         return plannerTodayString();
       }
       return formatPlannerDate(dt);
+    }
+    function plannerNowMinutes(){
+      var n = plannerNow();
+      return n.h * 60 + n.mi;
+    }
+    function plannerTimeMinutes(timeStr){
+      var m = String(timeStr || '').match(/^(\d{1,2}):(\d{2})$/);
+      if(!m) return null;
+      var h = +m[1], mi = +m[2];
+      if(h > 23 || mi > 59) return null;
+      return h * 60 + mi;
+    }
+    function plannerMinTimeForDate(dateStr){
+      return plannerIsToday(dateStr) ? plannerNowMinutes() : 0;
+    }
+    function clampPlannerTime(timeStr, dateStr){
+      var mins = plannerTimeMinutes(timeStr);
+      if(mins == null) return plannerNowTimeString();
+      var floor = plannerMinTimeForDate(dateStr);
+      if(mins < floor) mins = floor;
+      return pad2(Math.floor(mins / 60)) + ':' + pad2(mins % 60);
     }
     function seedPlannerMoment(p, dateInp, timeInp){
       if(!p) return;
@@ -10262,6 +10308,13 @@
         p.time = plannerNowTimeString();
         if(timeInp) timeInp.value = fmt12(p.time);
         changed = true;
+      } else {
+        var clampedTime = clampPlannerTime(p.time, p.date);
+        if(clampedTime !== p.time){
+          p.time = clampedTime;
+          if(timeInp) timeInp.value = fmt12(p.time);
+          changed = true;
+        }
       }
       if(changed) savePlanner();
     }
@@ -10585,6 +10638,11 @@
         var pm = p.time.match(/^(\d{1,2}):(\d{2})$/);
         var h = pm ? +pm[1] : 0, mn = pm ? +pm[2] : 0;
         var total = ((h*60 + mn + delta) % 1440 + 1440) % 1440;
+        var floor = plannerMinTimeForDate(p.date);
+        if(total < floor){
+          total = floor;
+          invalidFlash(inp);
+        }
         p.time = pad2(Math.floor(total/60)) + ':' + pad2(total%60);
         inp.value = fmt12(p.time);
         flash(inp); savePlanner();
@@ -10645,8 +10703,16 @@
         acc = 0;
         var p = getP(); if(!p) return;
         var parsed = parse12(inp.value);
-        if(parsed){ p.time = parsed; inp.value = fmt12(p.time); }
-        else       { inp.value = fmt12(p.time); }
+        if(parsed){
+          var clamped = clampPlannerTime(parsed, p.date);
+          if(clamped !== parsed) invalidFlash(inp);
+          p.time = clamped;
+          inp.value = fmt12(p.time);
+        }
+        else {
+          invalidFlash(inp);
+          inp.value = fmt12(p.time);
+        }
         savePlanner();
       });
     }
@@ -10678,7 +10744,15 @@
         var pm = p.date.match(/^(\d{4})\.(\d{2})\.(\d{2})$/);
         var dt = pm ? new Date(+pm[1],+pm[2]-1,+pm[3]) : new Date();
         dt.setDate(dt.getDate() + delta);
-        p.date = clampPlannerDate(dt.getFullYear()+'.'+pad2(dt.getMonth()+1)+'.'+pad2(dt.getDate()));
+        var rawDate = dt.getFullYear()+'.'+pad2(dt.getMonth()+1)+'.'+pad2(dt.getDate());
+        p.date = clampPlannerDate(rawDate);
+        if(p.date !== rawDate) invalidFlash(inp);
+        var timeInp = inp.closest('.shoot-row') && inp.closest('.shoot-row').querySelector('.shoot-time');
+        var clampedTime = clampPlannerTime(p.time, p.date);
+        if(clampedTime !== p.time){
+          p.time = clampedTime;
+          if(timeInp) timeInp.value = fmt12(p.time);
+        }
         inp.value = p.date;
         flash(inp); savePlanner();
       }
@@ -10744,7 +10818,17 @@
         setMobileScrubKeyboardLock(false);
         acc = 0;
         var p = getP(); if(!p) return;
-        p.date = clampPlannerDate(inp.value);
+        var clamped = clampPlannerDate(inp.value);
+        var typedParts = plannerDateParts(inp.value);
+        if(!typedParts || plannerDateStamp(typedParts) < plannerDateStamp(plannerTodayParts())) invalidFlash(inp);
+        p.date = clamped;
+        var row = inp.closest('.shoot-row');
+        var timeInp = row && row.querySelector('.shoot-time');
+        var clampedTime = clampPlannerTime(p.time, p.date);
+        if(clampedTime !== p.time){
+          p.time = clampedTime;
+          if(timeInp) timeInp.value = fmt12(p.time);
+        }
         inp.value = p.date;
         savePlanner();
       });
@@ -10754,6 +10838,13 @@
       el.classList.remove('scroll-bump');
       void el.offsetWidth;
       el.classList.add('scroll-bump');
+    }
+    function invalidFlash(el){
+      el.classList.remove('scroll-invalid');
+      void el.offsetWidth;
+      el.classList.add('scroll-invalid');
+      clearTimeout(el._invalidFlashTimer);
+      el._invalidFlashTimer = setTimeout(function(){ el.classList.remove('scroll-invalid'); }, 420);
     }
 
     function releasePlannerScrubField(target){
@@ -11401,7 +11492,7 @@
                    ' placeholder="Description…"'+
                    ' data-field="notes">'+esc(p.notes)+'</textarea>'+
 
-            '<input class="shoot-date" type="text" placeholder="YYYY.MM.DD"'+
+            '<input class="shoot-date" type="text" placeholder="Date"'+
                    ' value="'+esc(p.date)+'" data-field="date"'+
                    ' title="Scroll ↕ to change date">'+
 
