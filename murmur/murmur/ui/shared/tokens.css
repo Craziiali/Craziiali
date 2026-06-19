@@ -1,0 +1,170 @@
+/* ============================================================================
+   Murmur — Design Tokens
+   A single source of truth for color, type, space, motion and material.
+   Inspired by Apple's HIG: deep dark canvas, layered surfaces, vibrancy,
+   restrained accent, generous rounding, spring-like motion.
+   ============================================================================ */
+
+:root {
+  /* ---- Canvas & elevated surfaces (dark, the default) ------------------- */
+  --bg-base:        #0b0b0f;   /* app canvas, near-black with a hint of blue */
+  --bg-sunken:      #08080b;   /* recessed wells (transcript, inputs)        */
+  --surface-1:      #141419;   /* cards, sidebar                             */
+  --surface-2:      #1c1c23;   /* raised cards, popovers                     */
+  --surface-3:      #26262f;   /* hover / pressed elevation                  */
+  --material:       rgba(28, 28, 35, 0.72); /* vibrancy panel (with blur)    */
+  --material-thin:  rgba(20, 20, 26, 0.55);
+
+  /* ---- Hairlines & separators ------------------------------------------ */
+  --hairline:       rgba(255, 255, 255, 0.08);
+  --hairline-strong:rgba(255, 255, 255, 0.14);
+  --hairline-faint: rgba(255, 255, 255, 0.045);
+
+  /* ---- Text ------------------------------------------------------------- */
+  --text-primary:   rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.58);
+  --text-tertiary:  rgba(255, 255, 255, 0.36);
+  --text-quaternary:rgba(255, 255, 255, 0.20);
+  --text-on-accent: #0b0b0f;
+
+  /* ---- Accent (Murmur periwinkle) -------------------------------------- */
+  --accent:         #6e8bff;
+  --accent-hover:   #859dff;
+  --accent-press:   #5a78f0;
+  --accent-soft:    rgba(110, 139, 255, 0.16);
+  --accent-ring:    rgba(110, 139, 255, 0.45);
+
+  /* ---- The aurora orb (brand hero) — a living gradient ------------------ */
+  --orb-a:          #7c9cff;   /* indigo  */
+  --orb-b:          #b58cff;   /* violet  */
+  --orb-c:          #5be0c8;   /* mint    */
+  --orb-d:          #ffb37c;   /* peach   */
+
+  /* ---- Semantic --------------------------------------------------------- */
+  --good:           #43d39e;
+  --warn:           #ffcf5c;
+  --bad:            #ff6b6b;
+  --listening:      #ff7a8a;   /* warm pink while the mic is hot            */
+
+  /* ---- Radius ----------------------------------------------------------- */
+  --r-xs: 7px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* ---- Spacing (4pt grid) ---------------------------------------------- */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-7: 32px; --s-8: 40px;
+  --s-9: 56px; --s-10: 72px;
+
+  /* ---- Type ------------------------------------------------------------- */
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI",
+          system-ui, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", "JetBrains Mono", ui-monospace,
+               Menlo, Consolas, monospace;
+
+  --t-display: 600 34px/1.1 var(--font);
+  --t-title:   600 22px/1.25 var(--font);
+  --t-headline:600 17px/1.3 var(--font);
+  --t-body:    400 14px/1.5 var(--font);
+  --t-label:   500 13px/1.3 var(--font);
+  --t-caption: 500 11.5px/1.3 var(--font);
+
+  /* ---- Shadows (soft, layered) ----------------------------------------- */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.45);
+  --shadow-lg: 0 24px 60px rgba(0,0,0,0.55);
+  --shadow-orb: 0 0 60px rgba(124,156,255,0.35), 0 0 120px rgba(91,224,200,0.18);
+
+  /* ---- Motion ----------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 420ms;
+}
+
+/* ---- Light theme override (auto / forced) ------------------------------ */
+:root[data-theme="light"] {
+  --bg-base:        #f4f4f7;
+  --bg-sunken:      #ebebf0;
+  --surface-1:      #ffffff;
+  --surface-2:      #ffffff;
+  --surface-3:      #f0f0f5;
+  --material:       rgba(255, 255, 255, 0.72);
+  --material-thin:  rgba(255, 255, 255, 0.6);
+
+  --hairline:       rgba(0, 0, 0, 0.10);
+  --hairline-strong:rgba(0, 0, 0, 0.16);
+  --hairline-faint: rgba(0, 0, 0, 0.05);
+
+  --text-primary:   rgba(0, 0, 0, 0.88);
+  --text-secondary: rgba(0, 0, 0, 0.55);
+  --text-tertiary:  rgba(0, 0, 0, 0.38);
+  --text-quaternary:rgba(0, 0, 0, 0.22);
+
+  --accent-soft:    rgba(110, 139, 255, 0.14);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
+  --shadow-lg: 0 24px 60px rgba(0,0,0,0.18);
+}
+
+/* ============================================================================
+   Base reset & primitives shared across windows
+   ============================================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body {
+  font: var(--t-body);
+  color: var(--text-primary);
+  background: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  letter-spacing: 0.1px;
+  user-select: none;
+  overflow: hidden;
+}
+button { font-family: inherit; }
+::selection { background: var(--accent-soft); }
+
+/* Custom scrollbar — thin, ghosted, Apple-ish */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- The aurora orb (used in pill + brand mark) ------------------ */
+.orb {
+  position: relative;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 28%, var(--orb-a), transparent 60%),
+    radial-gradient(circle at 72% 34%, var(--orb-b), transparent 58%),
+    radial-gradient(circle at 38% 76%, var(--orb-c), transparent 60%),
+    radial-gradient(circle at 76% 72%, var(--orb-d), transparent 55%),
+    var(--orb-b);
+  box-shadow: var(--shadow-orb);
+  overflow: hidden;
+  isolation: isolate;
+}
+.orb::after {            /* glossy top highlight */
+  content: "";
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 32% 22%, rgba(255,255,255,0.55), transparent 42%);
+  mix-blend-mode: screen;
+}
+.orb.spin { animation: orb-spin 7s linear infinite; }
+.orb.breathe { animation: orb-breathe 4.2s var(--ease-in-out) infinite; }
+@keyframes orb-spin   { to { filter: hue-rotate(360deg); } }
+@keyframes orb-breathe{ 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

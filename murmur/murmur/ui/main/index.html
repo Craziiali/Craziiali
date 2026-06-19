@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Murmur</title>
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Custom slim titlebar (drag region) -->
+  <header class="titlebar">
+    <div class="titlebar__drag"></div>
+    <div class="titlebar__controls">
+      <button class="winbtn" data-win="min" title="Minimize" aria-label="Minimize"></button>
+      <button class="winbtn winbtn--close" data-win="close" title="Close" aria-label="Close"></button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <!-- ============================ Sidebar ============================ -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="orb spin brand__orb"></div>
+        <div class="brand__name">Murmur</div>
+      </div>
+
+      <nav class="nav" role="tablist">
+        <button class="nav__item is-active" data-view="dictate" role="tab">
+          <svg viewBox="0 0 24 24" class="ic"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" class="stroke"/></svg>
+          <span>Dictate</span>
+        </button>
+        <button class="nav__item" data-view="modes" role="tab">
+          <svg viewBox="0 0 24 24" class="ic"><path class="stroke" d="M4 7h10M4 12h16M4 17h7"/><circle cx="18" cy="7" r="2.4" class="stroke"/><circle cx="14" cy="17" r="2.4" class="stroke"/></svg>
+          <span>Modes</span>
+        </button>
+        <button class="nav__item" data-view="history" role="tab">
+          <svg viewBox="0 0 24 24" class="ic"><path class="stroke" d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1M5 4v3.4h3.4M12 8v4.3l3 1.8"/></svg>
+          <span>History</span>
+        </button>
+        <button class="nav__item" data-view="settings" role="tab">
+          <svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="12" r="3.1" class="stroke"/><path class="stroke" d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 0 1-4 0v-.09a1.7 1.7 0 0 0-2.9-1.2l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 13.5H4.5a2 2 0 0 1 0-4h.09a1.7 1.7 0 0 0 1.2-2.9l-.06-.06A2 2 0 1 1 8.56 3.7l.06.06a1.7 1.7 0 0 0 2.88-1.2V2.5a2 2 0 0 1 4 0v.09a1.7 1.7 0 0 0 2.9 1.2l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-1.2 2.88v.1a2 2 0 0 1 0 4h-.09Z"/></svg>
+          <span>Settings</span>
+        </button>
+      </nav>
+
+      <div class="sidebar__foot">
+        <div class="statline" id="engineStat">
+          <span class="dot dot--good"></span>
+          <span class="statline__text">Local · base</span>
+        </div>
+        <div class="statline" id="micStat">
+          <span class="dot dot--good"></span>
+          <span class="statline__text">Microphone ready</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============================ Content ============================ -->
+    <main class="content">
+
+      <!-- ---------------------------- DICTATE --------------------------- -->
+      <section class="view view--dictate is-active" data-view="dictate">
+        <div class="hero">
+          <div class="hero__orb-wrap">
+            <div class="orb breathe hero__orb" id="heroOrb"></div>
+            <div class="hero__ring"></div>
+          </div>
+          <h1 class="hero__title">Hold <kbd>Alt</kbd><kbd>Space</kbd> and speak</h1>
+          <p class="hero__sub">Release to drop polished text wherever your cursor is.</p>
+
+          <div class="modechip" id="activeModeChip">
+            <span class="modechip__icon">✶</span>
+            <span class="modechip__name">Voice</span>
+            <svg viewBox="0 0 24 24" class="modechip__caret"><path class="stroke" d="m7 10 5 5 5-5"/></svg>
+          </div>
+        </div>
+
+        <div class="livecard" id="liveCard">
+          <div class="livecard__head">
+            <span class="livecard__label">Last dictation</span>
+            <button class="ghostbtn" id="copyLast">Copy</button>
+          </div>
+          <p class="livecard__text" id="lastText">Your transcribed text will appear here. Press and hold your hotkey, say a sentence, and Murmur turns it into clean, punctuated text — then types it for you.</p>
+        </div>
+
+        <div class="statrow" id="statRow"></div>
+      </section>
+
+      <!-- ----------------------------- MODES ---------------------------- -->
+      <section class="view view--modes" data-view="modes">
+        <div class="view__head">
+          <div>
+            <h2 class="view__title">Modes</h2>
+            <p class="view__sub">Each mode is a recipe: a model, a prompt, and where it switches on automatically.</p>
+          </div>
+          <button class="primarybtn" id="newMode"><span>＋</span> New Mode</button>
+        </div>
+        <div class="modegrid" id="modeGrid"></div>
+      </section>
+
+      <!-- ---------------------------- HISTORY --------------------------- -->
+      <section class="view view--history" data-view="history">
+        <div class="view__head">
+          <div>
+            <h2 class="view__title">History</h2>
+            <p class="view__sub">Everything you've dictated, searchable and private to this device.</p>
+          </div>
+          <div class="search">
+            <svg viewBox="0 0 24 24" class="ic"><circle cx="11" cy="11" r="6.5" class="stroke"/><path class="stroke" d="m20 20-3.5-3.5"/></svg>
+            <input id="historySearch" placeholder="Search dictations" />
+          </div>
+        </div>
+        <div class="historylist" id="historyList"></div>
+      </section>
+
+      <!-- ---------------------------- SETTINGS -------------------------- -->
+      <section class="view view--settings" data-view="settings">
+        <div class="view__head">
+          <div>
+            <h2 class="view__title">Settings</h2>
+            <p class="view__sub">Tune the engine, your keys, and how Murmur behaves.</p>
+          </div>
+        </div>
+        <div class="settings" id="settingsBody"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

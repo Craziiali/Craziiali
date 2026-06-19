@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.tmp
+
+# Local environment
+.venv/
+venv/
+
+# Murmur runtime data (created at run time, never committed)
+*.db
+settings.json
+modes.json
+models/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db

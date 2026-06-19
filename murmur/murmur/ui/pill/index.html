@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <title>Murmur</title>
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="pill" id="pill" data-state="idle">
+    <div class="pill__orb-wrap">
+      <div class="orb pill__orb" id="pillOrb"></div>
+    </div>
+
+    <div class="pill__wave" id="wave">
+      <!-- bars injected by JS -->
+    </div>
+
+    <div class="pill__meta">
+      <div class="pill__state" id="stateText">Ready</div>
+      <div class="pill__mode" id="modeText">Voice · Hold Alt Space</div>
+    </div>
+
+    <div class="pill__timer" id="timer">0:00</div>
+  </div>
+
+  <script src="pill.js"></script>
+</body>
+</html>

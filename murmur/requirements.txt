@@ -1,0 +1,24 @@
+# ── Murmur dependencies ──────────────────────────────────────────────────────
+# Install everything for the full experience:   pip install -r requirements.txt
+# Each block is independent; Murmur degrades gracefully if one is missing.
+
+# UI window (WebView2 on Windows). The only hard requirement to see the app.
+pywebview>=5.0
+
+# Microphone capture
+sounddevice>=0.4.6
+numpy>=1.24
+
+# Global hold-to-talk hotkey + paste-anywhere keystrokes
+keyboard>=0.13.5
+pyperclip>=1.8.2
+
+# Offline transcription (downloads Whisper models on first use)
+faster-whisper>=1.0.0
+
+# Cloud transcription + AI "modes" rewriting (optional; only used if you add keys)
+openai>=1.30
+anthropic>=0.39
+
+# Active-app detection on Windows (for auto-switching modes)
+psutil>=5.9 ; sys_platform == "win32"
